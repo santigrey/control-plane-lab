@@ -1,0 +1,14 @@
+# OS / editor
+.DS_Store
+.vscode/
+
+# Logs
+*.log
+
+# Secrets (never commit)
+.env
+*.key
+*.pem
+
+# Local data dirs (if you ever add bind mounts)
+data/
