@@ -7,7 +7,7 @@ import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from db import insert_memory, search_memories, get_latest_phrase, db_ping
+from ai_operator.memory.db import insert_memory, search_memories, get_latest_phrase, db_ping
 
 app = FastAPI()
 
