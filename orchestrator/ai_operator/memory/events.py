@@ -1,29 +1,6 @@
-from __future__ import annotations
-
-import json
-from dataclasses import dataclass
+import uuid
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
-
-
-def utc_now_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-@dataclass(frozen=True)
-class MemoryEvent:
-    """
-    Canonical event envelope for anything we persist.
-
-    type: event category (prompt, retrieval, tool_call, tool_result, response, etc.)
-    source: component name (orchestrator, tool:<name>, etc.)
-    ts: ISO-8601 UTC timestamp
-    data: structured payload (JSON-serializable)
-    """
-    type: str
-    source: str
-    data: Dict[str, Any]
-    ts: str
 
 
 def make_event(
@@ -31,35 +8,41 @@ def make_event(
     type: str,
     source: str,
     data: Dict[str, Any],
-    ts: Optional[str] = None,
-) -> MemoryEvent:
-    if not type or not isinstance(type, str):
-        raise ValueError("type must be a non-empty string")
-    if not source or not isinstance(source, str):
-        raise ValueError("source must be a non-empty string")
-    if data is None or not isinstance(data, dict):
-        raise ValueError("data must be a dict")
-    return MemoryEvent(type=type, source=source, data=data, ts=ts or utc_now_iso())
+    run_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Normalized event envelope for durable structured persistence.
+
+    run_id groups all events produced during a single /ask execution.
+    """
+    return {
+        "id": str(uuid.uuid4()),
+        "run_id": run_id,
+        "type": type,
+        "source": source,
+        "ts": datetime.now(timezone.utc).isoformat(),
+        "data": data,
+    }
 
 
-def event_to_content(e: MemoryEvent) -> str:
+def event_to_content(event: Dict[str, Any]) -> str:
     """
-    Human-readable content string (still useful for quick grep/debug).
-    Keep this short and stable.
+    Human-readable content column representation.
     """
-    # Compact JSON for readability
-    payload = json.dumps(
-        {"type": e.type, "source": e.source, "ts": e.ts, "data": e.data},
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    )
-    return f"EVENT:{payload}"
+    import json
+
+    return "EVENT:" + json.dumps(event, separators=(",", ":"), sort_keys=True)
 
 
-def event_to_tool_result(e: MemoryEvent) -> Dict[str, Any]:
+def event_to_tool_result(event: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Structured payload to store in tool_result JSONB.
-    This becomes our durable contract.
+    JSONB-safe tool_result representation.
     """
-    return {"type": e.type, "source": e.source, "ts": e.ts, "data": e.data}
+    return {
+        "id": event.get("id"),
+        "run_id": event.get("run_id"),
+        "type": event.get("type"),
+        "source": event.get("source"),
+        "ts": event.get("ts"),
+        "data": event.get("data"),
+    }
