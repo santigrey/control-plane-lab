@@ -19,6 +19,7 @@ from ai_operator.inference.ollama import (
     get_expected_dim,
 )
 from ai_operator.memory.db import insert_memory, search_memories, get_latest_phrase, db_ping
+from ai_operator.memory.writer import write_event
 from ai_operator.memory.events import make_event, event_to_content, event_to_tool_result
 
 app = FastAPI()
@@ -211,14 +212,7 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             run_id=run_id,
         )
 
-        mem_id = insert_memory(
-            source="orchestrator",
-            content=event_to_content(remember_event),
-            embedding=None,
-            embedding_model=EMBED_MODEL,
-            tool=None,
-            tool_result=event_to_tool_result(remember_event),
-        )
+        mem_id = write_event(event=remember_event)
         timings["db_s"] = round(time.time() - t, 4)
         timings["total_s"] = round(time.time() - t0, 4)
 
@@ -303,14 +297,7 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             run_id=run_id,
         )
 
-            insert_memory(
-                source="orchestrator",
-                content=event_to_content(tool_call_event),
-                embedding=None,
-                embedding_model=EMBED_MODEL,
-                tool=tool_used,
-                tool_result=event_to_tool_result(tool_call_event),
-            )
+            write_event(event=tool_call_event)
 
             tool_result_event = make_event(
                 type="tool_result",
@@ -320,14 +307,7 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             run_id=run_id,
         )
 
-            insert_memory(
-                source="orchestrator",
-                content=event_to_content(tool_result_event),
-                embedding=None,
-                embedding_model=EMBED_MODEL,
-                tool=tool_used,
-                tool_result=event_to_tool_result(tool_result_event),
-            )
+            write_event(event=tool_result_event)
 
             followup_prompt = (
                 f"{user_prompt}\n\n"
@@ -358,14 +338,7 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             run_id=run_id,
         )
 
-    mem_id = insert_memory(
-        source="orchestrator",
-        content=event_to_content(response_event),
-        embedding=query_emb,
-        embedding_model=EMBED_MODEL,
-        tool="retrieval_injection",
-        tool_result=event_to_tool_result(response_event),
-    )
+    mem_id = write_event(event=response_event)
 
     timings["db_s"] = round(time.time() - t0, 4)
     timings["total_s"] = round(time.time() - t0, 4)
