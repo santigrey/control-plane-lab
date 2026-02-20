@@ -31,7 +31,12 @@ def event_to_content(event: Dict[str, Any]) -> str:
     """
     import json
 
-    return "EVENT:" + json.dumps(event, separators=(",", ":"), sort_keys=True)
+    return "EVENT:" + json.dumps(
+        event,
+        separators=(",", ":"),
+        sort_keys=True,
+        default=str,
+    )
 
 
 def event_to_tool_result(event: Dict[str, Any]) -> Dict[str, Any]:
