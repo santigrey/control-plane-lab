@@ -1,6 +1,7 @@
 import os
 import re
 import time
+import uuid
 import json
 from typing import Any, Dict, List, Optional
 
@@ -191,6 +192,8 @@ def ask(req: AskRequest) -> Dict[str, Any]:
     timings: Dict[str, float] = {}
     t0 = time.time()
 
+    run_id = str(uuid.uuid4())
+
     tool_used: Optional[str] = None
     tool_result: Optional[Dict[str, Any]] = None
 
@@ -204,7 +207,10 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             type="remember_phrase",
             source="orchestrator",
             data={"phrase": phrase},
+        
+            run_id=run_id,
         )
+
         mem_id = insert_memory(
             source="orchestrator",
             content=event_to_content(remember_event),
@@ -293,7 +299,10 @@ def ask(req: AskRequest) -> Dict[str, Any]:
                 type="tool_call",
                 source="orchestrator",
                 data={"tool": tool_used, "args": tool_args},
-            )
+            
+            run_id=run_id,
+        )
+
             insert_memory(
                 source="orchestrator",
                 content=event_to_content(tool_call_event),
@@ -307,7 +316,10 @@ def ask(req: AskRequest) -> Dict[str, Any]:
                 type="tool_result",
                 source=f"tool:{tool_used}",
                 data={"tool": tool_used, "result": tool_result},
-            )
+            
+            run_id=run_id,
+        )
+
             insert_memory(
                 source="orchestrator",
                 content=event_to_content(tool_result_event),
@@ -342,7 +354,10 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             "tool_used": tool_used,
             "response": response_text,
         },
-    )
+    
+            run_id=run_id,
+        )
+
     mem_id = insert_memory(
         source="orchestrator",
         content=event_to_content(response_event),
