@@ -1,17 +1,51 @@
 import os
 import re
 import time
+import json
 from typing import Any, Dict, List, Optional
 
 import requests
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from ai_operator.inference.ollama import ollama_embed, ollama_chat, get_ollama_url, get_embed_model, get_chat_model, get_expected_dim
-
+from ai_operator.tools.registry import default_registry
+from ai_operator.inference.ollama import (
+    ollama_embed,
+    ollama_chat,
+    get_ollama_url,
+    get_embed_model,
+    get_chat_model,
+    get_expected_dim,
+)
 from ai_operator.memory.db import insert_memory, search_memories, get_latest_phrase, db_ping
 
 app = FastAPI()
+TOOLS = default_registry()
+
+
+def parse_tool_call(text: str) -> Optional[Dict[str, Any]]:
+    """
+    Accepts a strict JSON object like:
+      {"tool":"ping","args":{"message":"hi"}}
+    Returns None if not a valid tool call.
+    """
+    try:
+        obj = json.loads((text or "").strip())
+    except Exception:
+        return None
+    if not isinstance(obj, dict):
+        return None
+
+    tool = obj.get("tool")
+    args = obj.get("args", {})
+    if not isinstance(tool, str) or not tool.strip():
+        return None
+    if args is None:
+        args = {}
+    if not isinstance(args, dict):
+        return None
+
+    return {"tool": tool.strip(), "args": args}
 
 
 class AskRequest(BaseModel):
@@ -42,14 +76,6 @@ def env_float(name: str, default: str) -> float:
     return float(env(name, default).strip())
 
 
-
-
-
-
-
-
-
-
 def get_top_k() -> int:
     return env_int("TOP_K", "5")
 
@@ -74,7 +100,9 @@ def get_system_prompt() -> str:
 
 
 # ---- intent detection ----
-_RECALL_RX = re.compile(r"^\s*what\s+exact\s+phrase\s+did\s+i\s+ask\s+you\s+to\s+remember\b", re.I)
+_RECALL_RX = re.compile(
+    r"^\s*what\s+exact\s+phrase\s+did\s+i\s+ask\s+you\s+to\s+remember\b", re.I
+)
 _REMEMBER_RX = re.compile(r"^\s*remember\s+this\s+exact\s+phrase\s*:\s*(.+)\s*$", re.I)
 
 
@@ -92,7 +120,6 @@ def classify_mode(prompt: str) -> str:
 def extract_phrase(prompt: str) -> str:
     m = _REMEMBER_RX.match((prompt or "").strip())
     return (m.group(1) or "").strip() if m else ""
-
 
 
 def format_retrieved_for_injection(retrieved: List[Dict[str, Any]]) -> str:
@@ -168,6 +195,10 @@ def ask(req: AskRequest) -> Dict[str, Any]:
     timings: Dict[str, float] = {}
     t0 = time.time()
 
+    # Tool fields (always present in response)
+    tool_used: Optional[str] = None
+    tool_result: Optional[Dict[str, Any]] = None
+
     # --- remember/recall are deterministic and do NOT touch Ollama ---
     if mode == "remember":
         phrase = extract_phrase(user_prompt)
@@ -178,7 +209,7 @@ def ask(req: AskRequest) -> Dict[str, Any]:
         mem_id = insert_memory(
             source="orchestrator",
             content=f"PHRASE: {phrase}",
-            embedding=None,                 # no embedding needed
+            embedding=None,  # no embedding needed
             embedding_model=EMBED_MODEL,
             tool=None,
             tool_result={"mode": "remember"},
@@ -191,6 +222,8 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             "response": phrase,
             "memory_id": mem_id,
             "retrieved": [],
+            "tool_used": tool_used,
+            "tool_result": tool_result,
             "timings": {**timings, "embed_s": 0.0, "retrieve_s": 0.0, "generate_s": 0.0},
             "config": {"mode": mode, "expected_dim": EXPECTED_DIM},
         }
@@ -204,9 +237,17 @@ def ask(req: AskRequest) -> Dict[str, Any]:
         return {
             "model": CHAT_MODEL,
             "response": phrase,
-            "memory_id": None,   # DO NOT persist recall
+            "memory_id": None,  # DO NOT persist recall
             "retrieved": [],
-            "timings": {**timings, "embed_s": 0.0, "retrieve_s": 0.0, "generate_s": 0.0, "db_s": 0.0},
+            "tool_used": tool_used,
+            "tool_result": tool_result,
+            "timings": {
+                **timings,
+                "embed_s": 0.0,
+                "retrieve_s": 0.0,
+                "generate_s": 0.0,
+                "db_s": 0.0,
+            },
             "config": {"mode": mode, "expected_dim": EXPECTED_DIM},
         }
 
@@ -239,10 +280,52 @@ def ask(req: AskRequest) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Generation failed: {e}")
 
-    # persist chat
+    # --- Optional single-step tool call (strict JSON) ---
+    if INCLUDE_TOOLS:
+        tc = parse_tool_call(response_text)
+        if tc:
+            tool_used = tc["tool"]
+            tool_args = tc["args"]
+
+            # Run tool with registry (schema validated)
+            try:
+                tool_result = TOOLS.run(tool_used, tool_args)
+            except Exception as e:
+                tool_result = {"ok": False, "tool": tool_used, "error": str(e)}
+
+            # Persist tool execution as its own memory row (no embedding required)
+            insert_memory(
+                source="orchestrator",
+                content=f"TOOL_CALL: {tool_used} args={tool_args}\nTOOL_RESULT: {tool_result}",
+                embedding=None,
+                embedding_model=EMBED_MODEL,
+                tool=tool_used,
+                tool_result=tool_result,
+            )
+
+            # One more model call to produce final answer using tool output
+            followup_prompt = (
+                f"{user_prompt}\n\n"
+                f"TOOL_USED: {tool_used}\n"
+                f"TOOL_RESULT: {tool_result}\n\n"
+                "Now respond to the user with the final answer."
+            )
+            try:
+                t = time.time()
+                response_text = ollama_chat(SYSTEM_PROMPT, followup_prompt, injected_text)
+                timings["generate_s_2"] = round(time.time() - t, 4)
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Generation (post-tool) failed: {e}")
+
+    # persist chat summary (prompt + retrieved + final response)
     mem_id = insert_memory(
         source="orchestrator",
-        content=f"PROMPT: {user_prompt}\nRETRIEVED_TOPK: {len(retrieved)}\nRESPONSE: {response_text}",
+        content=(
+            f"PROMPT: {user_prompt}\n"
+            f"RETRIEVED_TOPK: {len(retrieved)}\n"
+            f"TOOL_USED: {tool_used}\n"
+            f"RESPONSE: {response_text}"
+        ),
         embedding=query_emb,
         embedding_model=EMBED_MODEL,
         tool="retrieval_injection",
@@ -254,6 +337,7 @@ def ask(req: AskRequest) -> Dict[str, Any]:
             "chat_model": CHAT_MODEL,
             "embed_model": EMBED_MODEL,
             "retrieved_ids": [m.get("id") for m in retrieved if m.get("id")],
+            "tool_used": tool_used,
         },
     )
 
@@ -265,6 +349,8 @@ def ask(req: AskRequest) -> Dict[str, Any]:
         "response": response_text,
         "memory_id": mem_id,
         "retrieved": retrieved,
+        "tool_used": tool_used,
+        "tool_result": tool_result,
         "timings": timings,
         "config": {"mode": "chat", "expected_dim": EXPECTED_DIM},
     }
