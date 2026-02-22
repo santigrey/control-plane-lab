@@ -238,3 +238,81 @@ def run_patch_apply_task(task_id: str, payload: dict) -> dict:
     """Runner entrypoint for tasks.type='patch.apply'"""
     # Expect payload keys: repo_path, patch_path, require_clean, check_only, name, purpose...
     return apply_patch(payload)
+
+# --- runner entrypoint: patch.apply ---
+
+from __future__ import annotations
+
+import inspect
+from typing import Any, Dict
+
+
+def run_patch_apply_task(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Runner entrypoint for tasks.type='patch.apply'
+
+    Expected payload keys (from your enqueue):
+      - repo_path (str)
+      - patch_path (str)
+      - require_clean (bool)
+      - check_only (bool)
+      - name (str) optional
+      - purpose (str) optional
+    """
+
+    repo_path = payload.get("repo_path")
+    patch_path = payload.get("patch_path")
+    require_clean = bool(payload.get("require_clean", True))
+    check_only = bool(payload.get("check_only", False))
+
+    if not repo_path or not isinstance(repo_path, str):
+        raise ValueError("patch.apply payload.repo_path required (string)")
+    if not patch_path or not isinstance(patch_path, str):
+        raise ValueError("patch.apply payload.patch_path required (string)")
+
+    # Your module should already implement apply_patch(...) because patch.apply succeeded earlier.
+    if "apply_patch" not in globals():
+        raise RuntimeError("patch_apply.py must define apply_patch(...)")
+
+    fn = globals()["apply_patch"]
+    sig = inspect.signature(fn)
+
+    # Build kwargs that might match your apply_patch signature
+    kwargs = {}
+    for k in ("repo_path", "patch_path", "require_clean", "check_only", "name", "purpose"):
+        if k in sig.parameters and k in payload:
+            kwargs[k] = payload[k]
+
+    # Common signatures we support:
+    #   apply_patch(repo_path, patch_path, require_clean=True, check_only=False, ...)
+    #   apply_patch(repo_path=..., patch_path=..., ...)
+    #   apply_patch(payload)   (older style)
+    try:
+        # If it clearly wants (repo_path, patch_path) positionally, do that.
+        params = list(sig.parameters.values())
+        wants_positional = (
+            len(params) >= 2
+            and params[0].kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            and params[1].kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            and params[0].name in ("repo_path", "repo")
+            and params[1].name in ("patch_path", "patch")
+        )
+        if wants_positional:
+            # Fill remaining as kwargs if present
+            extra = {k: v for k, v in kwargs.items() if k not in ("repo_path", "patch_path")}
+            return fn(repo_path, patch_path, **extra)
+
+        # Otherwise try kwargs call
+        if "repo_path" in kwargs and "patch_path" in kwargs:
+            return fn(**kwargs)
+
+        # Fall back to payload-style if signature suggests 1 param
+        if len(sig.parameters) == 1:
+            return fn(payload)
+
+        # If we got here, we can't safely call it
+        raise TypeError(f"Unsupported apply_patch signature: {sig}")
+
+    except TypeError as e:
+        # Raise with clearer context
+        raise TypeError(f"apply_patch call failed: {e} (signature={sig})")
