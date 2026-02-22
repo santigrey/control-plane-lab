@@ -241,7 +241,6 @@ def run_patch_apply_task(task_id: str, payload: dict) -> dict:
 
 # --- runner entrypoint: patch.apply ---
 
-from __future__ import annotations
 
 import inspect
 from typing import Any, Dict
