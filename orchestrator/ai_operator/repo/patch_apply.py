@@ -8,6 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional
 
+import psycopg
+
+from ai_operator.memory.db import get_db_url
+
 
 def utc_ts_compact() -> str:
     # 20260221T225059Z
@@ -57,6 +61,106 @@ def ensure_repo_clean(repo_path: str) -> str:
     if cp.returncode != 0:
         raise RuntimeError(f"git status failed: {cp.stderr.strip()}")
     return out
+
+
+def get_repo_head(repo_path: str) -> str:
+    cp = run(["git", "rev-parse", "HEAD"], cwd=repo_path, timeout_s=30)
+    if cp.returncode != 0:
+        raise RuntimeError(f"git rev-parse HEAD failed: {(cp.stderr or '').strip()}")
+    return (cp.stdout or "").strip()
+
+
+def insert_patch_apply_marker(
+    *,
+    task_id: str,
+    patch_sha256: str,
+    repo_path: str,
+    repo_head_before: str,
+) -> Dict[str, Any]:
+    """
+    Returns:
+      {"action": "proceed"} OR {"action": "idempotent", "reason": "..."}
+    Rules:
+      - Same task_id:
+          - if status == 'applied' => idempotent
+          - else => allow retry (set status='applying')
+      - Different task_id but same (repo_path, patch_sha256):
+          - idempotent (already applied elsewhere)
+    """
+    db_url = get_db_url()
+
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            # 1) If this task_id exists, decide based on its status
+            cur.execute(
+                """
+                SELECT status
+                FROM public.patch_applies
+                WHERE task_id = %(task_id)s::uuid
+                """,
+                {"task_id": task_id},
+            )
+            row = cur.fetchone()
+            if row:
+                status = row[0]
+                if status == "applied":
+                    conn.commit()
+                    return {"action": "idempotent", "reason": "already applied for task_id"}
+                # failed/applying => allow retry; set back to applying
+                cur.execute(
+                    """
+                    UPDATE public.patch_applies
+                    SET status='applying',
+                        repo_head_before=%(repo_head_before)s
+                    WHERE task_id=%(task_id)s::uuid
+                    """,
+                    {"task_id": task_id, "repo_head_before": repo_head_before},
+                )
+                conn.commit()
+                return {"action": "proceed"}
+
+            # 2) Try insert new row; dedupe on (repo_path, patch_sha256)
+            cur.execute(
+                """
+                INSERT INTO public.patch_applies
+                    (task_id, patch_sha256, repo_path, repo_head_before, status)
+                VALUES
+                    (%(task_id)s::uuid, %(patch_sha256)s, %(repo_path)s, %(repo_head_before)s, 'applying')
+                ON CONFLICT (repo_path, patch_sha256) DO NOTHING
+                """,
+                {
+                    "task_id": task_id,
+                    "patch_sha256": patch_sha256,
+                    "repo_path": repo_path,
+                    "repo_head_before": repo_head_before,
+                },
+            )
+            inserted = cur.rowcount == 1
+        conn.commit()
+
+    if not inserted:
+        return {"action": "idempotent", "reason": "patch already applied for repo_path+patch_sha256"}
+    return {"action": "proceed"}
+
+
+def update_patch_apply_marker(*, task_id: str, status: str, repo_head_after: Optional[str] = None) -> None:
+    sql = """
+    UPDATE public.patch_applies
+    SET status = %(status)s,
+        repo_head_after = COALESCE(%(repo_head_after)s, repo_head_after)
+    WHERE task_id = %(task_id)s::uuid
+    """
+    with psycopg.connect(get_db_url()) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                sql,
+                {
+                    "task_id": task_id,
+                    "status": status,
+                    "repo_head_after": repo_head_after,
+                },
+            )
+        conn.commit()
 
 
 def apply_patch(
@@ -234,19 +338,7 @@ def write_apply_report(
     }
     return report_meta
 
-def run_patch_apply_task(task_id: str, payload: dict) -> dict:
-    """Runner entrypoint for tasks.type='patch.apply'"""
-    # Expect payload keys: repo_path, patch_path, require_clean, check_only, name, purpose...
-    return apply_patch(payload)
-
-# --- runner entrypoint: patch.apply ---
-
-
-import inspect
-from typing import Any, Dict
-
-
-def run_patch_apply_task(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def run_patch_apply_task(task_id: str, payload: Dict[str, Any]) -> Any:
     """
     Runner entrypoint for tasks.type='patch.apply'
 
@@ -269,49 +361,35 @@ def run_patch_apply_task(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any
     if not patch_path or not isinstance(patch_path, str):
         raise ValueError("patch.apply payload.patch_path required (string)")
 
-    # Your module should already implement apply_patch(...) because patch.apply succeeded earlier.
-    if "apply_patch" not in globals():
-        raise RuntimeError("patch_apply.py must define apply_patch(...)")
+    repo_path = os.path.abspath(repo_path)
+    patch_path = os.path.abspath(patch_path)
+    patch_sha256 = sha256_file(Path(patch_path))
+    repo_head_before = get_repo_head(repo_path)
 
-    fn = globals()["apply_patch"]
-    sig = inspect.signature(fn)
+    marker = insert_patch_apply_marker(
+        task_id=task_id,
+        patch_sha256=patch_sha256,
+        repo_path=repo_path,
+        repo_head_before=repo_head_before,
+    )
+    if marker["action"] == "idempotent":
+        return {"ok": True, "idempotent": True, "reason": marker["reason"]}
 
-    # Build kwargs that might match your apply_patch signature
-    kwargs = {}
-    for k in ("repo_path", "patch_path", "require_clean", "check_only", "name", "purpose"):
-        if k in sig.parameters and k in payload:
-            kwargs[k] = payload[k]
-
-    # Common signatures we support:
-    #   apply_patch(repo_path, patch_path, require_clean=True, check_only=False, ...)
-    #   apply_patch(repo_path=..., patch_path=..., ...)
-    #   apply_patch(payload)   (older style)
     try:
-        # If it clearly wants (repo_path, patch_path) positionally, do that.
-        params = list(sig.parameters.values())
-        wants_positional = (
-            len(params) >= 2
-            and params[0].kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            and params[1].kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.POSITIONAL_OR_KEYWORD)
-            and params[0].name in ("repo_path", "repo")
-            and params[1].name in ("patch_path", "patch")
+        result = apply_patch(
+            repo_path=repo_path,
+            patch_path=patch_path,
+            require_clean=require_clean,
+            check_only=check_only,
         )
-        if wants_positional:
-            # Fill remaining as kwargs if present
-            extra = {k: v for k, v in kwargs.items() if k not in ("repo_path", "patch_path")}
-            return fn(repo_path, patch_path, **extra)
+    except Exception:
+        update_patch_apply_marker(task_id=task_id, status="failed")
+        raise
 
-        # Otherwise try kwargs call
-        if "repo_path" in kwargs and "patch_path" in kwargs:
-            return fn(**kwargs)
+    if result.ok and result.applied:
+        repo_head_after = get_repo_head(repo_path)
+        update_patch_apply_marker(task_id=task_id, status="applied", repo_head_after=repo_head_after)
+    elif not result.ok:
+        update_patch_apply_marker(task_id=task_id, status="failed")
 
-        # Fall back to payload-style if signature suggests 1 param
-        if len(sig.parameters) == 1:
-            return fn(payload)
-
-        # If we got here, we can't safely call it
-        raise TypeError(f"Unsupported apply_patch signature: {sig}")
-
-    except TypeError as e:
-        # Raise with clearer context
-        raise TypeError(f"apply_patch call failed: {e} (signature={sig})")
+    return result
