@@ -2,131 +2,118 @@
 set -euo pipefail
 
 REPO="/home/jes/control-plane/orchestrator"
-DB_CONTAINER="control-postgres"
+PY="$REPO/.venv/bin/python"
+export PYTHONPATH="$REPO"
+
+echo "[gate6] repo=$REPO"
+echo "[gate6] python=$PY"
+echo "[gate6] PYTHONPATH=$PYTHONPATH"
 
 cd "$REPO"
 
-echo "[gate6] repo=$REPO"
+# compile quick health check
+$PY -m py_compile ai_operator/repo/patch_apply.py
+$PY -m py_compile ai_operator/worker/runner.py
+echo "[gate6] py_compile OK"
 
-# --- load env (DATABASE_URL etc.) ---
+# REQUIRE CLEAN (no untracked, no modified)
+if [[ -n "$(git status --porcelain)" ]]; then
+  echo "[gate6] ERROR: repo not clean (require_clean=true)."
+  git status --porcelain
+  exit 1
+fi
+
+# restart worker (needs sudo)
+sudo systemctl restart aiop-worker
+echo "[gate6] worker restarted"
+
+# load env so dev enqueuers work
 set -a
 source "$REPO/.env"
 set +a
 
-# --- python env ---
-PY="$REPO/.venv/bin/python"
-export PYTHONPATH="$REPO"
-export PYTHONUNBUFFERED=1
-
-echo "[gate6] python=$PY"
-echo "[gate6] PYTHONPATH=$PYTHONPATH"
-
-# --- sanity compile ---
-$PY -m py_compile ai_operator/worker/runner.py
-$PY -m py_compile ai_operator/repo/patch_apply.py
-echo "[gate6] py_compile OK"
-
-# --- restart worker ---
-sudo systemctl restart aiop-worker
-echo "[gate6] worker restarted"
-
-# --- enforce clean repo BEFORE patch.apply ---
-dirty="$(git status --porcelain || true)"
-if [[ -n "$dirty" ]]; then
-  echo "[gate6] ERROR: repo not clean (require_clean=true). Fix with commit/stash or ignore rules."
-  echo "$dirty"
-  exit 2
-fi
-echo "[gate6] repo clean OK"
-
-# --- enqueue demo tool tasks (ping -> sleep -> ping) ---
 echo "[gate6] enqueue tool demo tasks..."
 $PY ai_operator/dev/enqueue_demo.py
 
-# --- enqueue artifact demo tasks ---
-if [[ -f "$REPO/ai_operator/dev/enqueue_artifact_demo.py" ]]; then
-  echo "[gate6] enqueue artifact demo tasks..."
-  $PY ai_operator/dev/enqueue_artifact_demo.py
-else
-  echo "[gate6] WARN: ai_operator/dev/enqueue_artifact_demo.py not found, skipping"
-fi
+echo "[gate6] enqueue artifact demo tasks..."
+$PY ai_operator/dev/enqueue_artifact_demo.py
 
-# --- create patch OUTSIDE repo to keep git clean ---
-TS="$(date -u +%Y%m%dT%H%M%SZ)"
-PATCH_PATH="/tmp/${TS}_gate6_demo.patch"
+# create a demo patch in *repo-root* artifacts/patches
+PATCH_PATH="$($PY - <<'PY'
+import os
+from datetime import datetime, timezone
 
-cat > "$PATCH_PATH" <<'PATCH'
-diff --git a/artifacts/gate6_demo.txt b/artifacts/gate6_demo.txt
+repo = "/home/jes/control-plane/orchestrator"
+ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+out_dir = os.path.join(repo, "artifacts", "patches")
+os.makedirs(out_dir, exist_ok=True)
+
+path = os.path.join(out_dir, f"{ts}_gate6_demo.patch")
+patch = """diff --git a/artifacts/gate6_demo.txt b/artifacts/gate6_demo.txt
 new file mode 100644
 index 0000000..e69de29
 --- /dev/null
 +++ b/artifacts/gate6_demo.txt
 @@ -0,0 +1 @@
 +gate6_demo
-PATCH
+"""
+with open(path, "w", encoding="utf-8") as f:
+    f.write(patch)
 
-echo "[gate6] PATCH_PATH=$PATCH_PATH (outside repo)"
+print(path)
+PY
+)"
+echo "[gate6] PATCH_PATH=$PATCH_PATH"
 
-# --- enqueue patch.apply ---
+# enqueue patch.apply task
 TASK_ID="$(
-  docker exec -i "$DB_CONTAINER" psql -U admin -d controlplane -Atq -c "
-    INSERT INTO tasks (type, payload, priority, max_attempts)
-    VALUES (
-      'patch.apply',
-      jsonb_build_object(
-        'repo_path', '$REPO',
-        'patch_path', '$PATCH_PATH',
-        'name', 'gate6_demo',
-        'purpose', 'phase2_gate6_patch_apply',
-        'require_clean', true,
-        'check_only', false
-      ),
-      10,
-      3
-    )
-    RETURNING id;
-  " | head -n 1 | tr -d '\r'
+  docker exec -i control-postgres psql -U admin -d controlplane -Atq -c \
+  "INSERT INTO tasks (type, payload, priority, max_attempts)
+   VALUES (
+     'patch.apply',
+     jsonb_build_object(
+       'repo_path','$REPO',
+       'patch_path','$PATCH_PATH',
+       'name','gate6_demo',
+       'purpose','phase2_gate6_patch_apply',
+       'require_clean', true,
+       'check_only', false
+     ),
+     10,
+     3
+   )
+   RETURNING id;" | head -n 1 | tr -d '\r'
 )"
 echo "[gate6] patch.apply TASK_ID=$TASK_ID"
 
-# --- wait up to ~25s ---
 echo "[gate6] waiting for patch.apply to finish..."
-for i in $(seq 1 25); do
-  row="$(docker exec -i "$DB_CONTAINER" psql -U admin -d controlplane -Atq -c \
+for i in $(seq 1 12); do
+  row="$(docker exec -i control-postgres psql -U admin -d controlplane -Atq -c \
     "SELECT status||'|'||attempts||'|'||coalesce(left(last_error,120),'') FROM tasks WHERE id='${TASK_ID}'::uuid;" \
-    | tr -d '\r' || true)"
-
+    | head -n 1 | tr -d '\r')"
   status="${row%%|*}"
   rest="${row#*|}"
   attempts="${rest%%|*}"
   err="${rest#*|}"
-
-  echo "[gate6] poll $i status=$status attempts=$attempts err=${err:-<none>}"
-
-  if [[ "$status" == "succeeded" || "$status" == "failed" ]]; then
-    break
-  fi
+  [[ -z "$err" ]] && err="<none>"
+  echo "[gate6] poll $i status=$status attempts=$attempts err=$err"
+  [[ "$status" == "succeeded" || "$status" == "failed" ]] && break
   sleep 1
 done
 
 echo
 echo "==================== GATE6 VERIFY ===================="
-docker exec -i "$DB_CONTAINER" psql -U admin -d controlplane -c \
-"SELECT id, type, status, attempts, left(coalesce(last_error,''),160) AS err160
- FROM tasks
- WHERE id='${TASK_ID}'::uuid;"
+docker exec -i control-postgres psql -U admin -d controlplane < "$REPO/ai_operator/dev/gate6_verify.sql" | tail -n 80 || true
 
 echo
 echo "[gate6] artifacts/docs:"
-ls -lt "$REPO/artifacts/docs" 2>/dev/null | head -n 10 || true
-
+ls -lt "$REPO/artifacts/docs" | head -n 10 || true
 echo
 echo "[gate6] artifacts/patches:"
-ls -lt "$REPO/artifacts/patches" 2>/dev/null | head -n 10 || true
+ls -lt "$REPO/artifacts/patches" | head -n 10 || true
 
 echo
 echo "[gate6] git status (should still be clean):"
 git status --porcelain || true
-
 echo "======================================================"
 echo "[gate6] done."
