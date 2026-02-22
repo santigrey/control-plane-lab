@@ -1,80 +1,96 @@
+cd /home/jes/control-plane/orchestrator
+
+cat > ai_operator/worker/runner.py <<'PY'
+#!/usr/bin/env python3
 from __future__ import annotations
 
+import json
 import logging
 import os
+import socket
 import time
-from dataclasses import dataclass
+from dataclasses import asdict, is_dataclass
 from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
-from ai_operator.tools.registry import default_registry
-from ai_operator.memory.tasks import (
-    claim_task,
-    complete_task_success,
-    complete_task_failure,
-)
-from ai_operator.memory.events import write_event
+import psycopg
 
-# New: handlers for non-tool task types
-from ai_operator.worker.artifacts import run_repo_change_task, run_doc_build_task
+from ai_operator.memory.db import get_db_url
+from ai_operator.memory.tasks import (
+    claim_next_task,
+    mark_task_failed,
+    mark_task_succeeded,
+)
+from ai_operator.memory.writer import write_memory_event
 from ai_operator.repo.patch_apply import run_patch_apply_task
+from ai_operator.worker.artifacts import run_doc_build_task, run_repo_change_task
+from ai_operator.tools.registry import run_tool_call
+
 
 LOG = logging.getLogger("aiop.worker")
-TOOLS = default_registry()
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
 
 
-def _setup_logging() -> None:
-    # journald-friendly
-    lvl = os.getenv("AIOP_LOG_LEVEL", "INFO").upper()
-    logging.basicConfig(
-        level=getattr(logging, lvl, logging.INFO),
-        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-    )
-
-
-def env_int(name: str, default: str) -> int:
-    v = os.getenv(name, default)
-    return int(str(v).strip())
-
-
-def utc_iso() -> str:
+def _utc_now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
-def now_ms() -> int:
-    return int(time.time() * 1000)
+def _normalize_result(obj: Any) -> Dict[str, Any]:
+    """
+    Normalize a task handler return value into a dict so runner can safely merge it.
+    Supports:
+      - dict
+      - dataclass instances
+      - pydantic v1 (.dict) / v2 (.model_dump)
+      - objects with __dict__
+      - scalar/other values (wrapped)
+    """
+    if obj is None:
+        return {}
 
+    if isinstance(obj, dict):
+        return obj
 
-def compute_backoff_s(attempts: int) -> int:
-    # 1s, 2s, 4s ... capped at 30s
-    base = 2 ** max(0, attempts - 1)
-    return int(min(30, base))
+    if is_dataclass(obj):
+        try:
+            return asdict(obj)
+        except Exception:
+            return {"value": repr(obj)}
 
+    # pydantic v2
+    if hasattr(obj, "model_dump") and callable(getattr(obj, "model_dump")):
+        try:
+            return obj.model_dump()
+        except Exception:
+            return {"value": repr(obj)}
 
-@dataclass
-class WorkerConfig:
-    poll_s: int = 1
-    lock_s: int = 60
+    # pydantic v1
+    if hasattr(obj, "dict") and callable(getattr(obj, "dict")):
+        try:
+            return obj.dict()
+        except Exception:
+            return {"value": repr(obj)}
 
+    # plain object
+    if hasattr(obj, "__dict__"):
+        try:
+            return dict(obj.__dict__)
+        except Exception:
+            return {"value": repr(obj)}
 
-def _run_tool_call(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    tool = payload.get("tool")
-    args = payload.get("args") or {}
-
-    if not isinstance(tool, str) or not tool.strip():
-        raise ValueError("payload.tool must be a non-empty string")
-    if not isinstance(args, dict):
-        raise ValueError("payload.args must be an object")
-
-    tool_name = tool.strip()
-    result = TOOLS.run(tool_name, args)
-    return {"ok": True, "tool": tool_name, "result": result}
+    # fallback
+    return {"value": obj}
 
 
 def _dispatch_task(task_type: str, task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
-    # NOTE: these names match what you're enqueueing into tasks.type
+    """
+    Returns a dict-like payload to merge into the task result.
+    """
     if task_type == "tool.call":
-        return _run_tool_call(task_id, payload)
+        return run_tool_call(task_id=task_id, payload=payload)
 
     if task_type == "repo.change":
         return run_repo_change_task(task_id=task_id, payload=payload)
@@ -83,121 +99,150 @@ def _dispatch_task(task_type: str, task_id: str, payload: Dict[str, Any]) -> Dic
         return run_doc_build_task(task_id=task_id, payload=payload)
 
     if task_type == "patch.apply":
-        return run_patch_apply_task(task_id=task_id, payload=payload)
+        # NOTE: may return ApplyResult (dataclass/class) -> normalize later
+        return run_patch_apply_task(task_id=task_id, payload=payload)  # type: ignore[return-value]
 
     raise ValueError(f"unknown task type: {task_type}")
 
 
-def run_once(worker_id: str, cfg: WorkerConfig) -> bool:
-    task = claim_task(worker_id=worker_id, lock_s=cfg.lock_s)
-    if not task:
-        return False
+def main() -> None:
+    db_url = get_db_url()
 
-    task_id = str(task["id"])
-    task_type = str(task["type"])
-    attempts = int(task.get("attempts") or 0)
-    max_attempts = int(task.get("max_attempts") or 3)
-    payload = task.get("payload") or {}
-    run_id = task.get("run_id")
+    hostname = socket.gethostname()
+    pid = os.getpid()
+    worker_id = f"{hostname}:{pid}"
 
-    t0 = now_ms()
-    LOG.info("claimed id=%s type=%s attempts=%s/%s", task_id, task_type, attempts, max_attempts)
+    poll_s = int(os.environ.get("AIOP_POLL_S", "1"))
+    lock_s = int(os.environ.get("AIOP_LOCK_S", "60"))
 
-    # EVENT: task claimed
-    write_event(
-        source="worker",
-        envelope={
-            "type": "task.claimed",
-            "ts": utc_iso(),
-            "task_id": task_id,
-            "task_type": task_type,
-            "worker_id": worker_id,
-            "attempts": attempts,
-            "max_attempts": max_attempts,
-            "run_id": str(run_id) if run_id else None,
-            "payload": payload,
-        },
-    )
+    LOG.info("starting wid=%s poll_s=%s lock_s=%s", worker_id, poll_s, lock_s)
 
-    try:
-        # EVENT: task begin (generic)
-        write_event(
-            source="worker",
-            envelope={
-                "type": task_type,
-                "ts": utc_iso(),
-                "task_id": task_id,
-                "run_id": str(run_id) if run_id else None,
-                "data": payload,
-            },
-        )
+    with psycopg.connect(db_url) as conn:
+        conn.autocommit = True
 
-        result = _dispatch_task(task_type=task_type, task_id=task_id, payload=payload)
-        took_ms = now_ms() - t0
+        while True:
+            task = claim_next_task(conn, worker_id=worker_id, lock_s=lock_s)
 
-        complete_task_success(
-            task_id=task_id,
-            result={"ok": True, "kind": task_type, "took_ms": took_ms, **(result or {})},
-        )
+            if not task:
+                time.sleep(poll_s)
+                continue
 
-        # EVENT: success
-        write_event(
-            source="worker",
-            envelope={
-                "type": f"{task_type}.result",
-                "ts": utc_iso(),
-                "task_id": task_id,
-                "run_id": str(run_id) if run_id else None,
-                "data": {"ok": True, "took_ms": took_ms, "result": result},
-            },
-        )
+            task_id = str(task["id"])
+            task_type = str(task["type"])
+            attempts = int(task.get("attempts") or 0)
+            max_attempts = int(task.get("max_attempts") or 3)
 
-        LOG.info("succeeded id=%s kind=%s took_ms=%s", task_id, task_type, took_ms)
-        return True
+            payload_raw = task.get("payload") or {}
+            payload: Dict[str, Any] = payload_raw if isinstance(payload_raw, dict) else json.loads(payload_raw)
 
-    except Exception as e:
-        took_ms = now_ms() - t0
-        err = f"{type(e).__name__}: {e}"
+            LOG.info("claimed id=%s type=%s attempts=%s/%s", task_id, task_type, attempts, max_attempts)
 
-        retry_backoff_s = compute_backoff_s(max(1, attempts))
-        terminal = (attempts >= max_attempts)
+            write_memory_event(
+                conn,
+                source="worker",
+                tool="",
+                content=json.dumps(
+                    {
+                        "type": "task.claimed",
+                        "ts": _utc_now_iso(),
+                        "task_id": task_id,
+                        "task_type": task_type,
+                        "worker_id": worker_id,
+                        "attempts": attempts,
+                        "max_attempts": max_attempts,
+                        "run_id": None,
+                    }
+                ),
+            )
 
-        complete_task_failure(task_id=task_id, error=err, retry_backoff_s=retry_backoff_s)
+            start = time.time()
+            try:
+                # emit task start event
+                write_memory_event(
+                    conn,
+                    source="worker",
+                    tool="",
+                    content=json.dumps(
+                        {
+                            "type": task_type,
+                            "ts": _utc_now_iso(),
+                            "task_id": task_id,
+                            "run_id": None,
+                            "data": payload,
+                        }
+                    ),
+                )
 
-        # EVENT: failure
-        write_event(
-            source="worker",
-            envelope={
-                "type": "task.failed" if not terminal else "task.permanently_failed",
-                "ts": utc_iso(),
-                "task_id": task_id,
-                "run_id": str(run_id) if run_id else None,
-                "error": err,
-                "took_ms": took_ms,
-                "attempts": attempts,
-                "max_attempts": max_attempts,
-                "retry_backoff_s": retry_backoff_s,
-            },
-        )
+                raw_result = _dispatch_task(task_type=task_type, task_id=task_id, payload=payload)
+                took_ms = int((time.time() - start) * 1000)
 
-        LOG.error("failed id=%s err=%s terminal=%s", task_id, err, terminal)
-        return True
+                result_payload = _normalize_result(raw_result)
 
+                mark_task_succeeded(
+                    conn,
+                    task_id=task_id,
+                    result={
+                        "ok": True,
+                        "kind": task_type,
+                        "took_ms": took_ms,
+                        **result_payload,
+                    },
+                )
 
-def run_forever() -> None:
-    _setup_logging()
-    worker_id = f"{os.uname().nodename}:{os.getpid()}"
-    cfg = WorkerConfig(
-        poll_s=env_int("AIOP_WORKER_POLL_S", "1"),
-        lock_s=env_int("AIOP_WORKER_LOCK_S", "60"),
-    )
-    LOG.info("starting wid=%s poll_s=%s lock_s=%s", worker_id, cfg.poll_s, cfg.lock_s)
+                write_memory_event(
+                    conn,
+                    source="worker",
+                    tool="",
+                    content=json.dumps(
+                        {
+                            "type": f"{task_type}.result",
+                            "ts": _utc_now_iso(),
+                            "task_id": task_id,
+                            "run_id": None,
+                            "data": {
+                                "ok": True,
+                                "took_ms": took_ms,
+                                "result": {
+                                    "ok": True,
+                                    "kind": task_type,
+                                    "took_ms": took_ms,
+                                    **result_payload,
+                                },
+                            },
+                        }
+                    ),
+                )
 
-    while True:
-        did = run_once(worker_id, cfg)
-        if not did:
-            time.sleep(cfg.poll_s)
+                LOG.info("succeeded id=%s kind=%s took_ms=%s", task_id, task_type, took_ms)
+
+            except Exception as e:
+                took_ms = int((time.time() - start) * 1000)
+                err = f"{type(e).__name__}: {e}"
+                terminal = attempts >= max_attempts
+
+                mark_task_failed(conn, task_id=task_id, error=err, terminal=terminal)
+
+                write_memory_event(
+                    conn,
+                    source="worker",
+                    tool="",
+                    content=json.dumps(
+                        {
+                            "type": "task.failed" if not terminal else "task.permanently_failed",
+                            "ts": _utc_now_iso(),
+                            "task_id": task_id,
+                            "run_id": None,
+                            "error": err,
+                            "took_ms": took_ms,
+                            "attempts": attempts,
+                            "max_attempts": max_attempts,
+                        }
+                    ),
+                )
+
+                LOG.error("failed id=%s err=%s terminal=%s", task_id, err, terminal)
 
 
 if __name__ == "__main__":
-    run_forever()
+    main()
+PY
