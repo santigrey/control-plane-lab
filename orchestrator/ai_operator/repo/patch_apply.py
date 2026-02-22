@@ -233,3 +233,8 @@ def write_apply_report(
         },
     }
     return report_meta
+
+def run_patch_apply_task(task_id: str, payload: dict) -> dict:
+    """Runner entrypoint for tasks.type='patch.apply'"""
+    # Expect payload keys: repo_path, patch_path, require_clean, check_only, name, purpose...
+    return apply_patch(payload)

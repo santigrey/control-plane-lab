@@ -1,41 +1,40 @@
 from __future__ import annotations
 
-import json
 import logging
 import os
 import time
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from ai_operator.tools.registry import default_registry
-from ai_operator.memory.tasks import claim_task, complete_task_failure, complete_task_success
+from ai_operator.memory.tasks import (
+    claim_task,
+    complete_task_success,
+    complete_task_failure,
+)
 from ai_operator.memory.events import write_event
-from ai_operator.repo.patch_apply import apply_patch, write_apply_report
 
-TOOLS = default_registry()
+# New: handlers for non-tool task types
+from ai_operator.worker.artifacts import run_repo_change_task, run_doc_build_task
+from ai_operator.repo.patch_apply import run_patch_apply_task
 
 LOG = logging.getLogger("aiop.worker")
+TOOLS = default_registry()
 
 
-def setup_logging() -> None:
-    if LOG.handlers:
-        return
-    LOG.setLevel(logging.INFO)
-    h = logging.StreamHandler()
-    fmt = logging.Formatter("%(asctime)s %(levelname)s [%(name)s] %(message)s")
-    h.setFormatter(fmt)
-    LOG.addHandler(h)
+def _setup_logging() -> None:
+    # journald-friendly
+    lvl = os.getenv("AIOP_LOG_LEVEL", "INFO").upper()
+    logging.basicConfig(
+        level=getattr(logging, lvl, logging.INFO),
+        format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+    )
 
 
 def env_int(name: str, default: str) -> int:
     v = os.getenv(name, default)
     return int(str(v).strip())
-
-
-def env_str(name: str, default: str = "") -> str:
-    v = os.getenv(name, default)
-    return str(v).strip()
 
 
 def utc_iso() -> str:
@@ -47,6 +46,7 @@ def now_ms() -> int:
 
 
 def compute_backoff_s(attempts: int) -> int:
+    # 1s, 2s, 4s ... capped at 30s
     base = 2 ** max(0, attempts - 1)
     return int(min(30, base))
 
@@ -55,17 +55,12 @@ def compute_backoff_s(attempts: int) -> int:
 class WorkerConfig:
     poll_s: int = 1
     lock_s: int = 60
-    default_repo_path: str = "/home/jes/control-plane/orchestrator"
 
 
-def _event(source: str, envelope: Dict[str, Any], tool: str | None = None, tool_result: Dict[str, Any] | None = None) -> None:
-    # Persist to memory table (event-sourcing trail)
-    write_event(source=source, envelope=envelope, tool=tool, tool_result=tool_result)
-
-
-def handle_tool_call(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+def _run_tool_call(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     tool = payload.get("tool")
     args = payload.get("args") or {}
+
     if not isinstance(tool, str) or not tool.strip():
         raise ValueError("payload.tool must be a non-empty string")
     if not isinstance(args, dict):
@@ -76,60 +71,21 @@ def handle_tool_call(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     return {"ok": True, "tool": tool_name, "result": result}
 
 
-def handle_patch_apply(cfg: WorkerConfig, payload: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    payload fields:
-      - repo_path: optional (defaults to cfg.default_repo_path)
-      - patch_path: required (path to .patch file)
-      - name: optional (used for report file name)
-      - purpose: optional (portfolio metadata)
-      - require_clean: optional bool (default True)
-      - check_only: optional bool (default False)
-    """
-    repo_path = str(payload.get("repo_path") or cfg.default_repo_path)
-    patch_path = payload.get("patch_path")
-    if not isinstance(patch_path, str) or not patch_path.strip():
-        raise ValueError("payload.patch_path must be a non-empty string")
+def _dispatch_task(task_type: str, task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    # NOTE: these names match what you're enqueueing into tasks.type
+    if task_type == "tool.call":
+        return _run_tool_call(task_id, payload)
 
-    name = str(payload.get("name") or "patch_apply")
-    purpose = str(payload.get("purpose") or "apply_patch")
-    require_clean = bool(payload.get("require_clean", True))
-    check_only = bool(payload.get("check_only", False))
+    if task_type == "repo.change":
+        return run_repo_change_task(task_id=task_id, payload=payload)
 
-    ar = apply_patch(
-        repo_path=repo_path,
-        patch_path=patch_path,
-        require_clean=require_clean,
-        check_only=check_only,
-    )
+    if task_type == "doc.build":
+        return run_doc_build_task(task_id=task_id, payload=payload)
 
-    if not ar.ok:
-        # Return a structured failure detail; runner will wrap into task failure
-        raise RuntimeError(
-            "patch apply failed\n"
-            f"check_stderr={ar.check_stderr}\n"
-            f"apply_stderr={ar.apply_stderr}"
-        )
+    if task_type == "patch.apply":
+        return run_patch_apply_task(task_id=task_id, payload=payload)
 
-    report_meta = write_apply_report(
-        repo_path=repo_path,
-        name=name,
-        purpose=purpose,
-        patch_path=patch_path,
-        apply_result=ar,
-    )
-    ar.report_path = report_meta["meta"]["path"]
-
-    return {
-        "ok": True,
-        "kind": "patch.apply",
-        "repo_path": repo_path,
-        "patch_path": patch_path,
-        "checked": ar.checked,
-        "applied": ar.applied,
-        "diff_stat": ar.diff_stat,
-        "artifact": report_meta,
-    }
+    raise ValueError(f"unknown task type: {task_type}")
 
 
 def run_once(worker_id: str, cfg: WorkerConfig) -> bool:
@@ -144,11 +100,11 @@ def run_once(worker_id: str, cfg: WorkerConfig) -> bool:
     payload = task.get("payload") or {}
     run_id = task.get("run_id")
 
+    t0 = now_ms()
     LOG.info("claimed id=%s type=%s attempts=%s/%s", task_id, task_type, attempts, max_attempts)
 
-    t0 = now_ms()
-
-    _event(
+    # EVENT: task claimed
+    write_event(
         source="worker",
         envelope={
             "type": "task.claimed",
@@ -164,88 +120,55 @@ def run_once(worker_id: str, cfg: WorkerConfig) -> bool:
     )
 
     try:
-        if task_type == "tool.call":
-            _event(
-                source="worker",
-                envelope={
-                    "type": "tool_call",
-                    "ts": utc_iso(),
-                    "task_id": task_id,
-                    "run_id": str(run_id) if run_id else None,
-                    "data": {"tool": payload.get("tool"), "args": payload.get("args") or {}},
-                },
-                tool=str(payload.get("tool") or ""),
-            )
-            out = handle_tool_call(task_id, payload)
-            took_ms = now_ms() - t0
-            result = {"ok": True, "tool": out["tool"], "result": out["result"], "took_ms": took_ms}
+        # EVENT: task begin (generic)
+        write_event(
+            source="worker",
+            envelope={
+                "type": task_type,
+                "ts": utc_iso(),
+                "task_id": task_id,
+                "run_id": str(run_id) if run_id else None,
+                "data": payload,
+            },
+        )
 
-            complete_task_success(task_id=task_id, result=result)
+        result = _dispatch_task(task_type=task_type, task_id=task_id, payload=payload)
+        took_ms = now_ms() - t0
 
-            _event(
-                source="worker",
-                envelope={
-                    "type": "tool_result",
-                    "ts": utc_iso(),
-                    "task_id": task_id,
-                    "run_id": str(run_id) if run_id else None,
-                    "data": {"tool": out["tool"], "result": out["result"], "took_ms": took_ms},
-                },
-                tool=out["tool"],
-                tool_result={"tool": out["tool"], "result": out["result"], "took_ms": took_ms},
-            )
+        complete_task_success(
+            task_id=task_id,
+            result={"ok": True, "kind": task_type, "took_ms": took_ms, **(result or {})},
+        )
 
-            LOG.info("succeeded id=%s tool=%s took_ms=%s", task_id, out["tool"], took_ms)
-            return True
+        # EVENT: success
+        write_event(
+            source="worker",
+            envelope={
+                "type": f"{task_type}.result",
+                "ts": utc_iso(),
+                "task_id": task_id,
+                "run_id": str(run_id) if run_id else None,
+                "data": {"ok": True, "took_ms": took_ms, "result": result},
+            },
+        )
 
-        if task_type == "patch.apply":
-            _event(
-                source="worker",
-                envelope={
-                    "type": "patch.apply",
-                    "ts": utc_iso(),
-                    "task_id": task_id,
-                    "run_id": str(run_id) if run_id else None,
-                    "data": payload,
-                },
-            )
-
-            out = handle_patch_apply(cfg, payload)
-            took_ms = now_ms() - t0
-            result = {"ok": True, "kind": "patch.apply", "took_ms": took_ms, **out}
-
-            complete_task_success(task_id=task_id, result=result)
-
-            _event(
-                source="worker",
-                envelope={
-                    "type": "patch.apply.result",
-                    "ts": utc_iso(),
-                    "task_id": task_id,
-                    "run_id": str(run_id) if run_id else None,
-                    "data": {"ok": True, "took_ms": took_ms, "artifact": out.get("artifact")},
-                },
-            )
-
-            LOG.info("succeeded id=%s kind=patch.apply took_ms=%s", task_id, took_ms)
-            return True
-
-        raise ValueError(f"unknown task type: {task_type}")
+        LOG.info("succeeded id=%s kind=%s took_ms=%s", task_id, task_type, took_ms)
+        return True
 
     except Exception as e:
         took_ms = now_ms() - t0
         err = f"{type(e).__name__}: {e}"
 
         retry_backoff_s = compute_backoff_s(max(1, attempts))
+        terminal = (attempts >= max_attempts)
+
         complete_task_failure(task_id=task_id, error=err, retry_backoff_s=retry_backoff_s)
 
-        terminal = attempts >= max_attempts  # best-effort; DB function is source of truth
-        LOG.error("failed id=%s err=%s terminal=%s", task_id, err, terminal)
-
-        _event(
+        # EVENT: failure
+        write_event(
             source="worker",
             envelope={
-                "type": "task.failed",
+                "type": "task.failed" if not terminal else "task.permanently_failed",
                 "ts": utc_iso(),
                 "task_id": task_id,
                 "run_id": str(run_id) if run_id else None,
@@ -257,16 +180,16 @@ def run_once(worker_id: str, cfg: WorkerConfig) -> bool:
             },
         )
 
+        LOG.error("failed id=%s err=%s terminal=%s", task_id, err, terminal)
         return True
 
 
 def run_forever() -> None:
-    setup_logging()
+    _setup_logging()
     worker_id = f"{os.uname().nodename}:{os.getpid()}"
     cfg = WorkerConfig(
         poll_s=env_int("AIOP_WORKER_POLL_S", "1"),
         lock_s=env_int("AIOP_WORKER_LOCK_S", "60"),
-        default_repo_path=env_str("AIOP_REPO_PATH", "/home/jes/control-plane/orchestrator"),
     )
     LOG.info("starting wid=%s poll_s=%s lock_s=%s", worker_id, cfg.poll_s, cfg.lock_s)
 
