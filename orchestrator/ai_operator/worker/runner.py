@@ -2,7 +2,6 @@ cd /home/jes/control-plane/orchestrator
 
 cat > ai_operator/worker/runner.py <<'PY'
 #!/usr/bin/env python3
-from __future__ import annotations
 
 import json
 import logging
