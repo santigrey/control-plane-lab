@@ -1,1 +1,4 @@
 .env
+
+# generated artifacts
+orchestrator/artifacts/
