@@ -126,7 +126,7 @@ def insert_patch_apply_marker(
                     (task_id, patch_sha256, repo_path, repo_head_before, status)
                 VALUES
                     (%(task_id)s::uuid, %(patch_sha256)s, %(repo_path)s, %(repo_head_before)s, 'applying')
-                ON CONFLICT (repo_path, patch_sha256) DO NOTHING
+                ON CONFLICT (repo_path, patch_sha256, repo_head_before) DO NOTHING
                 """,
                 {
                     "task_id": task_id,
