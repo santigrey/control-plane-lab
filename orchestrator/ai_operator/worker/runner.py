@@ -1,6 +1,3 @@
-cd /home/jes/control-plane/orchestrator
-
-cat > ai_operator/worker/runner.py <<'PY'
 #!/usr/bin/env python3
 
 import json
@@ -16,9 +13,9 @@ import psycopg
 
 from ai_operator.memory.db import get_db_url
 from ai_operator.memory.tasks import (
-    claim_next_task,
-    mark_task_failed,
-    mark_task_succeeded,
+    claim_task,
+    complete_task_failure,
+    complete_task_success,
 )
 from ai_operator.memory.writer import write_memory_event
 from ai_operator.repo.patch_apply import run_patch_apply_task
@@ -120,7 +117,7 @@ def main() -> None:
         conn.autocommit = True
 
         while True:
-            task = claim_next_task(conn, worker_id=worker_id, lock_s=lock_s)
+            task = claim_task(worker_id=worker_id, lock_s=lock_s)
 
             if not task:
                 time.sleep(poll_s)
@@ -177,8 +174,7 @@ def main() -> None:
 
                 result_payload = _normalize_result(raw_result)
 
-                mark_task_succeeded(
-                    conn,
+                complete_task_success(
                     task_id=task_id,
                     result={
                         "ok": True,
@@ -219,7 +215,7 @@ def main() -> None:
                 err = f"{type(e).__name__}: {e}"
                 terminal = attempts >= max_attempts
 
-                mark_task_failed(conn, task_id=task_id, error=err, terminal=terminal)
+                complete_task_failure(task_id=task_id, error=err)
 
                 write_memory_event(
                     conn,
@@ -244,4 +240,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-PY

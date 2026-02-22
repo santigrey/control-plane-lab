@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any, Dict, List, Optional
 
 from ai_operator.memory.db import insert_memory
@@ -28,3 +29,25 @@ def write_event(
         tool=tool or event.get("type"),
         tool_result=event_to_tool_result(event),
     )
+
+
+def write_memory_event(
+    _conn: Any,
+    *,
+    source: str,
+    tool: Optional[str],
+    content: str,
+) -> str:
+    """
+    Backward-compatible wrapper used by worker runner.
+    Accepts JSON string content and stores it through the canonical writer path.
+    """
+    try:
+        event = json.loads(content)
+        if not isinstance(event, dict):
+            event = {"type": "raw.event", "content": content}
+    except Exception:
+        event = {"type": "raw.event", "content": content}
+
+    event.setdefault("source", source)
+    return write_event(event=event, tool=tool)

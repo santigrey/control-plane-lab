@@ -115,3 +115,27 @@ def default_registry() -> ToolRegistry:
     )
 
     return r
+
+
+def run_tool_call(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Compatibility entrypoint for worker runner "tool.call" tasks.
+    Expected payload shape: {"tool": "<name>", "args": {...}}.
+    """
+    tool_name = payload.get("tool")
+    if not isinstance(tool_name, str) or not tool_name.strip():
+        raise ValueError("tool.call payload.tool must be a non-empty string")
+
+    args = payload.get("args") or {}
+    if not isinstance(args, dict):
+        raise ValueError("tool.call payload.args must be an object")
+
+    result = default_registry().run(tool_name, args)
+    return {
+        "ok": True,
+        "kind": "tool.call",
+        "task_id": task_id,
+        "tool": tool_name,
+        "args": args,
+        "result": result,
+    }

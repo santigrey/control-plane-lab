@@ -8,6 +8,22 @@ import psycopg
 from ai_operator.memory.db import get_db_url
 
 
+def event_to_content(event: Dict[str, Any]) -> str:
+    """
+    Human-readable storage format for memory.content.
+    Convention: prefix with 'EVENT:' then JSON.
+    """
+    return "EVENT:" + json.dumps(event, ensure_ascii=False)
+
+
+def event_to_tool_result(event: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Structured storage format for memory.tool_result (JSONB).
+    Keep it as the event envelope.
+    """
+    return event
+
+
 def write_event(
     *,
     source: str,
