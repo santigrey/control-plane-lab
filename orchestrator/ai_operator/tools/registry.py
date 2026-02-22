@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
@@ -8,7 +9,7 @@ from typing import Any, Callable, Dict, Optional
 class ToolSpec:
     name: str
     description: str
-    # Minimal schema: {"type":"object","properties":{...},"required":[...]}
+    # Minimal schema: {"type":"object","properties":{...},"required":[...],"additionalProperties":False}
     schema: Dict[str, Any]
     handler: Callable[[Dict[str, Any]], Dict[str, Any]]
 
@@ -32,16 +33,23 @@ class ToolRegistry:
         # Lightweight validation (no jsonschema dependency)
         if schema.get("type") != "object":
             raise ValueError("Tool schema must be type=object")
+
         required = schema.get("required") or []
         props = schema.get("properties") or {}
+        additional_ok = schema.get("additionalProperties", True)
 
         for k in required:
             if k not in args:
                 raise ValueError(f"Missing required arg: {k}")
 
+        if not additional_ok:
+            for k in args.keys():
+                if k not in props:
+                    raise ValueError(f"Unexpected arg: {k}")
+
         for k, v in args.items():
             if k not in props:
-                raise ValueError(f"Unexpected arg: {k}")
+                continue
             expected_type = props[k].get("type")
             if expected_type == "string" and not isinstance(v, str):
                 raise ValueError(f"Arg '{k}' must be string")
@@ -60,15 +68,24 @@ class ToolRegistry:
         return tool.handler(args)
 
 
-# ---- Built-in tools ----
+# ---- built-in tools ----
 
 def _ping_handler(args: Dict[str, Any]) -> Dict[str, Any]:
     message = args.get("message", "pong")
     return {"ok": True, "tool": "ping", "echo": message}
 
 
+def _sleep_handler(args: Dict[str, Any]) -> Dict[str, Any]:
+    seconds = int(args.get("seconds", 1))
+    if seconds < 0 or seconds > 60:
+        raise ValueError("seconds must be between 0 and 60")
+    time.sleep(seconds)
+    return {"ok": True, "tool": "sleep", "slept": seconds}
+
+
 def default_registry() -> ToolRegistry:
     r = ToolRegistry()
+
     r.register(
         ToolSpec(
             name="ping",
@@ -77,8 +94,24 @@ def default_registry() -> ToolRegistry:
                 "type": "object",
                 "properties": {"message": {"type": "string"}},
                 "required": [],
+                "additionalProperties": False,
             },
             handler=_ping_handler,
         )
     )
+
+    r.register(
+        ToolSpec(
+            name="sleep",
+            description="Sleep for N seconds (testing lock visibility).",
+            schema={
+                "type": "object",
+                "properties": {"seconds": {"type": "integer"}},
+                "required": ["seconds"],
+                "additionalProperties": False,
+            },
+            handler=_sleep_handler,
+        )
+    )
+
     return r

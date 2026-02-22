@@ -1,0 +1,10 @@
+diff --git a/README.md b/README.md
+index 0000000..1111111 100644
+--- a/README.md
++++ b/README.md
+@@ -0,0 +1,5 @@
++# AI Operator
++
++Artifact demo patch written by worker.
++This file may or may not exist yet—this is just demonstrating patch artifact output.
++

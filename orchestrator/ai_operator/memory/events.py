@@ -1,53 +1,51 @@
-import uuid
-from datetime import datetime, timezone
+from __future__ import annotations
+
+import json
 from typing import Any, Dict, Optional
 
+import psycopg
 
-def make_event(
+from ai_operator.memory.db import get_db_url
+
+
+def write_event(
     *,
-    type: str,
     source: str,
-    data: Dict[str, Any],
-    run_id: Optional[str] = None,
-) -> Dict[str, Any]:
+    envelope: Dict[str, Any],
+    tool: Optional[str] = None,
+    tool_result: Optional[Dict[str, Any]] = None,
+) -> None:
     """
-    Normalized event envelope for durable structured persistence.
+    Append a canonical event envelope into public.memory.
 
-    run_id groups all events produced during a single /ask execution.
+    We store:
+      - source: e.g. "worker"
+      - content: JSON string of envelope
+      - tool: optional tool name
+      - tool_result: optional JSONB payload (stored safely via json.dumps + ::jsonb)
     """
-    return {
-        "id": str(uuid.uuid4()),
-        "run_id": run_id,
-        "type": type,
-        "source": source,
-        "ts": datetime.now(timezone.utc).isoformat(),
-        "data": data,
-    }
+    db_url = get_db_url()
 
+    content_json = json.dumps(envelope, ensure_ascii=False)
 
-def event_to_content(event: Dict[str, Any]) -> str:
+    tool_result_json: Optional[str] = None
+    if tool_result is not None:
+        tool_result_json = json.dumps(tool_result, ensure_ascii=False)
+
+    sql = """
+    INSERT INTO memory (id, source, content, tool, tool_result)
+    VALUES (gen_random_uuid(), %(source)s, %(content)s, %(tool)s, %(tool_result)s::jsonb);
     """
-    Human-readable content column representation.
-    """
-    import json
 
-    return "EVENT:" + json.dumps(
-        event,
-        separators=(",", ":"),
-        sort_keys=True,
-        default=str,
-    )
-
-
-def event_to_tool_result(event: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    JSONB-safe tool_result representation.
-    """
-    return {
-        "id": event.get("id"),
-        "run_id": event.get("run_id"),
-        "type": event.get("type"),
-        "source": event.get("source"),
-        "ts": event.get("ts"),
-        "data": event.get("data"),
-    }
+    with psycopg.connect(db_url) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                sql,
+                {
+                    "source": source,
+                    "content": content_json,
+                    "tool": tool,
+                    "tool_result": tool_result_json,
+                },
+            )
+            conn.commit()
