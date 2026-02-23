@@ -1,11 +1,35 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 
 import psycopg
 
 from ai_operator.memory.db import get_db_url
+
+
+def _utc_now_iso() -> str:
+    return datetime.now(timezone.utc).isoformat()
+
+
+def make_event(
+    *,
+    type: str,
+    source: str,
+    data: Optional[Dict[str, Any]] = None,
+    run_id: Optional[str] = None,
+) -> Dict[str, Any]:
+    """
+    Build a normalized event envelope used by orchestrator and trace readers.
+    """
+    return {
+        "type": type,
+        "source": source,
+        "run_id": run_id,
+        "ts": _utc_now_iso(),
+        "data": data or {},
+    }
 
 
 def event_to_content(event: Dict[str, Any]) -> str:

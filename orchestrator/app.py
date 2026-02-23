@@ -6,6 +6,7 @@ import uuid
 from typing import Any, Dict, List, Optional
 
 import requests
+import psycopg
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 
@@ -17,7 +18,7 @@ from ai_operator.inference.ollama import (
     get_chat_model,
     get_expected_dim,
 )
-from ai_operator.memory.db import search_memories, get_latest_phrase, db_ping
+from ai_operator.memory.db import search_memories, get_latest_phrase, db_ping, get_db_url
 from ai_operator.memory.events import make_event
 from ai_operator.memory.writer import write_event
 from ai_operator.memory.trace import get_trace
@@ -57,9 +58,36 @@ class AskRequest(BaseModel):
     prompt: str
 
 
+class ToolCallResponse(BaseModel):
+    tool: str
+    args: Dict[str, Any] = {}
+    result: Optional[Dict[str, Any]] = None
+
+
+class AskResponse(BaseModel):
+    status: str
+    answer: str
+    tool_calls: List[ToolCallResponse]
+    memory_ids: List[str]
+    retrieved_ids: List[str]
+    retrieved_topk: int
+    run_id: str
+
+
 class HealthResponse(BaseModel):
     status: str
     details: Optional[Dict[str, Any]] = None
+
+
+FALLBACK_ANSWER = "Sorry, I could not generate a valid response."
+
+
+def _safe_answer(value: Any) -> str:
+    if isinstance(value, str):
+        text = value.strip()
+        if text:
+            return text
+    return FALLBACK_ANSWER
 
 
 # ---- env helpers ----
@@ -113,6 +141,7 @@ def get_system_prompt() -> str:
 # ---- intent detection ----
 _RECALL_RX = re.compile(r"^\s*what\s+exact\s+phrase\s+did\s+i\s+ask\s+you\s+to\s+remember\b", re.I)
 _REMEMBER_RX = re.compile(r"^\s*remember\s+this\s+exact\s+phrase\s*:\s*(.+)\s*$", re.I)
+_TOKEN_RX = re.compile(r"\b[A-Z]+[A-Z0-9-]{3,}\b")
 
 
 def classify_mode(prompt: str) -> str:
@@ -129,6 +158,11 @@ def classify_mode(prompt: str) -> str:
 def extract_phrase(prompt: str) -> str:
     m = _REMEMBER_RX.match((prompt or "").strip())
     return (m.group(1) or "").strip() if m else ""
+
+
+def is_token_recall_prompt(prompt: str) -> bool:
+    p = (prompt or "").strip().lower()
+    return p.startswith("recall:") or "reply with only the token" in p
 
 
 def format_retrieved_for_injection(retrieved: List[Dict[str, Any]]) -> str:
@@ -153,8 +187,71 @@ def format_retrieved_for_injection(retrieved: List[Dict[str, Any]]) -> str:
 
 @app.get("/healthz", response_model=HealthResponse)
 def healthz() -> Dict[str, Any]:
-    # Liveness: process is up
-    return {"status": "ok"}
+    # Liveness + dependency snapshot (non-fatal for probe callers)
+    details: Dict[str, Any] = {"api": "ok"}
+    ok = True
+
+    # Postgres
+    try:
+        db_ping()
+        details["postgres"] = "ok"
+    except Exception as e:
+        ok = False
+        details["postgres"] = f"error: {e}"
+
+    # Ollama
+    try:
+        r = requests.get(f"{get_ollama_url()}/api/tags", timeout=10)
+        r.raise_for_status()
+        details["ollama"] = "ok"
+    except Exception as e:
+        ok = False
+        details["ollama"] = f"error: {e}"
+
+    # Worker/service status (best effort, only if tasks table exists)
+    try:
+        with psycopg.connect(get_db_url()) as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT to_regclass('public.tasks')")
+                has_tasks_table = cur.fetchone()[0] is not None
+                if not has_tasks_table:
+                    details["worker"] = {"status": "unavailable", "reason": "tasks_table_missing"}
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                          COUNT(*) FILTER (WHERE status='queued') AS queued,
+                          COUNT(*) FILTER (WHERE status='running') AS running,
+                          COUNT(DISTINCT locked_by) FILTER (
+                            WHERE status='running'
+                              AND locked_by IS NOT NULL
+                              AND lock_expires_at IS NOT NULL
+                              AND lock_expires_at > now()
+                          ) AS active_workers
+                        FROM tasks;
+                        """
+                    )
+                    queued, running, active_workers = cur.fetchone()
+                    queued_n = int(queued or 0)
+                    running_n = int(running or 0)
+                    active_workers_n = int(active_workers or 0)
+                    if active_workers_n > 0:
+                        worker_status = "ok"
+                    elif queued_n == 0 and running_n == 0:
+                        worker_status = "idle"
+                    else:
+                        worker_status = "unknown"
+                    details["worker"] = {
+                        "status": worker_status,
+                        "active_workers": active_workers_n,
+                        "running_tasks": running_n,
+                        "queued_tasks": queued_n,
+                        "signal_source": "tasks.locked_by+lock_expires_at",
+                    }
+    except Exception as e:
+        details["worker"] = {"status": "unavailable", "reason": f"error: {e}"}
+
+    return {"status": "ok" if ok else "degraded", "details": details}
 
 
 @app.get("/readyz", response_model=HealthResponse)
@@ -203,7 +300,7 @@ def trace(run_id: str) -> Dict[str, Any]:
 
     return {"run_id": run_id, "count": len(events), "events": events}
 
-@app.post("/ask")
+@app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
     run_id = getattr(request.state, 'run_id', None) or str(uuid.uuid4())
 
@@ -238,18 +335,13 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
         )
         mem_id = write_event(event=remember_event)
 
-        timings["db_s"] = round(time.time() - t0, 4)
-        timings["total_s"] = round(time.time() - t0, 4)
-
         return {
-            "model": CHAT_MODEL,
-            "response": phrase,
-            "memory_id": mem_id,
-            "retrieved": [],
-            "tool_used": None,
-            "tool_result": None,
-            "timings": {**timings, "embed_s": 0.0, "retrieve_s": 0.0, "generate_s": 0.0},
-            "config": {"mode": mode, "expected_dim": EXPECTED_DIM},
+            "status": "ok",
+            "answer": _safe_answer(phrase),
+            "tool_calls": [],
+            "memory_ids": [mem_id],
+            "retrieved_ids": [],
+            "retrieved_topk": 0,
             "run_id": run_id,
         }
 
@@ -258,16 +350,13 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
         if not phrase:
             raise HTTPException(status_code=404, detail="No remembered phrase found")
 
-        timings["total_s"] = round(time.time() - t0, 4)
         return {
-            "model": CHAT_MODEL,
-            "response": phrase,
-            "memory_id": None,  # DO NOT persist recall
-            "retrieved": [],
-            "tool_used": None,
-            "tool_result": None,
-            "timings": {**timings, "embed_s": 0.0, "retrieve_s": 0.0, "generate_s": 0.0, "db_s": 0.0},
-            "config": {"mode": mode, "expected_dim": EXPECTED_DIM},
+            "status": "ok",
+            "answer": _safe_answer(phrase),
+            "tool_calls": [],
+            "memory_ids": [],
+            "retrieved_ids": [],
+            "retrieved_topk": 0,
             "run_id": run_id,
         }
 
@@ -291,6 +380,39 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Memory search failed: {e}")
 
+    retrieved_ids = [str(m.get("id")) for m in retrieved if m.get("id")]
+
+    if is_token_recall_prompt(user_prompt) and len(retrieved) > 0:
+        token_candidates = set()
+        for m in retrieved:
+            content = str(m.get("content") or "")
+            token_candidates.update(_TOKEN_RX.findall(content))
+
+        if len(token_candidates) == 1:
+            token_answer = next(iter(token_candidates))
+            response_event = make_event(
+                type="response",
+                source="orchestrator",
+                data={
+                    "prompt": user_prompt,
+                    "response": token_answer,
+                    "retrieved_topk": len(retrieved),
+                    "retrieved_ids": retrieved_ids,
+                    "tool_used": None,
+                },
+                run_id=run_id,
+            )
+            mem_id = write_event(event=response_event)
+            return {
+                "status": "ok",
+                "answer": token_answer,
+                "tool_calls": [],
+                "memory_ids": [mem_id],
+                "retrieved_ids": retrieved_ids,
+                "retrieved_topk": len(retrieved),
+                "run_id": run_id,
+            }
+
     injected_text = format_retrieved_for_injection(retrieved)
 
     # 1) First model call
@@ -303,6 +425,8 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
 
     tool_used = None
     tool_result = None
+    tool_calls: List[Dict[str, Any]] = []
+    memory_ids: List[str] = []
     final_text = model_out
 
     # 2) If model output is a strict tool JSON, execute once, then do a second model call
@@ -317,12 +441,14 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
             data={"tool": tool_used, "args": args},
             run_id=run_id,
         )
-        write_event(event=tool_call_event)
+        tool_call_mem_id = write_event(event=tool_call_event)
+        memory_ids.append(tool_call_mem_id)
 
         try:
             tool_result = TOOLS.run(tool_used, args)
         except Exception as e:
             tool_result = {"ok": False, "error": str(e), "tool": tool_used}
+        tool_calls.append({"tool": tool_used, "args": args, "result": tool_result})
 
         tool_result_event = make_event(
             type="tool_result",
@@ -330,7 +456,8 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
             data={"tool": tool_used, "result": tool_result},
             run_id=run_id,
         )
-        write_event(event=tool_result_event)
+        tool_result_mem_id = write_event(event=tool_result_event)
+        memory_ids.append(tool_result_mem_id)
 
         # second model call with tool result appended
         followup = (
@@ -351,26 +478,25 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
         source="orchestrator",
         data={
             "prompt": user_prompt,
-            "response": final_text,
+            "response": _safe_answer(final_text),
             "retrieved_topk": len(retrieved),
-            "retrieved_ids": [m.get("id") for m in retrieved if m.get("id")],
+            "retrieved_ids": retrieved_ids,
             "tool_used": tool_used,
         },
         run_id=run_id,
     )
     mem_id = write_event(event=response_event)
+    memory_ids.append(mem_id)
 
     timings["db_s"] = round(time.time() - t0, 4)
     timings["total_s"] = round(time.time() - t0, 4)
 
     return {
-        "model": CHAT_MODEL,
-        "response": final_text,
-        "memory_id": mem_id,
-        "retrieved": retrieved,
-        "tool_used": tool_used,
-        "tool_result": tool_result,
-        "timings": timings,
-        "config": {"mode": "chat", "expected_dim": EXPECTED_DIM},
+        "status": "ok",
+        "answer": _safe_answer(final_text),
+        "tool_calls": tool_calls,
+        "memory_ids": memory_ids,
+        "retrieved_ids": retrieved_ids,
+        "retrieved_topk": len(retrieved),
         "run_id": run_id,
     }
