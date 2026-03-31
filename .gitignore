@@ -23,3 +23,13 @@ __pycache__/
 .DS_Store
 orchestrator/app.py.save
 *.bak
+
+# Google OAuth credentials
+google_credentials.json
+google_token.json
+
+# Runtime state
+notified_emails.json
+job_search_log.json
+session.md
+*.bak.*

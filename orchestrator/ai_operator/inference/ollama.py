@@ -44,7 +44,7 @@ def ollama_embed(text: str) -> List[float]:
     return emb
 
 
-def ollama_chat(system_prompt: str, user_prompt: str, injected_memories: str = "") -> str:
+def ollama_chat(system_prompt: str, user_prompt: str, injected_memories: str = "", history: list = None) -> str:
     url = f"{get_ollama_url()}/api/chat"
     model = get_chat_model()
 
@@ -58,13 +58,15 @@ def ollama_chat(system_prompt: str, user_prompt: str, injected_memories: str = "
             "----"
         )
 
+    messages = [{"role": "system", "content": system_prompt}]
+    if history:
+        messages.extend(history)
+    messages.append({"role": "user", "content": user_text})
+
     payload = {
         "model": model,
         "stream": False,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_text},
-        ],
+        "messages": messages,
     }
 
     r = requests.post(url, json=payload, timeout=120)
