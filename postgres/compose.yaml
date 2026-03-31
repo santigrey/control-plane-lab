@@ -5,7 +5,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: admin
-      POSTGRES_PASSWORD: adminpass
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adminpass}
       POSTGRES_DB: controlplane
     ports:
       - "5432:5432"
