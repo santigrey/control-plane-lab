@@ -106,6 +106,54 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             try: os.unlink(p)
             except: pass
 
+
+async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    user_id = update.effective_user.id
+    caption = update.message.caption or "What's in this image?"
+    logger.info(f"photo from {user_id}, caption: {caption!r}")
+    tmp_path = None
+    try:
+        photo = update.message.photo[-1]
+        file = await context.bot.get_file(photo.file_id)
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp:
+            tmp_path = tmp.name
+        await file.download_to_drive(tmp_path)
+        logger.info(f"downloaded photo to {tmp_path}, size={os.path.getsize(tmp_path)}")
+        async with aiohttp.ClientSession() as session:
+            with open(tmp_path, 'rb') as f:
+                form = aiohttp.FormData()
+                form.add_field('file', f, filename='photo.jpg', content_type='image/jpeg')
+                form.add_field('prompt', f'Extract all details from this image. The user says: {caption}')
+                async with session.post(
+                    f"{API_BASE}/vision/analyze",
+                    data=form,
+                    timeout=aiohttp.ClientTimeout(total=60),
+                ) as resp:
+                    vd = await resp.json()
+                    vision_text = vd.get('response') or vd.get('text') or vd.get('description') or str(vd)
+            logger.info(f"vision result: {vision_text[:120]!r}")
+            combined = (
+                f"The user sent a photo. Here's what the image shows: {vision_text}\n\n"
+                f"The user asked: {caption}\n\n"
+                "Use your tools to fulfill the request."
+            )
+            async with session.post(
+                f"{API_BASE}/chat",
+                json={"message": combined, "session_id": f"telegram-{user_id}"},
+                timeout=aiohttp.ClientTimeout(total=90),
+            ) as resp:
+                cd = await resp.json()
+                reply = cd.get("response") or cd.get("message") or str(cd)
+            logger.info(f"chat reply: {reply[:120]!r}")
+    except Exception as e:
+        logger.error(f"photo error: {e}", exc_info=True)
+        reply = f"Error processing photo: {e}"
+    finally:
+        if tmp_path:
+            try: os.unlink(tmp_path)
+            except: pass
+    await update.message.reply_text(reply[:4096])
+
 async def brief_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     logger.info(f"/brief from {update.effective_user.id}")
     try:
@@ -204,6 +252,7 @@ def main() -> None:
     app.add_handler(CommandHandler("reject", reject_handler))
     app.add_handler(CommandHandler("status", status_handler))
     app.add_handler(MessageHandler(filters.VOICE, voice_handler))
+    app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, chat_handler))
     app.run_polling(allowed_updates=Update.ALL_TYPES)
 

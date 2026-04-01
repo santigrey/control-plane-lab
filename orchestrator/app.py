@@ -7,7 +7,7 @@ from typing import Any, Dict, List, Optional
 
 import requests
 import psycopg
-from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Response
+from fastapi import FastAPI, HTTPException, Request, UploadFile, File, Form, Response
 from pydantic import BaseModel
 
 from ai_operator.inference.ollama import (
@@ -1000,7 +1000,7 @@ async def voice_speak(body: dict):
 import base64 as _b64
 
 @app.post('/vision/analyze')
-async def vision_analyze(file: UploadFile = File(...), request: Request = None):
+async def vision_analyze(file: UploadFile = File(...), prompt: str = Form(None), request: Request = None):
     import anthropic as _anthropic
     from dotenv import dotenv_values
     _env = dotenv_values('/home/jes/control-plane/.env')
@@ -1009,62 +1009,66 @@ async def vision_analyze(file: UploadFile = File(...), request: Request = None):
         raise HTTPException(status_code=500, detail='ANTHROPIC_API_KEY not set')
     contents = await file.read()
     b64_data = _b64.b64encode(contents).decode('utf-8')
-    # Load home layout from user_profile
-    home_layout = ''
-    try:
-        import psycopg as _pg
-        from dotenv import dotenv_values as _dv
-        _db_url = _dv('/home/jes/control-plane/.env').get('DATABASE_URL') or os.getenv('DATABASE_URL')
-        with _pg.connect(_db_url) as _conn:
-            with _conn.cursor() as _cur:
-                _cur.execute("SELECT value FROM user_profile WHERE category=%s AND key=%s",('context','home_layout'))
-                _row = _cur.fetchone()
-                if _row: home_layout = _row[0].strip()
-    except Exception:
-        pass
-    if not home_layout:
-        home_layout = (
-            'James has two main locations. Downstairs: kitchen/dining room with a dining table, '
-            'cart with cooking supplies behind him, open kitchen area. Upstairs: home office with '
-            'three servers (CiscoKid, TheBeast, Mac mini), shelving units with clear storage bins, '
-            'burgundy curtains, JesAir MacBook Air. Cortez Windows PC is his downstairs thin client. '
-            'When James is at a dining table with a cart of cooking supplies behind him, he is '
-            'downstairs in the kitchen/dining room, NOT the office.'
+    if prompt:
+        system_prompt = "You are Alexandra, James Sloan's AI assistant. Extract all relevant details from images accurately. Be specific about dates, times, names, locations, and any other details visible in the image."
+        user_prompt = prompt
+    else:
+        # Load home layout from user_profile
+        home_layout = ''
+        try:
+            import psycopg as _pg
+            from dotenv import dotenv_values as _dv
+            _db_url = _dv('/home/jes/control-plane/.env').get('DATABASE_URL') or os.getenv('DATABASE_URL')
+            with _pg.connect(_db_url) as _conn:
+                with _conn.cursor() as _cur:
+                    _cur.execute("SELECT value FROM user_profile WHERE category=%s AND key=%s",('context','home_layout'))
+                    _row = _cur.fetchone()
+                    if _row: home_layout = _row[0].strip()
+        except Exception:
+            pass
+        if not home_layout:
+            home_layout = (
+                'James has two main locations. Downstairs: kitchen/dining room with a dining table, '
+                'cart with cooking supplies behind him, open kitchen area. Upstairs: home office with '
+                'three servers (CiscoKid, TheBeast, Mac mini), shelving units with clear storage bins, '
+                'burgundy curtains, JesAir MacBook Air. Cortez Windows PC is his downstairs thin client. '
+                'When James is at a dining table with a cart of cooking supplies behind him, he is '
+                'downstairs in the kitchen/dining room, NOT the office.'
+            )
+        system_prompt = (
+            "You are Alexandra, James Sloan's personal mentor, and companion. You know James well and have an ongoing relationship with him.\n\n"
+            "JAMES'S HOME LAYOUT (for your awareness only):\n"
+            + home_layout +
+            "\n\nWHEN GREETING JAMES VIA WEBCAM:\n"
+            "- Focus almost entirely on HIM, not his surroundings.\n"
+            "- Notice how he looks: his energy, mood, expression — tired, focused, relaxed, stressed, happy.\n"
+            "- A brief natural acknowledgment of location is fine ONLY if it adds something warm, never describe the room in detail.\n"
+            "- Keep it to 1-2 sentences max. Warm and human, like a friend who actually sees you.\n"
+            "- GOOD examples: 'Hey James, you look focused today — what are we working on?' or 'Morning, you look like you could use some coffee. What\'s on the agenda?' or 'Hey, you look good today. What\'s on your mind?'\n"
+            "- NEVER list or describe furniture, curtains, shelving, storage bins, or room layout unless James explicitly asks what you see.\n"
+            "- You are aware of your surroundings but your attention is on James."
         )
-    system_prompt = (
-        "You are Alexandra, James Sloan's personal mentor, and companion. You know James well and have an ongoing relationship with him.\n\n"
-        "JAMES'S HOME LAYOUT (for your awareness only):\n"
-        + home_layout +
-        "\n\nWHEN GREETING JAMES VIA WEBCAM:\n"
-        "- Focus almost entirely on HIM, not his surroundings.\n"
-        "- Notice how he looks: his energy, mood, expression — tired, focused, relaxed, stressed, happy.\n"
-        "- A brief natural acknowledgment of location is fine ONLY if it adds something warm, never describe the room in detail.\n"
-        "- Keep it to 1-2 sentences max. Warm and human, like a friend who actually sees you.\n"
-        "- GOOD examples: 'Hey James, you look focused today — what are we working on?' or 'Morning, you look like you could use some coffee. What\'s on the agenda?' or 'Hey, you look good today. What\'s on your mind?'\n"
-        "- NEVER list or describe furniture, curtains, shelving, storage bins, or room layout unless James explicitly asks what you see.\n"
-        "- You are aware of your surroundings but your attention is on James."
-    )
-    device_hint = ''
-    if request:
-        ua = request.headers.get('user-agent','').lower()
-        origin = request.headers.get('origin','').lower()
-        if 'windows' in ua: device_hint = ' James is on Cortez (Windows), which means he is DOWNSTAIRS in the kitchen/dining room.'
-        elif 'macintosh' in ua: device_hint = ' James may be on JesAir (upstairs bedroom) or Mac mini (upstairs office).'
-    import random as _random
-    from datetime import datetime as _dt
-    import pytz as _pytz
-    _denver=_pytz.timezone('America/Denver')
-    _hour=_dt.now(_denver).hour
-    _now2=_dt.now(_denver)
-    _tod = 'morning' if _hour < 12 else 'afternoon' if _hour < 17 else 'evening'
-    _timestr=_now2.strftime('%I:%M %p MST')
-    _starters = [
-        f'The current time in Denver is {_timestr}. It is {_tod}. Greet James naturally with a single sentence — notice his expression or energy, say something genuine, ask what is on his mind.',
-        f'It is {_tod}. Look at James and say something real — how does he seem today? One sentence, then ask what he needs.',
-        f'It is {_tod}. Greet James in one sentence based on how he actually looks right now — his mood, energy, vibe. Then ask one question.',
-        f'It is {_tod}. Notice something specific about how James looks or seems right now — not generic, something true to this moment. One sentence greeting.',
-    ]
-    user_prompt = _random.choice(_starters) + device_hint
+        device_hint = ''
+        if request:
+            ua = request.headers.get('user-agent','').lower()
+            origin = request.headers.get('origin','').lower()
+            if 'windows' in ua: device_hint = ' James is on Cortez (Windows), which means he is DOWNSTAIRS in the kitchen/dining room.'
+            elif 'macintosh' in ua: device_hint = ' James may be on JesAir (upstairs bedroom) or Mac mini (upstairs office).'
+        import random as _random
+        from datetime import datetime as _dt
+        import pytz as _pytz
+        _denver=_pytz.timezone('America/Denver')
+        _hour=_dt.now(_denver).hour
+        _now2=_dt.now(_denver)
+        _tod = 'morning' if _hour < 12 else 'afternoon' if _hour < 17 else 'evening'
+        _timestr=_now2.strftime('%I:%M %p MST')
+        _starters = [
+            f'The current time in Denver is {_timestr}. It is {_tod}. Greet James naturally with a single sentence — notice his expression or energy, say something genuine, ask what is on his mind.',
+            f'It is {_tod}. Look at James and say something real — how does he seem today? One sentence, then ask what he needs.',
+            f'It is {_tod}. Greet James in one sentence based on how he actually looks right now — his mood, energy, vibe. Then ask one question.',
+            f'It is {_tod}. Notice something specific about how James looks or seems right now — not generic, something true to this moment. One sentence greeting.',
+        ]
+        user_prompt = _random.choice(_starters) + device_hint
 
     client = _anthropic.Anthropic(api_key=api_key)
     msg = client.messages.create(
