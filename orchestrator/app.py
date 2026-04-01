@@ -938,7 +938,7 @@ async def voice_wake_detect(file: UploadFile = File(...), request: Request = Non
             _tool_count_w = 0
             while _tool_count_w < MAX_TOOL_CALLS_W:
                 _r_w = _cl_w.messages.create(
-                    model='claude-haiku-4-5-20241022',
+                    model='claude-haiku-4-5-20251001',
                     max_tokens=1024,
                     system=_sys_w,
                     messages=_msgs_w,
@@ -970,8 +970,8 @@ async def voice_wake_detect(file: UploadFile = File(...), request: Request = Non
             reply = _re_w.sub(r'\{[^{}]*"tool"[^{}]*\}', '', reply)
             reply = _re_w.sub(r'^\s*\}\s*', '', reply)
             reply = reply.strip()
-    except Exception:
-        pass
+    except Exception as _wake_err:
+        open("/tmp/wake_errors.log", "a").write(f"{__import__('datetime').datetime.now().isoformat()} WAKE_API_ERROR: {type(_wake_err).__name__}: {_wake_err}\n")
     if not reply:
         try:
             import uuid as _uuid
