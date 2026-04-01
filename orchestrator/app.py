@@ -873,6 +873,98 @@ async def voice_transcribe(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f'Transcription failed: {e}')
     return {'text': text}
 
+@app.post('/voice/wake-detect')
+async def voice_wake_detect(file: UploadFile = File(...), request: Request = None):
+    dest = '/tmp/wake_input.webm'
+    wav_dest = '/tmp/wake_input.wav'
+    contents = await file.read()
+    if len(contents) < 500:
+        return {'triggered': False, 'reason': 'too_short'}
+    with open(dest, 'wb') as fh:
+        fh.write(contents)
+    try:
+        import subprocess, sys as _sw
+        _sw.path.insert(0, '/home/jes/control-plane')
+        subprocess.run(
+            ['ffmpeg', '-y', '-i', dest, '-ar', '16000', '-ac', '1', '-f', 'wav', wav_dest],
+            capture_output=True, timeout=10
+        )
+        from voice import transcribe_audio
+        text = transcribe_audio(wav_dest).lower().strip()
+        open('/tmp/wake_debug.log', 'a').write('TRANSCRIPT: ' + repr(text) + '\n')
+    except Exception as e:
+        return {'triggered': False, 'error': str(e)}
+    if not text:
+        return {'triggered': False, 'transcript': ''}
+    WAKE_VARIANTS = ['hey alexandra', 'hey, alexandra', 'a alexandra', 'hey alexand', 'alexand', 'hey alexander', 'alexander']
+    wake_hit = next((w for w in WAKE_VARIANTS if w in text), None)
+    if not wake_hit:
+        return {'triggered': False, 'transcript': text}
+    query = text.split(wake_hit, 1)[1].strip()
+    # strip partial word fragments at start (e.g. 'er.' 'ra.' from misheard 'alexandra')
+    words = query.split()
+    if words and len(words[0].rstrip('.,!?')) <= 3:
+        words = words[1:]
+    query = ' '.join(words).strip()
+    if not query:
+        return {'triggered': False, 'transcript': text, 'reason': 'no_query'}
+    reply = None
+    try:
+        import anthropic as _anth_w
+        import re as _re_w
+        from dotenv import dotenv_values as _dv_w
+        _key_w = _dv_w('/home/jes/control-plane/.env').get('ANTHROPIC_API_KEY')
+        if _key_w:
+            _cl_w = _anth_w.Anthropic(api_key=_key_w)
+            _sys_w = get_system_prompt()
+            _msgs_w = [{'role': 'user', 'content': query}]
+            MAX_TOOL_CALLS_W = 5
+            _tool_count_w = 0
+            while _tool_count_w < MAX_TOOL_CALLS_W:
+                _r_w = _cl_w.messages.create(
+                    model='claude-sonnet-4-20250514',
+                    max_tokens=1024,
+                    system=_sys_w,
+                    messages=_msgs_w,
+                )
+                _raw_w = _r_w.content[0].text if _r_w.content else ''
+                _tc_w = parse_tool_call(_raw_w)
+                if not _tc_w:
+                    reply = _raw_w
+                    break
+                try:
+                    _tr_w = TOOLS.run(_tc_w['tool'], _tc_w['args'])
+                except Exception as _ex_w:
+                    _tr_w = {'ok': False, 'error': str(_ex_w)}
+                _msgs_w.append({'role': 'assistant', 'content': _raw_w})
+                _msgs_w.append({
+                    'role': 'user',
+                    'content': (
+                        f"Tool '{_tc_w['tool']}' executed. Result:\n"
+                        f"{json.dumps(_tr_w, ensure_ascii=False, default=str)}\n\n"
+                        'Continue. If you need another tool call, output only the JSON. '
+                        'If you have enough information to answer James, respond conversationally now. '
+                        'Do NOT output any JSON in your final answer. Do NOT mention tool names.'
+                    )
+                })
+                _tool_count_w += 1
+            if reply is None:
+                reply = 'I ran into a loop trying to answer that. Could you try rephrasing?'
+            reply = _re_w.sub(r'\{[^{}]*\{[^{}]*\}[^{}]*\}', '', reply)
+            reply = _re_w.sub(r'\{[^{}]*"tool"[^{}]*\}', '', reply)
+            reply = _re_w.sub(r'^\s*\}\s*', '', reply)
+            reply = reply.strip()
+    except Exception:
+        pass
+    if not reply:
+        try:
+            import uuid as _uuid
+            result = run_agent(query, str(_uuid.uuid4()), 'wake_word')
+            reply = result.get('answer', '') or result.get('response', '')
+        except Exception as e:
+            return {'triggered': True, 'query': query, 'response': f'Error: {e}', 'transcript': text}
+    return {'triggered': True, 'query': query, 'response': reply or '', 'transcript': text}
+
 @app.post('/voice/speak')
 async def voice_speak(body: dict):
     text = (body or {}).get('text', '')

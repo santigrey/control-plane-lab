@@ -20,7 +20,7 @@ def _load_api_key() -> str:
 
 def transcribe_audio(audio_path: str) -> str:
     model = _get_model()
-    segments, _ = model.transcribe(audio_path, beam_size=1)
+    segments, _ = model.transcribe(audio_path, beam_size=1, language="en")
     return " ".join(s.text.strip() for s in segments).strip()
 
 def synthesize_speech(text: str) -> bytes:

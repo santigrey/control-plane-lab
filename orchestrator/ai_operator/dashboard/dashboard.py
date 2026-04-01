@@ -190,46 +190,112 @@ function startSession(){
   setTimeout(autoGreet,300);
 }
 
-// Wake word detection
-const WAKE_WORD = 'hey alexandra';
-let wakeRecognition = null;
-let wakeActive = false;
+// Wake word - VAD + local Whisper
+let wakeStream = null;
+let wakeRunning = false;
+let wakeAudioCtx = null;
+let wakeAnalyser = null;
+let wakeSilenceTimer = null;
+let wakeChunks = [];
+let wakeRecorder = null;
+let wakeRecording = false;
+let wakeSpeaking = false;
+let speechStartTime = null;
+const VAD_THRESHOLD = 0.045;
+const VAD_SILENCE_MS = 900;
+const VAD_MIN_SPEECH_MS = 400;
+const VAD_MAX_RECORD_MS = 6000;
 
-function startWakeWord() {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { console.warn('Wake word: SpeechRecognition not supported'); return; }
-  wakeRecognition = new SR();
-  wakeRecognition.continuous = true;
-  wakeRecognition.interimResults = false;
-  wakeRecognition.lang = 'en-US';
-  wakeRecognition.onresult = function(e) {
-    if (mediaRecorder && mediaRecorder.state === 'recording') return;
-    const transcript = Array.from(e.results)
-      .slice(e.resultIndex)
-      .map(r => r[0].transcript.trim().toLowerCase())
-      .join(' ');
-    if (transcript.includes(WAKE_WORD)) {
-      const query = transcript.split(WAKE_WORD).slice(1).join(' ').trim();
-      if (query) {
-        const input = document.getElementById('chat-input');
-        input.value = query;
-        setVoiceStatus('Wake word detected...');
-        sendChat();
-      }
-    }
-  };
-  wakeRecognition.onerror = function(e) {
-    if (e.error !== 'no-speech') console.warn('Wake word error:', e.error);
-  };
-  wakeRecognition.onend = function() {
-    if (wakeActive) setTimeout(() => { try { wakeRecognition.start(); } catch(e){} }, 500);
-  };
-  wakeActive = true;
-  try { wakeRecognition.start(); setVoiceStatus('Wake word active'); setTimeout(() => setVoiceStatus(''), 2000); }
-  catch(e) { console.warn('Wake word start failed:', e); }
+function rmsFromBuffer(buf) {
+  let s = 0;
+  for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+  return Math.sqrt(s / buf.length);
 }
 
-document.addEventListener('DOMContentLoaded', () => { setTimeout(startWakeWord, 1500); });
+async function startWakeWordWhisper() {
+  if (wakeRunning) return;
+  try {
+    wakeStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, sampleRate: 16000 }
+    });
+  } catch(e) { console.warn('Wake mic error:', e); return; }
+  wakeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = wakeAudioCtx.createMediaStreamSource(wakeStream);
+  wakeAnalyser = wakeAudioCtx.createAnalyser();
+  wakeAnalyser.fftSize = 512;
+  source.connect(wakeAnalyser);
+  wakeRunning = true;
+  setVoiceStatus('Wake word armed');
+  setTimeout(() => setVoiceStatus(''), 2000);
+  console.log('PACO: VAD armed, threshold=' + VAD_THRESHOLD);
+  vadLoop();
+}
+
+function vadLoop() {
+  if (!wakeRunning) return;
+  const buf = new Float32Array(wakeAnalyser.fftSize);
+  wakeAnalyser.getFloatTimeDomainData(buf);
+  const rms = rmsFromBuffer(buf);
+  if (rms > VAD_THRESHOLD) {
+    if (!wakeRecording) {
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        requestAnimationFrame(vadLoop); return;
+      }
+      if (wakeSpeaking) { requestAnimationFrame(vadLoop); return; }
+      wakeChunks = [];
+      speechStartTime = Date.now();
+      try {
+        wakeRecorder = new MediaRecorder(wakeStream, { mimeType: 'audio/webm;codecs=opus' });
+      } catch(e) {
+        wakeRecorder = new MediaRecorder(wakeStream);
+      }
+      wakeRecorder.ondataavailable = e => { if (e.data.size > 0) wakeChunks.push(e.data); };
+      wakeRecorder.onstop = handleWakeChunk;
+      wakeRecorder.start();
+      wakeRecording = true;
+      setTimeout(() => { if (wakeRecording) stopWakeRecording(); }, VAD_MAX_RECORD_MS);
+    }
+    clearTimeout(wakeSilenceTimer);
+    wakeSilenceTimer = setTimeout(() => { if (wakeRecording) stopWakeRecording(); }, VAD_SILENCE_MS);
+  }
+  requestAnimationFrame(vadLoop);
+}
+
+function stopWakeRecording() {
+  if (!wakeRecording) return;
+  wakeRecording = false;
+  clearTimeout(wakeSilenceTimer);
+  if (wakeRecorder && wakeRecorder.state === 'recording') wakeRecorder.stop();
+}
+
+async function handleWakeChunk() {
+  const duration = Date.now() - speechStartTime;
+  if (duration < VAD_MIN_SPEECH_MS || wakeChunks.length === 0) return;
+  const blob = new Blob(wakeChunks, { type: 'audio/webm' });
+  const fd = new FormData();
+  fd.append('file', blob, 'wake.webm');
+  try {
+    const r = await fetch('/voice/wake-detect', { method: 'POST', body: fd });
+    const d = await r.json();
+    console.log('PACO wake result:', JSON.stringify({triggered: d.triggered, transcript: d.transcript, query: d.query}));
+    if (d.triggered && d.response) {
+      appendMsg('user', d.query || '');
+      appendMsg('alex', d.response);
+      wakeSpeaking = true;
+      setVoiceStatus('Alexandra is speaking...');
+      try {
+        const sr = await fetch('/voice/speak', { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify({text: d.response}) });
+        const ab = await sr.blob();
+        const au = URL.createObjectURL(ab);
+        const a = new Audio(au);
+        a.onended = () => { wakeSpeaking = false; setVoiceStatus(''); URL.revokeObjectURL(au); };
+        a.play();
+      } catch(e) { wakeSpeaking = false; setVoiceStatus(''); }
+    }
+  } catch(e) { console.warn('wake-detect error:', e); }
+}
+
+document.addEventListener('DOMContentLoaded', () => { const startOnce = () => { startWakeWordWhisper(); document.removeEventListener('click', startOnce); document.removeEventListener('keydown', startOnce); }; document.addEventListener('click', startOnce); document.addEventListener('keydown', startOnce); });
 
 </script>
 </body>
