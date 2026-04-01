@@ -938,7 +938,7 @@ async def voice_wake_detect(file: UploadFile = File(...), request: Request = Non
             _tool_count_w = 0
             while _tool_count_w < MAX_TOOL_CALLS_W:
                 _r_w = _cl_w.messages.create(
-                    model='claude-sonnet-4-20250514',
+                    model='claude-haiku-4-5-20241022',
                     max_tokens=1024,
                     system=_sys_w,
                     messages=_msgs_w,
