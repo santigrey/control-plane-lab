@@ -276,6 +276,22 @@ def _get_calendar_handler(args: Dict[str, Any]) -> Dict[str, Any]:
     return _json.loads(r.stdout.strip())
 
 
+def _create_calendar_event_handler(args: Dict[str, Any]) -> Dict[str, Any]:
+    import subprocess, json as _json
+    snippet = (
+        'import sys, json; sys.path.insert(0,"/home/jes/control-plane"); '
+        'from google_readers import create_calendar_event; '
+        'print(json.dumps(create_calendar_event(**json.loads(sys.stdin.read()))))'
+    )
+    r = subprocess.run(
+        ['/usr/bin/python3', '-c', snippet],
+        input=_json.dumps(args), capture_output=True, text=True, timeout=20)
+    if r.returncode != 0:
+        return {"ok": False, "error": r.stderr.strip()}
+    result = _json.loads(r.stdout.strip())
+    result["ok"] = True
+    return result
+
 def _get_system_status_handler(args):
     import subprocess as _sp, urllib.request as _ur, json as _jj
     r = {}
@@ -539,6 +555,26 @@ def default_registry() -> ToolRegistry:
         description="Get James's calendar events for today. Use this when asked about schedule, meetings, or calendar. Returns event summary, start time, end time and location.",
         schema={"type": "object", "properties": {}, "required": [], "additionalProperties": True},
         handler=_get_calendar_handler,
+    ))
+
+    r.register(ToolSpec(
+        name="create_calendar_event",
+        description="Create a Google Calendar event. Args: summary (required), start_time (ISO, required), end_time (ISO, required), description, location, timezone (default America/Denver), recurrence (RFC5545 RRULE).",
+        schema={
+            "type": "object",
+            "properties": {
+                "summary": {"type": "string"},
+                "start_time": {"type": "string"},
+                "end_time": {"type": "string"},
+                "description": {"type": "string"},
+                "location": {"type": "string"},
+                "timezone": {"type": "string"},
+                "recurrence": {"type": "string"},
+            },
+            "required": ["summary", "start_time", "end_time"],
+            "additionalProperties": False,
+        },
+        handler=_create_calendar_event_handler,
     ))
 
     r.register(ToolSpec(

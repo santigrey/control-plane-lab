@@ -90,3 +90,42 @@ def get_todays_calendar(calendar_id='primary'):
             'location': item.get('location', ''),
         })
     return events
+
+
+def create_calendar_event(summary, start_time, end_time, description='', location='', timezone='America/Denver', recurrence=None):
+    """Create a Google Calendar event.
+    
+    Args:
+        summary: Event title
+        start_time: ISO format datetime string (e.g. '2026-03-31T18:00:00')
+        end_time: ISO format datetime string (e.g. '2026-03-31T19:00:00')
+        description: Optional event description
+        location: Optional location
+        timezone: Timezone string, defaults to America/Denver
+        recurrence: Optional RFC5545 recurrence rule string (e.g. 'RRULE:FREQ=WEEKLY;BYDAY=MO,WE,FR;UNTIL=20260627T000000Z')
+    
+    Returns:
+        dict with event id, summary, start, end, and htmlLink
+    """
+    from googleapiclient.discovery import build
+    creds = _load_credentials()
+    service = build('calendar', 'v3', credentials=creds)
+    event = {
+        'summary': summary,
+        'start': {'dateTime': start_time, 'timeZone': timezone},
+        'end': {'dateTime': end_time, 'timeZone': timezone},
+    }
+    if description:
+        event['description'] = description
+    if location:
+        event['location'] = location
+    if recurrence:
+        event['recurrence'] = [recurrence] if isinstance(recurrence, str) else recurrence
+    result = service.events().insert(calendarId='primary', body=event).execute()
+    return {
+        'id': result.get('id', ''),
+        'summary': result.get('summary', ''),
+        'start': result.get('start', {}).get('dateTime', ''),
+        'end': result.get('end', {}).get('dateTime', ''),
+        'link': result.get('htmlLink', ''),
+    }

@@ -34,28 +34,41 @@ app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_
 app.include_router(dashboard_router)
 TOOLS = default_registry()
 
-# ---- tool call parsing (strict JSON only) ----
+# ---- tool call parsing ----
 def parse_tool_call(text: str) -> Optional[Dict[str, Any]]:
     """
-    Accepts a strict JSON object like:
-      {"tool":"ping","args":{"message":"hi"}}
-    Returns None if not a valid tool call.
+    Extracts a tool call JSON object from text.
+    Handles cases where Claude outputs JSON followed by conversational text.
+    Returns None if no valid tool call found.
     """
+    import re
+    if not text or not text.strip():
+        return None
+    # Try direct parse first
     try:
-        obj = json.loads((text or "").strip())
+        obj = json.loads(text.strip())
+        if isinstance(obj, dict) and isinstance(obj.get("tool"), str) and obj["tool"].strip():
+            return {"tool": obj["tool"].strip(), "args": obj.get("args") or {}}
     except Exception:
-        return None
-    if not isinstance(obj, dict):
-        return None
-    tool = obj.get("tool")
-    args = obj.get("args", {})
-    if not isinstance(tool, str) or not tool.strip():
-        return None
-    if args is None:
-        args = {}
-    if not isinstance(args, dict):
-        return None
-    return {"tool": tool.strip(), "args": args}
+        pass
+    # Try to extract JSON object from the beginning of text
+    match = re.match(r'\s*(\{.*?\})\s', text, re.DOTALL)
+    if match:
+        try:
+            obj = json.loads(match.group(1))
+            if isinstance(obj, dict) and isinstance(obj.get("tool"), str) and obj["tool"].strip():
+                return {"tool": obj["tool"].strip(), "args": obj.get("args") or {}}
+        except Exception:
+            pass
+    # Try to find any JSON object with "tool" key anywhere in text
+    for match in re.finditer(r'\{[^{}]*"tool"[^{}]*\{[^{}]*\}[^{}]*\}', text):
+        try:
+            obj = json.loads(match.group(0))
+            if isinstance(obj, dict) and isinstance(obj.get("tool"), str) and obj["tool"].strip():
+                return {"tool": obj["tool"].strip(), "args": obj.get("args") or {}}
+        except Exception:
+            continue
+    return None
 
 
 # ---- request/response models ----
@@ -180,12 +193,15 @@ def get_system_prompt() -> str:
         "  get_live_context: Use this for ANY question about time, weather, temperature, stocks, markets, S&P 500, NASDAQ, Bitcoin, news, or headlines. This is a single tool that returns all of these at once. Never hallucinate this data — always call this tool.\n"
         "  get_emails: Use for any question about emails, inbox, or messages.\n"
         "  get_calendar: Use for any question about schedule, meetings, or calendar events.\n"
+        "  create_calendar_event: Use to create calendar events. Args: summary, start_time (ISO format), end_time (ISO format), description (optional), location (optional), timezone (optional), recurrence (optional RFC5545 RRULE string).\n"
         "  get_system_status: Use when James asks about system status, stack health, server check, services, disk, memory, or Tailscale. Returns live data.\n"
         "  get_job_pipeline: Use when James asks about job applications, interview status, pipeline, follow-ups, or how the job search is going. Returns counts, recent apps, and pending follow-ups.\n"
         "  research_topic: Use for researching any topic that requires current web information.\n"
         "  web_fetch: Use ONLY for fetching specific external URLs. Never use on Gmail or Google Calendar URLs.\n"
-        "- CRITICAL: Never hallucinate real-time data like weather, time, stock prices, or news. Always call get_live_context first.\n\n"
+        "- CRITICAL: Never hallucinate real-time data like weather, time, stock prices, or news. Always call get_live_context first.\n"
+        "- CRITICAL: For ANY action that changes state (creating calendar events, sending messages, etc), you MUST output the tool JSON. NEVER claim you performed an action without actually calling the tool. If you say you created a calendar event but did not output the create_calendar_event tool JSON, you are lying.\n\n"
         "JAMES'S CONTEXT:\n"
+        + f"TODAY'S DATE: {__import__('datetime').date.today().strftime('%A, %B %d, %Y')}. Use this for any relative date references like 'tomorrow', 'next week', etc.\n\n"
         + (profile_context if profile_context else
         "James Sloan, Denver CO. Senior infrastructure engineer transitioning to AI engineering. "
         "Building Project Ascension — a Jarvis-level AI companion on a self-hosted homelab. "
