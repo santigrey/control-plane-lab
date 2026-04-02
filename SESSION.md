@@ -113,13 +113,14 @@
 - Anthropic rate limits on Max plan during peak hours
 
 ## Next Steps (Day 53+)
-1. Fix MCP bridge - SSH ControlMaster or async rewrite (Day 53 priority)
-2. TheBeast amber light - investigate via iDRAC non-destructively
-3. Per Scholas homework - Lesson 933.2 Google Cloud Skills Boost Intro to GenAI
-4. Demo video of Alexandra for LinkedIn/portfolio
-5. Dashboard file/folder upload UI
-6. Event acknowledgment flow, chain template expansion, context engine tuning
+1. Fix MCP bridge - SSH ControlMaster or async rewrite to prevent long-command hangs
+2. TheBeast amber light - investigate via iDRAC/omreport non-destructively
+3. Mac mini Chrome mic fix - switch to OBSBOT Tiny SE for wake word
+4. Per Scholas homework - Lesson 933.2 Google Cloud Skills Boost Intro to GenAI
+5. Demo video of Alexandra for LinkedIn/portfolio
+6. Dashboard file/folder upload UI
+7. Event acknowledgment flow, chain template expansion, context engine tuning
 
 
 ## Resume Anchor
-"Paco - read SESSION.md. Day 52. Full homelab hardened: UFW on CiscoKid+TheBeast, PostgreSQL localhost-only, fail2ban on all Linux nodes, all kernels updated (174/107), P3 housekeeping complete. MCP bridge long-command hang is Day 53 priority fix. TheBeast amber LED monitor only. Alexandra stack fully operational. 907 pgvector rows. 62 applications."
+"Paco - read SESSION.md. Day 52. Full homelab hardened: UFW on CiscoKid+TheBeast, PostgreSQL localhost-only, fail2ban on all Linux nodes, all kernels updated (174/107), P3 housekeeping complete. MCP bridge long-command hang is known issue - fix is Day 53 priority. TheBeast amber LED - monitor only, no hardware changes. Alexandra stack fully operational post-reboot. 907 pgvector rows. 62 applications tracked."
