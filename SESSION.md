@@ -32,7 +32,7 @@
 - Do NOT touch hardware — previous CMOS swap caused full OS loss and rebuild
 - Action: monitor only, investigate via iDRAC non-destructively next session
 
-**MCP Bridge Stability (known issue, not yet fixed)**
+**MCP Bridge — RESOLVED via mcp-remote**
 - mcp_stdio.py blocking read loop stalls on long SSH commands (60s+), hanging bridge
 - Workaround used: fire-and-forget nohup + polling pattern
 - Permanent fix needed: SSH ControlMaster or async rewrite — Day 53 priority
@@ -124,3 +124,10 @@
 
 ## Resume Anchor
 "Paco - read SESSION.md. Day 52. Full homelab hardened: UFW on CiscoKid+TheBeast, PostgreSQL localhost-only, fail2ban on all Linux nodes, all kernels updated (174/107), P3 housekeeping complete. MCP bridge long-command hang is known issue - fix is Day 53 priority. TheBeast amber LED - monitor only, no hardware changes. Alexandra stack fully operational post-reboot. 907 pgvector rows. 62 applications tracked."
+## Day 52 Addendum
+- mcp-remote installed as permanent MCP bridge replacement
+- claude_desktop_config.json: npx mcp-remote http://192.168.1.10:8001/mcp
+- No SSH tunnel. HTTP only. Auto-reconnects on reboot. Bridge stable.
+- TheBeast amber light resolved: inlet temp threshold raised 33C to 37C via iDRAC9 (192.168.1.237)
+- CiscoKid iDRAC: 192.168.1.35
+- Standing Paco rule: search community solutions before declaring a blocker
