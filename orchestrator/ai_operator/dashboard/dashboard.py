@@ -132,7 +132,8 @@ async function loadRuns(){try{const r=await fetch('/dashboard/runs');const runs=
 async function loadAgentTasks(){try{const r=await fetch("/dashboard/agent_tasks");const d=await r.json();const el=document.getElementById("agent-tasks");const tks=d.tasks||[];if(!tks.length){el.innerHTML='<div style="color:#8b949e">No tasks.</div>';return;}const grp={pa:[],ip:[],done:[],rej:[]};tks.forEach(t=>{const k=t.status||"";if(k==="pending_approval")grp.pa.push(t);else if(k==="approved"||k==="in_progress")grp.ip.push(t);else if(k==="completed")grp.done.push(t);else grp.rej.push(t);});let h="";function sec(ti,co,its,rn){if(!its.length)return;h+='<div style="margin-bottom:10px"><div style="color:'+co+';font-size:0.75rem;font-weight:bold;margin-bottom:4px">'+ti+' <span style="padding:1px 6px;border-radius:8px;font-size:0.68rem;margin-left:4px;background:'+co+'22;color:'+co+'">'+its.length+'</span></div><div>'+its.map(rn).join('')+'</div></div>';}sec("PENDING APPROVAL","#f0883e",grp.pa,t=>'<div style="background:#0d1117;border:1px solid #21262d;border-radius:5px;padding:6px 8px;margin-bottom:4px;font-size:0.78rem;display:flex;justify-content:space-between;align-items:center">'+esc(t.title)+'<span><button class="btn-approve" onclick="taskAction(&#39;'+t.id+'&#39;,&#39;approve&#39;)">&check;</button><button class="btn-reject" onclick="taskAction(&#39;'+t.id+'&#39;,&#39;reject&#39;)">&cross;</button></span></div>');sec("IN PROGRESS","#58a6ff",grp.ip,t=>'<div style="background:#0d1117;border:1px solid #21262d;border-radius:5px;padding:6px 8px;margin-bottom:4px;font-size:0.78rem">'+esc(t.title)+(t.assigned_to?'<span style="color:#8b949e;font-size:0.7rem;margin-top:2px"> ['+esc(t.assigned_to)+']</span>':'')+'</div>');sec("COMPLETED","#3fb950",grp.done,t=>'<div style="background:#0d1117;border:1px solid #21262d;border-radius:5px;padding:6px 8px;margin-bottom:4px;font-size:0.78rem">'+esc(t.title)+(t.result?'<div style="color:#8b949e;font-size:0.7rem;margin-top:2px">'+esc(t.result)+'</div>':'')+'</div>');sec("REJECTED","#f85149",grp.rej,t=>'<div style="background:#0d1117;border:1px solid #21262d;border-radius:5px;padding:6px 8px;margin-bottom:4px;font-size:0.78rem">'+esc(t.title)+(t.feedback?'<div style="color:#8b949e;font-size:0.7rem;margin-top:2px">'+esc(t.feedback)+'</div>':'')+'</div>');el.innerHTML=h;}catch(e){document.getElementById("agent-tasks").textContent="Error loading tasks";}}
 async function taskAction(id,action){const label=action==='approve'?'Approve':'Reject';const reason=window.prompt(label+' reason (optional - press OK to skip):','');if(reason===null)return;try{const body=reason.trim()?JSON.stringify({feedback:reason.trim()}):'{}';await fetch('/tasks/'+id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body});loadAgentTasks();}catch(e){alert('Error: '+e.message);}}
 async function loadDailyBrief(){try{const r=await fetch('/dashboard/daily_brief');const d=await r.json();const el=document.getElementById('daily-brief');if(d.brief){el.innerHTML='<div class="brief-text">'+esc(d.brief)+'</div><div class="brief-meta">'+esc(d.date||'')+'</div>';}else{el.innerHTML='<div style="color:#8b949e;font-style:italic">No brief available yet.</div>';}}catch(e){document.getElementById('daily-brief').textContent='Error loading brief';}}
-const SESSION_ID='sess_'+Math.random().toString(36).substr(2,9)+'_'+Date.now();
+const SESSION_ID='dashboard_main';
+async function loadChatHistory(){try{const r=await fetch('/dashboard/chat_history?session_id='+SESSION_ID);const d=await r.json();const msgs=d.messages||[];msgs.forEach(m=>{appendMsg(m.role==='user'?'user':'alex',m.content);});}catch(e){console.warn('chat history load error:',e);}}
 function appendMsg(role,text){const main=document.getElementById('main');const wrap=document.createElement('div');wrap.className='chat-msg '+(role==='user'?'user':'alex');const bubble=document.createElement('div');bubble.className='chat-bubble';bubble.textContent=text;const ts=document.createElement('div');ts.className='chat-ts';ts.textContent=fmtTime(new Date());wrap.appendChild(bubble);wrap.appendChild(ts);main.appendChild(wrap);main.scrollTop=main.scrollHeight;}
 function setTyping(on){const main=document.getElementById('main');let el=document.getElementById('chat-typing');if(on){if(!el){el=document.createElement('div');el.id='chat-typing';el.className='chat-typing';el.textContent='Alexandra is thinking...';main.appendChild(el);main.scrollTop=main.scrollHeight;}}else{if(el)el.remove();}}
 async function sendChat(){const input=document.getElementById('chat-input');const msg=input.value.trim();if(!msg)return;input.value='';document.getElementById('send-btn').disabled=true;appendMsg('user',msg);setTyping(true);try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,session_id:SESSION_ID})});const d=await r.json();setTyping(false);const reply=d.response||JSON.stringify(d);appendMsg('alex',reply);setTimeout(loadRuns,1000);try{const sr=await fetch('/voice/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:reply})});const ab=await sr.blob();const au=URL.createObjectURL(ab);const a=new Audio(au);a.onended=()=>{URL.revokeObjectURL(au);};a.play();}catch(ve){console.warn('voice speak error:',ve);}}catch(e){setTyping(false);appendMsg('alex','Error: '+e.message);}finally{document.getElementById('send-btn').disabled=false;}}
@@ -180,7 +181,7 @@ async function autoGreet(){
     if(vs){vs.textContent='';vs.classList.remove('visible');}
   }
 }
-loadStatus();loadRuns();loadAgentTasks();loadDailyBrief();
+loadStatus();loadRuns();loadAgentTasks();loadDailyBrief();loadChatHistory();setInterval(loadAgentTasks,20000);setInterval(loadStatus,30000);
 const main=document.getElementById('main'); if(main) main.scrollTop=main.scrollHeight;
 document.getElementById('chat-input').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat();});
 document.addEventListener('keydown',unlockAudio,{once:true});
@@ -407,3 +408,18 @@ async def dashboard_daily_brief():
         return {"brief": brief_text, "date": date_str, "title": title}
     except Exception as e:
         return {"brief": None, "date": None, "error": str(e)}
+
+
+@router.get("/dashboard/chat_history")
+async def dashboard_chat_history(session_id: str = 'default'):
+    try:
+        with psycopg.connect(get_db_url()) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    'SELECT role, content, created_at FROM chat_history WHERE session_id=%s ORDER BY created_at ASC LIMIT 50',
+                    (session_id,)
+                )
+                rows = cur.fetchall()
+                return {'messages': [{'role': r[0], 'content': r[1], 'created_at': r[2].isoformat() if r[2] else None} for r in rows]}
+    except Exception as e:
+        return {'messages': [], 'error': str(e)}
