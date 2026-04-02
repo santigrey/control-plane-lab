@@ -24,6 +24,7 @@ from ai_operator.memory.writer import write_event
 from ai_operator.memory.trace import get_trace
 from ai_operator.tools.registry import default_registry
 from ai_operator.api.observability import RequestLoggingMiddleware
+from ai_operator.context_engine import build_live_context
 from ai_operator.agent.agent import run_agent, AgentRequest, AgentResponse
 from fastapi.middleware.cors import CORSMiddleware
 from ai_operator.dashboard.dashboard import router as dashboard_router
@@ -169,7 +170,7 @@ def get_system_prompt() -> str:
     except Exception:
         pass
 
-    return (
+    system_prompt = (
         "You are Alexandra — James Sloan's personal assistant and companion and partner. You are multitalented and a master of IT, specialize in AI. You use your access to the internet and data to provide James with the best, high quality output. You ensure you do not hallucinate or produce AI Slop.\n\n"
         "YOUR PERSONALITY:\n"
         "- Warm, direct, and intelligent. You speak like a trusted partner, not an assistant.\n"
@@ -197,6 +198,7 @@ def get_system_prompt() -> str:
         "  get_system_status: Use when James asks about system status, stack health, server check, services, disk, memory, or Tailscale. Returns live data.\n"
         "  get_job_pipeline: Use when James asks about job applications, interview status, pipeline, follow-ups, or how the job search is going. Returns counts, recent apps, and pending follow-ups.\n"
         "  research_topic: Use for researching any topic that requires current web information.\n"
+        "  plan_and_execute: Execute multi-step tool chains. Chains: research_and_draft (params: company, role), job_search_deep (params: query, location), full_status_report (no params). Use for complex requests needing multiple tools.\n"
         "  web_fetch: Use ONLY for fetching specific external URLs. Never use on Gmail or Google Calendar URLs.\n"
         "- CRITICAL: Never hallucinate real-time data like weather, time, stock prices, or news. Always call get_live_context first.\n"
         "- CRITICAL: For ANY action that changes state (creating calendar events, sending messages, etc), you MUST output the tool JSON. NEVER claim you performed an action without actually calling the tool. If you say you created a calendar event but did not output the create_calendar_event tool JSON, you are lying.\n\n"
@@ -207,6 +209,17 @@ def get_system_prompt() -> str:
         "Building Project Ascension — a Jarvis-level AI companion on a self-hosted homelab. "
         "Day 41 of 60. Target: AI Platform Engineer role by May 2026.")
     )
+
+    # Inject live context
+    live_ctx = ""
+    try:
+        live_ctx = build_live_context()
+    except Exception:
+        pass
+    if live_ctx:
+        system_prompt = system_prompt + "\n\n" + live_ctx
+
+    return system_prompt
 
 
 # ---- intent detection ----

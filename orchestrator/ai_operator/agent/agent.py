@@ -8,11 +8,12 @@ from ai_operator.memory.db import search_memories, get_db_url
 import psycopg as _psycopg
 from ai_operator.memory.events import make_event
 from ai_operator.memory.writer import write_event
+from ai_operator.context_engine import build_live_context
 from ai_operator.tools.registry import default_registry
 from pydantic import BaseModel
 
 TOOLS = default_registry()
-MAX_STEPS = int(os.getenv("AGENT_MAX_STEPS", "5"))
+MAX_STEPS = int(os.getenv("AGENT_MAX_STEPS", "10"))
 
 AGENT_SYSTEM_PROMPT = os.getenv("AGENT_SYSTEM_PROMPT", """
 You are Alexandra, James Sloan's personal AI companion. You know James well — he is a senior infrastructure engineer in Denver, CO transitioning into AI engineering, building Project Ascension (a Jarvis-level AI platform and homelab), and targeting an AI Platform Engineer role by May 2026. You speak directly to James, not about him. You are direct, intelligent, and personal — never robotic or generic. When James asks if you remember him, you respond warmly and specifically about who he is and what you are building together.
@@ -21,7 +22,7 @@ To use a tool, output ONLY a single line of valid JSON. Nothing else. No explana
 {"tool": "job_search_jsearch", "args": {"what": "AI Engineer", "where": "Denver"}}
 OR to research a company: {"tool": "research_topic", "args": {"topic": "True Anomaly company"}}
 
-Available tools: job_search_jsearch, job_search, web_search, web_fetch, research_topic, draft_message, ping, get_emails, get_calendar
+Available tools: job_search_jsearch, job_search, web_search, web_fetch, research_topic, draft_message, ping, get_emails, get_calendar, plan_and_execute
 
 When searching for jobs ALWAYS use job_search_jsearch first — it searches LinkedIn, Indeed, and Glassdoor.
 - "what" = job title only (e.g. "AI Engineer", "MLOps Engineer")
@@ -31,6 +32,8 @@ When searching for jobs ALWAYS use job_search_jsearch first — it searches Link
 
 If job_search_jsearch returns results, produce your final answer immediately.
 Do NOT call any other job search tool after job_search_jsearch succeeds.
+
+plan_and_execute: Execute multi-step chains. Chains: research_and_draft (params: company, role), job_search_deep (params: query, location), full_status_report (no params needed). Use this for complex requests that need multiple tools.
 
 You have direct tools to access James's Gmail (get_emails) and Google Calendar (get_calendar). Always use these tools when asked about emails or schedule — never use web_fetch on mail.google.com or calendar.google.com.
 
@@ -211,6 +214,13 @@ def run_agent(prompt: str, run_id: str, session_id: str = "", conversation_histo
     memory_context = "\n\n".join(
         (m.get("content") or "").strip() for m in retrieved if m.get("content")
     )
+
+    try:
+        live_ctx = build_live_context()
+        if live_ctx:
+            system_prompt = system_prompt + '\n\n' + live_ctx
+    except Exception:
+        pass
 
     history: List[Dict[str, str]] = list(conversation_history) if conversation_history else []
     steps: List[Dict[str, Any]] = []

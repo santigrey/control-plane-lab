@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 import requests
+from ai_operator.tools.chains import CHAIN_TEMPLATES
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, Optional
 
@@ -437,6 +438,42 @@ def _get_live_context_handler(args: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+
+
+def _plan_and_execute_handler(args):
+    chain_name = args.get('chain', '')
+    params = args.get('params', {})
+    if chain_name not in CHAIN_TEMPLATES:
+        return {'ok': False, 'error': f'Unknown chain: {chain_name}. Available: {list(CHAIN_TEMPLATES.keys())}'}
+    template = CHAIN_TEMPLATES[chain_name]
+    results = []
+    context = dict(params)
+    registry = default_registry()
+    for i, step in enumerate(template['steps']):
+        tool_name = step['tool']
+        filled_args = {}
+        for k, v in step.get('args_template', {}).items():
+            if isinstance(v, str) and v.startswith('{') and v.endswith('}'):
+                filled_args[k] = context.get(v[1:-1], v)
+            else:
+                filled_args[k] = v
+        try:
+            result = registry.run(tool_name, filled_args)
+            results.append({'step': i, 'tool': tool_name, 'result': result})
+            if isinstance(result, dict):
+                for rk, rv in result.items():
+                    if isinstance(rv, str) and len(rv) < 500:
+                        context[f'step_{i}_{rk}'] = rv
+                if 'synthesis' in result:
+                    context['research_result'] = result['synthesis'][:500]
+                if 'results' in result and isinstance(result['results'], list) and result['results']:
+                    first = result['results'][0]
+                    if isinstance(first, dict) and 'company' in first:
+                        context['top_company'] = first['company']
+        except Exception as e:
+            results.append({'step': i, 'tool': tool_name, 'error': str(e)})
+    return {'ok': True, 'chain': chain_name, 'steps_executed': len(results), 'results': results}
+
 def default_registry() -> ToolRegistry:
     r = ToolRegistry()
 
@@ -617,6 +654,14 @@ def default_registry() -> ToolRegistry:
         description='Get James job search pipeline status: application counts by status, 10 most recent applications, and applications pending follow-up. Use when James asks about job applications, interview status, pipeline, follow-ups, or how the job search is going.',
         schema={'type':'object','properties':{},'required':[],'additionalProperties':True},
         handler=_get_job_pipeline_handler,
+    ))
+
+
+    r.register(ToolSpec(
+        name='plan_and_execute',
+        description='Execute a pre-defined multi-step tool chain. Chains: research_and_draft (params: company, role), job_search_deep (params: query, location), full_status_report (no params). Use for complex requests needing multiple tools.',
+        schema={'type': 'object', 'properties': {'chain': {'type': 'string'}, 'params': {'type': 'object'}}, 'required': ['chain'], 'additionalProperties': False},
+        handler=_plan_and_execute_handler,
     ))
 
     return r
