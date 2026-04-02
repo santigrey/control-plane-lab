@@ -200,6 +200,7 @@ def get_system_prompt() -> str:
         "  research_topic: Use for researching any topic that requires current web information.\n"
         "  plan_and_execute: Execute multi-step tool chains. Chains: research_and_draft (params: company, role), job_search_deep (params: query, location), full_status_report (no params). Use for complex requests needing multiple tools.\n"
         "  web_fetch: Use ONLY for fetching specific external URLs. Never use on Gmail or Google Calendar URLs.\n"
+        "  read_course_material: Access Per Scholas course files. Actions: list, read (by filename), search (by keyword). Use for homework, study, or class questions.\n"
         "- CRITICAL: Never hallucinate real-time data like weather, time, stock prices, or news. Always call get_live_context first.\n"
         "- CRITICAL: For ANY action that changes state (creating calendar events, sending messages, etc), you MUST output the tool JSON. NEVER claim you performed an action without actually calling the tool. If you say you created a calendar event but did not output the create_calendar_event tool JSON, you are lying.\n\n"
         "JAMES'S CONTEXT:\n"

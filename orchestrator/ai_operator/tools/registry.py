@@ -440,6 +440,55 @@ def _get_live_context_handler(args: Dict[str, Any]) -> Dict[str, Any]:
 
 
 
+def _read_course_material_handler(args):
+    import os, subprocess
+    BASE = '/home/jes/control-plane/course_materials'
+    action = args.get('action', 'list')
+    if action == 'list':
+        files = []
+        for f in sorted(os.listdir(BASE)):
+            fp = os.path.join(BASE, f)
+            if os.path.isfile(fp):
+                files.append({'name': f, 'size_kb': round(os.path.getsize(fp)/1024,1)})
+        return {'ok': True, 'action': 'list', 'files': files, 'count': len(files)}
+    elif action == 'read':
+        fn = os.path.basename(args.get('filename',''))
+        if not fn: return {'ok': False, 'error': 'filename required'}
+        fp = os.path.join(BASE, fn)
+        if not os.path.exists(fp): return {'ok': False, 'error': f'Not found: {fn}'}
+        ext = os.path.splitext(fn)[1].lower()
+        if ext in ('.md','.txt','.csv','.json','.py','.js','.html'):
+            c = open(fp,'r',errors='replace').read()
+            if len(c)>8000: c = c[:8000]+'\n[TRUNCATED]'
+            return {'ok':True,'action':'read','filename':fn,'content':c}
+        elif ext == '.pdf':
+            r = subprocess.run(['pdftotext',fp,'-'],capture_output=True,text=True,timeout=15)
+            if r.returncode==0 and r.stdout.strip():
+                return {'ok':True,'action':'read','filename':fn,'content':r.stdout.strip()[:8000]}
+            return {'ok':False,'error':'PDF extract failed'}
+        elif ext in ('.png','.jpg','.jpeg'):
+            return {'ok':True,'action':'read','filename':fn,'content':'[IMAGE]','type':'image'}
+        return {'ok':False,'error':f'Unsupported: {ext}'}
+    elif action == 'search':
+        query = args.get('query','').lower()
+        if not query: return {'ok':False,'error':'query required'}
+        matches = []
+        for f in os.listdir(BASE):
+            fp = os.path.join(BASE, f)
+            ext = os.path.splitext(f)[1].lower()
+            if ext in ('.md','.txt','.csv','.json','.py','.js','.html'):
+                try:
+                    content = open(fp,'r',errors='replace').read()
+                    if query in content.lower() or query in f.lower():
+                        lines = [l.strip() for l in content.split('\n') if query in l.lower()][:5]
+                        matches.append({'filename':f,'matching_lines':lines})
+                except: pass
+            elif query in f.lower():
+                matches.append({'filename':f,'matching_lines':['(filename match)']})
+        return {'ok':True,'action':'search','query':query,'matches':matches}
+    return {'ok':False,'error':f'Unknown action: {action}. Use list, read, or search.'}
+
+
 def _plan_and_execute_handler(args):
     chain_name = args.get('chain', '')
     params = args.get('params', {})
@@ -656,6 +705,13 @@ def default_registry() -> ToolRegistry:
         handler=_get_job_pipeline_handler,
     ))
 
+
+    r.register(ToolSpec(
+        name='read_course_material',
+        description='Access Per Scholas course materials. Actions: list (show files), read (read file by filename), search (search keyword). Use for homework, study, class questions.',
+        schema={'type':'object','properties':{'action':{'type':'string'},'filename':{'type':'string'},'query':{'type':'string'}},'required':['action'],'additionalProperties':False},
+        handler=_read_course_material_handler,
+    ))
 
     r.register(ToolSpec(
         name='plan_and_execute',

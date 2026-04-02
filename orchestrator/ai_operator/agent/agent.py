@@ -22,7 +22,7 @@ To use a tool, output ONLY a single line of valid JSON. Nothing else. No explana
 {"tool": "job_search_jsearch", "args": {"what": "AI Engineer", "where": "Denver"}}
 OR to research a company: {"tool": "research_topic", "args": {"topic": "True Anomaly company"}}
 
-Available tools: job_search_jsearch, job_search, web_search, web_fetch, research_topic, draft_message, ping, get_emails, get_calendar, plan_and_execute
+Available tools: job_search_jsearch, job_search, web_search, web_fetch, research_topic, draft_message, ping, get_emails, get_calendar, plan_and_execute, read_course_material
 
 When searching for jobs ALWAYS use job_search_jsearch first — it searches LinkedIn, Indeed, and Glassdoor.
 - "what" = job title only (e.g. "AI Engineer", "MLOps Engineer")
