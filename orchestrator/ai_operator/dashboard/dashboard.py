@@ -202,10 +202,10 @@ let wakeRecorder = null;
 let wakeRecording = false;
 let wakeSpeaking = false;
 let speechStartTime = null;
-const VAD_THRESHOLD = 0.045;
-const VAD_SILENCE_MS = 900;
-const VAD_MIN_SPEECH_MS = 400;
-const VAD_MAX_RECORD_MS = 6000;
+const VAD_THRESHOLD = 0.12;
+const VAD_SILENCE_MS = 600;
+const VAD_MIN_SPEECH_MS = 500;
+const VAD_MAX_RECORD_MS = 5000;
 
 function rmsFromBuffer(buf) {
   let s = 0;
