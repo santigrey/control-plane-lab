@@ -1,8 +1,46 @@
 # SESSION.md — Project Ascension
 
 ## Last Updated
-2026-04-02 (Day 51)
+2026-04-02 (Day 52)
 
+## Completed Day 52 — April 2, 2026
+
+**P1 — Security (complete)**
+- CiscoKid: UFW enabled (default deny, LAN-only 22/80/443/8000/8001, deny 5432)
+- CiscoKid: PostgreSQL rebound to 127.0.0.1 via compose.yaml (Docker bypasses UFW iptables). Committed 261dc8f.
+- CiscoKid: .env audit clean — gitignored, not tracked, no hardcoded secrets
+- TheBeast: OLLAMA_HOST=0.0.0.0 + UFW LAN-only on 11434/22 (UFW is the access control layer)
+- fail2ban running on CiscoKid, TheBeast, SlimJim — sshd jail active on all
+- Orchestrator health post-hardening: api=ok, postgres=ok, ollama=ok
+
+**P2 — Kernel Updates (complete)**
+- SlimJim: 6.8.0-106 -> 6.8.0-107, clean boot, zero failed units
+- TheBeast: 5.15.0-173 -> 5.15.0-174, Ollama active post-reboot, Tesla T4 healthy
+- CiscoKid: 5.15.0-173 -> 5.15.0-174, all services recovered, UFW intact, PostgreSQL on 127.0.0.1
+- Note: Ubuntu holds kernels back from apt upgrade — dist-upgrade required
+
+**P3 — Housekeeping (complete)**
+- CiscoKid: removed 2 dead Docker containers (thirsty_noyce, heuristic_wozniak)
+- Mac mini: cleared 8.8GB from ~/Library/Caches
+- JesAir: CiscoKid SSH key authorized — CiscoKid can now SSH to JesAir directly
+- KaliPi: Tailscale 1.96.4 installed and authenticated — now in mesh
+- Mac mini: Tailscale launched and authenticated — now in mesh
+
+**TheBeast Amber Light**
+- Dell EMC PowerEdge amber health LED — likely RAID controller BBU draining
+- Machine fully operational: Ollama active, Tesla T4 healthy 57-64C
+- Do NOT touch hardware — previous CMOS swap caused full OS loss and rebuild
+- Action: monitor only, investigate via iDRAC non-destructively next session
+
+**MCP Bridge Stability (known issue, not yet fixed)**
+- mcp_stdio.py blocking read loop stalls on long SSH commands (60s+), hanging bridge
+- Workaround used: fire-and-forget nohup + polling pattern
+- Permanent fix needed: SSH ControlMaster or async rewrite — Day 53 priority
+
+**Services Post-Day-52**
+- All 7 systemd services active and healthy post-reboot
+- pgvector: 907 memory rows | Ollama: 2 models | PostgreSQL: 127.0.0.1:5432 only
+- UFW: active on CiscoKid and TheBeast | fail2ban: CiscoKid + TheBeast + SlimJim
 ## Completed Day 51 — April 2, 2026
 
 ### Completed
@@ -74,13 +112,14 @@
 - Task queue works for research tasks but not code-edit tasks (CC needs direct file access)
 - Anthropic rate limits on Max plan during peak hours
 
-## Next Steps (Day 52+)
-1. Mac mini Chrome mic fix — switch to OBSBOT Tiny SE for wake word
-2. Per Scholas homework — Lesson 933.2 Google Cloud Skills Boost Intro to GenAI
-3. read_course_material tool for Alexandra
+## Next Steps (Day 53+)
+1. Fix MCP bridge - SSH ControlMaster or async rewrite (Day 53 priority)
+2. TheBeast amber light - investigate via iDRAC non-destructively
+3. Per Scholas homework - Lesson 933.2 Google Cloud Skills Boost Intro to GenAI
 4. Demo video of Alexandra for LinkedIn/portfolio
 5. Dashboard file/folder upload UI
 6. Event acknowledgment flow, chain template expansion, context engine tuning
 
+
 ## Resume Anchor
-"Paco - read SESSION.md. Day 51. Jarvis upgrade complete: Event Engine + Tool Chain Engine + Live Context Engine. 62 applications. 7 systemd services. Alexandra has real-time awareness, autonomous multi-step execution, and priority interrupts. Next: demo video, coursework, dashboard UX."
+"Paco - read SESSION.md. Day 52. Full homelab hardened: UFW on CiscoKid+TheBeast, PostgreSQL localhost-only, fail2ban on all Linux nodes, all kernels updated (174/107), P3 housekeeping complete. MCP bridge long-command hang is Day 53 priority fix. TheBeast amber LED monitor only. Alexandra stack fully operational. 907 pgvector rows. 62 applications."
