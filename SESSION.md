@@ -142,3 +142,18 @@
   - Status: Under review, ETA 24-48 hours
 - Applications CSV: Oracle AI Engineer + Lirio marked rejected (7 total rejections)
 - Note: bulk sed error wiped applied statuses, restored 45 rows via python script
+
+## Day 53 Morning
+
+**MCP Architecture — Final Form**
+- Tailscale HTTPS cert issued for sloan3.tail1216a3.ts.net (Let's Encrypt via Tailscale)
+- nginx updated: serves dashboard on 443 + MCP on 8443 with valid cert
+- All devices now connect directly to CiscoKid — no Mac mini bridge, no SSH tunnel
+- Cortez: Node.js v20 installed, mcp-remote config written, npm dir created, working
+- Mac mini: updated remotely to HTTPS URL
+- JesAir: updated remotely to HTTPS URL
+- iPhone: manual 30-second setup pending
+- New URLs: dashboard=https://sloan3.tail1216a3.ts.net/dashboard, MCP=https://sloan3.tail1216a3.ts.net:8443/mcp
+- Tailnet name: tail1216a3.ts.net
+- iDRAC IPs: TheBeast=192.168.1.237, CiscoKid=192.168.1.35
+- Cortez now has SSH server accessible from homelab (for future remote ops)
