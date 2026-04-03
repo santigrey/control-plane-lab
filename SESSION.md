@@ -131,3 +131,14 @@
 - TheBeast amber light resolved: inlet temp threshold raised 33C to 37C via iDRAC9 (192.168.1.237)
 - CiscoKid iDRAC: 192.168.1.35
 - Standing Paco rule: search community solutions before declaring a blocker
+
+## Day 52 Evening Addendum
+- Twilio local number provisioned: +1 720 902 7314 (Denver local, replaces failed toll-free)
+- TWILIO_FROM_NUMBER updated in .env, orchestrator restarted
+- A2P 10DLC brand + campaign submitted for carrier approval
+  - Brand: James Sloan (Sole Proprietor, $4.50 one-time + $2/month)
+  - Messaging service: Alexandra
+  - Campaign: Mixed / personal assistant notifications
+  - Status: Under review, ETA 24-48 hours
+- Applications CSV: Oracle AI Engineer + Lirio marked rejected (7 total rejections)
+- Note: bulk sed error wiped applied statuses, restored 45 rows via python script
