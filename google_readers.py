@@ -83,9 +83,16 @@ def get_todays_calendar(calendar_id='primary'):
     for item in result.get('items', []):
         start = item.get('start', {})
         end = item.get('end', {})
+        start_str = start.get('dateTime') or start.get('date', '')
+        day_name = ''
+        try:
+            day_name = datetime.fromisoformat(start_str).strftime('%A')
+        except Exception:
+            pass
         events.append({
             'summary': item.get('summary', '(no title)'),
-            'start': start.get('dateTime') or start.get('date', ''),
+            'start': start_str,
+            'day_of_week': day_name,
             'end': end.get('dateTime') or end.get('date', ''),
             'location': item.get('location', ''),
         })
@@ -112,9 +119,16 @@ def get_upcoming_calendar(days=14, calendar_id='primary'):
     for item in result.get('items', []):
         s = item.get('start', {})
         e = item.get('end', {})
+        start_str = s.get('dateTime') or s.get('date', '')
+        day_name = ''
+        try:
+            day_name = datetime.fromisoformat(start_str).strftime('%A')
+        except Exception:
+            pass
         events.append({
             'summary': item.get('summary', '(no title)'),
-            'start': s.get('dateTime') or s.get('date', ''),
+            'start': start_str,
+            'day_of_week': day_name,
             'end': e.get('dateTime') or e.get('date', ''),
             'location': item.get('location', ''),
         })
