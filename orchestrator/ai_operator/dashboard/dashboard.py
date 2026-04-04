@@ -156,17 +156,27 @@ async function autoGreet(){
   _greeted=true;
   const vs=document.getElementById('voice-status');
   try{
-    const stream=await navigator.mediaDevices.getUserMedia({video:true});
+    const stream=await navigator.mediaDevices.getUserMedia({video:{width:{ideal:640},height:{ideal:480}}});
     if(vs){vs.textContent='Alexandra is looking...';vs.classList.add('visible');}
     const video=document.createElement('video');
     video.srcObject=stream;
-    await video.play();
-    await new Promise(r=>setTimeout(r,500));
+    video.setAttribute('playsinline','true');
+    await new Promise(r=>video.addEventListener('loadeddata',r,{once:true}));
+    await video.play().catch(()=>{});
+    await new Promise(r=>setTimeout(r,3000));
     const canvas=document.createElement('canvas');
     canvas.width=video.videoWidth||640;
     canvas.height=video.videoHeight||480;
-    canvas.getContext('2d').drawImage(video,0,0);
+    const ctx=canvas.getContext('2d');
+    for(let att=0;att<3;att++){
+      ctx.drawImage(video,0,0,canvas.width,canvas.height);
+      const px=ctx.getImageData(0,0,canvas.width,1).data;
+      let bright=0;for(let i=0;i<px.length;i+=4){if(px[i]+px[i+1]+px[i+2]>30)bright++;}
+      if(bright>canvas.width*0.1)break;
+      await new Promise(r=>setTimeout(r,1500));
+    }
     stream.getTracks().forEach(t=>t.stop());
+
     const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.85));
     const fd=new FormData();
     fd.append('file',blob,'webcam.jpg');
