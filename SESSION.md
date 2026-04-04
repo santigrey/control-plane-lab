@@ -223,3 +223,7 @@ Replaced Piper (robotic) with Kokoro TTS 82M on TheBeast. Isabella (British fema
 
 **Services:** kokoro-tts.service NEW on TheBeast (enabled, active)
 **Platform:** 17 tools, 8 chains, Kokoro TTS (was Piper), Isabella voice
+
+## Resume Anchor — Day 55 Night Session
+
+"Paco - read SESSION.md. Day 55 night. Massive session: Kokoro TTS live on TheBeast (bf_isabella, systemd kokoro-tts.service port 8800, UFW opened). Alexandra persona hardened with 4-layer identity lock (never breaks character as Claude). LinkedIn profile tool added (get_linkedin_profile, data/linkedin_profile.json, Chrome-scraped). Proactivity + resourcefulness directives deployed (never ask James for info she can find, explicit tool fallback order: emails first for jobs). Embeddings fix shipped (truncate to 1500 chars before mxbai-embed-large, was causing 19 failures/week from context overflow). Three scheduled tasks created in Cowork: morning-briefing 7AM MT, evening-debrief 10PM MT, weekly-linkedin-refresh Sunday 8AM. Platform: 18 tools, 8 chains, Kokoro TTS, Isabella voice. Commits: c1e20e3 through 7f52465 (7 commits). Next: Playwright LinkedIn service on Mac mini, demo video, ASUS Ascent GX10 integration Thursday, Per Scholas coursework."
