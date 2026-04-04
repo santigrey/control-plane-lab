@@ -35,3 +35,5 @@ session.md
 *.bak.*
 *.pdf
 course_materials/
+*.txt
+architecture_dump.txt
