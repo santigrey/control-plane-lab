@@ -336,6 +336,23 @@ def _get_system_status_handler(args):
     except:
         r["tailscale"] = "unavailable"
     r["ok"] = True
+
+def _get_linkedin_profile_handler(args: Dict[str, Any]) -> Dict[str, Any]:
+    import json as _json
+    profile_path = '/home/jes/control-plane/data/linkedin_profile.json'
+    section = args.get('section', 'all')
+    try:
+        with open(profile_path, 'r') as f:
+            data = _json.load(f)
+        if section == 'all':
+            return {"ok": True, "tool": "get_linkedin_profile", "profile": data}
+        elif section in data:
+            return {"ok": True, "tool": "get_linkedin_profile", "section": section, "data": data[section]}
+        else:
+            return {"ok": True, "tool": "get_linkedin_profile", "profile": data, "note": f"section '{section}' not found, returning all"}
+    except Exception as e:
+        return {"ok": False, "tool": "get_linkedin_profile", "error": str(e)}
+
     return r
 
 
@@ -906,6 +923,7 @@ def default_registry() -> ToolRegistry:
     r.register(ToolSpec(name="send_telegram", description="Send a message via Telegram bot. Args: message (required). Rate limited 5/60s.", schema={"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"], "additionalProperties": False}, handler=_send_telegram_handler))
     r.register(ToolSpec(name="read_file", description="Read a file from /home/jes/control-plane/ (jailed). Args: path (required). Max 50KB.", schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}, handler=_read_file_handler))
     r.register(ToolSpec(name="write_file", description="Write to /home/jes/control-plane/ (jailed). Args: path, content (max 50KB). Rejects .env, .key, .pem, .git/.", schema={"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"], "additionalProperties": False}, handler=_write_file_handler))
+    r.register(ToolSpec(name="get_linkedin_profile", description="Get James's LinkedIn profile data. Args: section (optional: 'experience', 'education', 'certifications', 'projects', 'recent_activity', or 'all'). Returns structured profile data.", schema={"type": "object", "properties": {"section": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_get_linkedin_profile_handler))
     r.register(ToolSpec(name="list_files", description="List files in /home/jes/control-plane/ (jailed). Args: path (optional). Max 100 entries.", schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_list_files_handler))
 
 

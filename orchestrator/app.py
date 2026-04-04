@@ -220,6 +220,7 @@ def get_system_prompt() -> str:
         "  read_file: Read a file from control-plane directory. Args: path (required). Max 50KB.\n"
         "  write_file: Write a file to control-plane directory. Args: path, content (required). Max 50KB.\n"
         "  list_files: List files in control-plane directory. Args: path (optional).\n"
+        "  get_linkedin_profile: Get James's LinkedIn profile data (experience, education, certifications, projects, activity). Args: section (optional). Use when James asks about his LinkedIn, profile, or wants to review/update his professional presence.\n"
         "- For complex or novel multi-step requests, use plan_and_execute with goal parameter to plan and execute autonomously.\n"
         "- CRITICAL: Never hallucinate real-time data. Always call get_live_context first for weather, time, stocks, or news.\n"
         "- CRITICAL: For ANY action that changes state, you MUST output the tool JSON. Never claim you performed an action without calling the tool.\n\n"

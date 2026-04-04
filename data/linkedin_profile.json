@@ -1,0 +1,143 @@
+{
+  "last_updated": "2026-04-04",
+  "url": "https://www.linkedin.com/in/james3sloan",
+  "name": "James Sloan MS",
+  "headline": "AI Platform Engineer | Agent Orchestration \u2022 MCP \u2022 LLMs \u2022 pgvector \u2022 Kubernetes",
+  "location": "Denver Metropolitan Area",
+  "connections": 196,
+  "followers": 200,
+  "open_to_work": true,
+  "target_roles": [
+    "Artificial Intelligence Engineer"
+  ],
+  "experience": [
+    {
+      "title": "Senior Software Engineer",
+      "company": "Optum",
+      "type": "Full-time",
+      "dates": "Jun 2021 - Nov 2025",
+      "duration": "4 yrs 6 mos",
+      "location": "Denver, Colorado, United States - Remote",
+      "description": "Delivered and supported enterprise-scale platforms spanning Windows application packaging and API gateway systems in highly regulated environments. Led incident response and served as Incident Commander during high-impact production outages. Designed and automated software packaging and deployment workflows. Supported cloud-native API gateway platforms, contributing to observability, reliability engineering, and SOA adoption. Participated in applied AI initiatives.",
+      "skills": [
+        "Windows application packaging",
+        "InstallShield",
+        "AdminStudio",
+        "PSADT",
+        "batch scripting",
+        "WiseScript"
+      ]
+    },
+    {
+      "title": "Lead IT Support Engineer",
+      "company": "Rally Health",
+      "type": "Full-time",
+      "dates": "Jun 2021 - Sep 2021",
+      "duration": "4 mos",
+      "location": "Denver, Colorado, United States",
+      "description": "Owned local IT infrastructure and endpoint management for the Denver office. Supported Windows and macOS environments. Acted as escalation point for technical issues."
+    },
+    {
+      "title": "Information Technology Support Engineer",
+      "company": "Insurium",
+      "type": "Full-time",
+      "dates": "Mar 2020 - Mar 2021",
+      "duration": "1 yr 1 mo",
+      "location": "Denver, Colorado, United States",
+      "description": "Cloud-based insurance platform. Full-stack IT support."
+    },
+    {
+      "title": "Virtualization Specialist",
+      "company": "Regis University College of Computer & Information Sciences",
+      "type": "Contract",
+      "dates": "Jan 2015 - Aug 2020",
+      "duration": "5 yrs 8 mos",
+      "location": "Greenwood Village",
+      "description": "Regis Cloud and Virtual Desktop Infrastructure Engineer. Rocky Mountain Collegiate Cyber Defense Competition Project Manager."
+    },
+    {
+      "title": "General Manager for National Accounts",
+      "company": "Sodexo",
+      "type": "Full-time",
+      "dates": "Nov 2012 - Oct 2019",
+      "duration": "7 yrs",
+      "location": "National",
+      "description": "Led large, multi-site operations with full accountability for teams, budgets, compliance, and service delivery."
+    },
+    {
+      "title": "Executive Chef",
+      "company": "Sodexo",
+      "dates": "Oct 2005 - Nov 2012",
+      "duration": "7 yrs 2 mos"
+    }
+  ],
+  "education": [
+    {
+      "school": "Regis University",
+      "degree": "Master of Science - MS, Computer/Information Assurance/Cyber Security",
+      "dates": "2015 - 2017"
+    },
+    {
+      "school": "Regis University",
+      "degree": "Master of Science - MS, Organizational Leadership/Project Leadership and Management",
+      "dates": "2013 - 2015",
+      "notes": "PMI accredited through GAC. Only 87 schools in the world hold this accreditation."
+    }
+  ],
+  "certifications": [
+    {
+      "name": "Microsoft Certified: Azure Fundamentals",
+      "issuer": "Microsoft",
+      "issued": "Nov 2025",
+      "credential_id": "37D3EA312729D895"
+    },
+    {
+      "name": "Microsoft Certified: Azure AI Fundamentals",
+      "issuer": "Microsoft",
+      "issued": "Oct 2025",
+      "expires": "Oct 2030",
+      "credential_id": "3EA9376954D2B86"
+    }
+  ],
+  "total_certifications": 14,
+  "projects": [
+    {
+      "name": "Regis Cloud Virtual Desktop Infrastructure",
+      "dates": "Nov 2019 - Mar 2020",
+      "associated_with": "Regis University",
+      "description": "Led VDI project after a cyber attack on Regis. Learned VMware Horizon, created business case, developed POC within 90 days. Converted to production."
+    },
+    {
+      "name": "Agent Forge",
+      "description": "Modular multi-agent AI system. Python package with agents/, core/, cli/ modules. Repository Analysis Agent and Document Summarization Agent."
+    }
+  ],
+  "total_projects": 7,
+  "total_skills": 83,
+  "key_skills": [
+    "Retrieval-Augmented Generation (RAG)",
+    "AI Agents"
+  ],
+  "recent_activity": [
+    {
+      "date": "2d ago",
+      "content": "Enrolled in AI Solutions Developer course via Per Scholas"
+    },
+    {
+      "date": "1w ago",
+      "content": "Posted Project Ascension AI_Operator document (7 pages)"
+    },
+    {
+      "date": "1w ago",
+      "content": "Open to work post - seeking AI Engineer roles"
+    },
+    {
+      "date": "1w ago",
+      "content": "Mass LinkedIn update - Claude Mastery Project portfolio"
+    },
+    {
+      "date": "1mo ago",
+      "content": "Seeking Senior Software Engineer / Applied AI Engineer role - 11 reactions, 2 reposts"
+    }
+  ]
+}
