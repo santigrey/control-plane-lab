@@ -111,6 +111,10 @@ html, body { height: 100%; background: #0d1117; color: #e6edf3; font-family: 'Co
     <div class="menu-section-hdr" onclick="toggleSection('tasks')"><span class="menu-section-title">Agent Tasks</span><span class="menu-chevron" id="chevron-tasks">&#8250;</span></div>
     <div class="menu-section-body" id="body-tasks"><div id="agent-tasks" style="color:#8b949e;font-size:0.82rem">Loading...</div></div>
   </div>
+  <div class="menu-section">
+    <div class="menu-section-hdr" onclick="toggleSection('archive')"><span class="menu-section-title">Chat History</span><span class="menu-chevron" id="chevron-archive">&#8250;</span></div>
+    <div class="menu-section-body" id="body-archive"><div id="chat-archive-list" style="color:#8b949e;font-size:0.82rem">Loading...</div></div>
+  </div>
 </div>
 <div id="main"></div>
 <div id="voice-status"></div>
@@ -133,7 +137,9 @@ async function loadAgentTasks(){try{const r=await fetch("/dashboard/agent_tasks"
 async function taskAction(id,action){const label=action==='approve'?'Approve':'Reject';const reason=window.prompt(label+' reason (optional - press OK to skip):','');if(reason===null)return;try{const body=reason.trim()?JSON.stringify({feedback:reason.trim()}):'{}';await fetch('/tasks/'+id+'/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body});loadAgentTasks();}catch(e){alert('Error: '+e.message);}}
 async function loadDailyBrief(){try{const r=await fetch('/dashboard/daily_brief');const d=await r.json();const el=document.getElementById('daily-brief');if(d.brief){el.innerHTML='<div class="brief-text">'+esc(d.brief)+'</div><div class="brief-meta">'+esc(d.date||'')+'</div>';}else{el.innerHTML='<div style="color:#8b949e;font-style:italic">No brief available yet.</div>';}}catch(e){document.getElementById('daily-brief').textContent='Error loading brief';}}
 const SESSION_ID='dashboard_main';
-async function loadChatHistory(){try{const r=await fetch('/dashboard/chat_history?session_id='+SESSION_ID);const d=await r.json();const msgs=d.messages||[];msgs.forEach(m=>{appendMsg(m.role==='user'?'user':'alex',m.content);});}catch(e){console.warn('chat history load error:',e);}}
+async function loadChatHistory(){try{const today=new Date().toISOString().split('T')[0];const r=await fetch('/dashboard/chat_history_by_date?date='+today);const d=await r.json();(d.messages||[]).forEach(m=>appendMsg(m.role==='user'?'user':'alex',m.content));}catch(e){console.warn('chat history load error:',e);}}
+async function loadChatArchive(){try{const r=await fetch('/dashboard/chat_archive');const d=await r.json();const container=document.getElementById('chat-archive-list');if(!container)return;container.innerHTML='';const today=new Date().toISOString().split('T')[0];(d.dates||[]).forEach(item=>{const label=item.date===today?'Today':item.date===new Date(Date.now()-86400000).toISOString().split('T')[0]?'Yesterday':item.date;const div=document.createElement('div');div.style.cssText='padding:8px 12px;cursor:pointer;border-bottom:1px solid #333;font-size:13px;';div.innerHTML='<span style=\"color:#ccc\">'+label+'</span> '+'<span style=\"color:#666;font-size:11px\">('+item.count+' msgs)</span>';div.onclick=()=>loadHistoryForDate(item.date,label);container.appendChild(div);});}catch(e){console.warn('archive load error:',e);}}
+async function loadHistoryForDate(date,label){try{const r=await fetch('/dashboard/chat_history_by_date?date='+date);const d=await r.json();const chatBox=document.getElementById('main');if(!chatBox)return;chatBox.innerHTML='<div style=\"text-align:center;color:#666;padding:10px;font-size:12px;border-bottom:1px solid #333;margin-bottom:10px\">\u2014 '+label+' \u2014</div>';(d.messages||[]).forEach(m=>appendMsg(m.role==='user'?'user':'alex',m.content));}catch(e){console.warn('history load error:',e);}}
 function appendMsg(role,text){const main=document.getElementById('main');const wrap=document.createElement('div');wrap.className='chat-msg '+(role==='user'?'user':'alex');const bubble=document.createElement('div');bubble.className='chat-bubble';bubble.textContent=text;const ts=document.createElement('div');ts.className='chat-ts';ts.textContent=fmtTime(new Date());wrap.appendChild(bubble);wrap.appendChild(ts);main.appendChild(wrap);main.scrollTop=main.scrollHeight;}
 function setTyping(on){const main=document.getElementById('main');let el=document.getElementById('chat-typing');if(on){if(!el){el=document.createElement('div');el.id='chat-typing';el.className='chat-typing';el.textContent='Alexandra is thinking...';main.appendChild(el);main.scrollTop=main.scrollHeight;}}else{if(el)el.remove();}}
 async function sendChat(){const input=document.getElementById('chat-input');const msg=input.value.trim();if(!msg)return;input.value='';document.getElementById('send-btn').disabled=true;appendMsg('user',msg);setTyping(true);try{const r=await fetch('/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg,session_id:SESSION_ID})});const d=await r.json();setTyping(false);const reply=d.response||JSON.stringify(d);appendMsg('alex',reply);setTimeout(loadRuns,1000);try{const sr=await fetch('/voice/speak',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:reply})});const ab=await sr.blob();const au=URL.createObjectURL(ab);const a=new Audio(au);a.onended=()=>{URL.revokeObjectURL(au);};a.play();}catch(ve){console.warn('voice speak error:',ve);}}catch(e){setTyping(false);appendMsg('alex','Error: '+e.message);}finally{document.getElementById('send-btn').disabled=false;}}
@@ -181,7 +187,7 @@ async function autoGreet(){
     if(vs){vs.textContent='';vs.classList.remove('visible');}
   }
 }
-loadStatus();loadRuns();loadAgentTasks();loadDailyBrief();loadChatHistory();setInterval(loadAgentTasks,20000);setInterval(loadStatus,30000);
+loadStatus();loadRuns();loadAgentTasks();loadDailyBrief();loadChatHistory();loadChatArchive();setInterval(loadAgentTasks,20000);setInterval(loadStatus,30000);
 const main=document.getElementById('main'); if(main) main.scrollTop=main.scrollHeight;
 document.getElementById('chat-input').addEventListener('keydown',function(e){if(e.key==='Enter')sendChat();});
 document.addEventListener('keydown',unlockAudio,{once:true});
@@ -421,5 +427,42 @@ async def dashboard_chat_history(session_id: str = 'default'):
                 )
                 rows = cur.fetchall()
                 return {'messages': [{'role': r[0], 'content': r[1], 'created_at': r[2].isoformat() if r[2] else None} for r in rows]}
+    except Exception as e:
+        return {'messages': [], 'error': str(e)}
+
+
+@router.get('/dashboard/chat_archive')
+async def dashboard_chat_archive():
+    try:
+        with psycopg.connect(get_db_url()) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT DATE(created_at) as chat_date,
+                           COUNT(*) as message_count
+                    FROM chat_history
+                    WHERE session_id = 'dashboard_main'
+                    GROUP BY DATE(created_at)
+                    ORDER BY chat_date DESC
+                    LIMIT 60
+                """)
+                rows = cur.fetchall()
+                return {'dates': [{'date': str(r[0]), 'count': r[1]} for r in rows]}
+    except Exception as e:
+        return {'dates': [], 'error': str(e)}
+
+@router.get('/dashboard/chat_history_by_date')
+async def dashboard_chat_history_by_date(date: str):
+    try:
+        with psycopg.connect(get_db_url()) as conn:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    SELECT role, content, created_at
+                    FROM chat_history
+                    WHERE session_id = 'dashboard_main'
+                    AND DATE(created_at) = %s
+                    ORDER BY created_at ASC
+                """, (date,))
+                rows = cur.fetchall()
+                return {'messages': [{'role': r[0], 'content': r[1], 'created_at': r[2].isoformat()} for r in rows]}
     except Exception as e:
         return {'messages': [], 'error': str(e)}
