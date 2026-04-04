@@ -614,6 +614,8 @@ def ask(req: AskRequest, request: Request) -> Dict[str, Any]:
 
 def _beast_embed(text: str):
     import urllib.request as _ur, json as _jj
+    # mxbai-embed-large has 512 token context - truncate to ~1500 chars to stay safe
+    text = text[:1500]
     req = _ur.Request(
         'http://192.168.1.152:11434/api/embeddings',
         data=_jj.dumps({'model':'mxbai-embed-large:latest','prompt':text}).encode(),
