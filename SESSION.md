@@ -157,3 +157,12 @@
 - Tailnet name: tail1216a3.ts.net
 - iDRAC IPs: TheBeast=192.168.1.237, CiscoKid=192.168.1.35
 - Cortez now has SSH server accessible from homelab (for future remote ops)
+
+## Day 53 Addendum
+- Mac mini MCP fixed: full node path required in config due to Claude Desktop PATH limitation
+  - command: /opt/homebrew/opt/node@20/bin/node
+  - args: npx-cli.js mcp-remote https://sloan3.tail1216a3.ts.net:8443/mcp
+  - env: PATH includes /opt/homebrew/opt/node@20/bin
+- Alexandra dashboard: must use hostname https://sloan3.tail1216a3.ts.net/dashboard not IP
+- iPhone MCP: not supported for private LAN servers - Telegram is the mobile interface
+- All 3 desktop devices now working: Cortez + Mac mini + JesAir
