@@ -166,3 +166,34 @@
 - Alexandra dashboard: must use hostname https://sloan3.tail1216a3.ts.net/dashboard not IP
 - iPhone MCP: not supported for private LAN servers - Telegram is the mobile interface
 - All 3 desktop devices now working: Cortez + Mac mini + JesAir
+
+## Day 55 — April 4, 2026
+
+**Alexandra Tool Chain Engine Upgrade — COMPLETE (commit e953c0a)**
+
+Three-phase build: job search assistant → general-purpose life operator.
+
+**Phase 1 — 7 New Tool Handlers (registry.py: 760→948 lines)**
+- summarize, memory_recall, memory_save, send_telegram, read_file, write_file, list_files
+- Security: _check_jail (realpath+startswith), forbidden file set, rate limiting 5/min
+
+**Phase 2 — Dynamic Chain Planner (chains.py: 30→244 lines)**
+- 8 static chains: research_and_draft, job_search_deep, full_status_report, morning_briefing, class_prep, weekly_review, application_followup, company_deep_dive
+- Dynamic planning: goal→Ollama llama3.1:8b→JSON plan→sequential execution
+- Execution: MAX_STEPS=10, TOTAL_TIMEOUT=120s, context passed between steps
+
+**Phase 3 — System Prompt (app.py: +9 lines, personas untouched)**
+- Added 7 new tool descriptions + updated plan_and_execute + planning instruction
+
+**Verified:** morning_briefing chain, dynamic goal planning, all 17 tools visible, clean restart.
+**Security:** Zero hardcoded secrets, jail on all file I/O, rate limiting, bounded execution.
+**Known:** TheBeast embeddings intermittent, list_files needs full path prefix.
+**Backups:** registry.py.bak.phase1, chains.py.bak.phase2, app.py.bak.phase3
+**Platform:** 17 tools (was 10), 8 static chains (was 3), dynamic planning NEW.
+
+## Next Steps
+1. TheBeast embeddings stability check
+2. Test dynamic goals via Telegram (cooking, class prep, life advice)
+3. Demo video for LinkedIn/portfolio
+4. Per Scholas coursework
+5. Prologis follow-up
