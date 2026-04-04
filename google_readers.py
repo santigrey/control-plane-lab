@@ -92,6 +92,34 @@ def get_todays_calendar(calendar_id='primary'):
     return events
 
 
+def get_upcoming_calendar(days=14, calendar_id='primary'):
+    """Get calendar events for the next N days (default 7)."""
+    from googleapiclient.discovery import build
+    creds = _load_credentials()
+    service = build('calendar', 'v3', credentials=creds)
+    local_now = datetime.now().astimezone()
+    tz = local_now.tzinfo
+    start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0).astimezone(tz)
+    end = start + timedelta(days=days)
+    result = service.events().list(
+        calendarId=calendar_id,
+        timeMin=start.isoformat(),
+        timeMax=end.isoformat(),
+        singleEvents=True,
+        orderBy='startTime'
+    ).execute()
+    events = []
+    for item in result.get('items', []):
+        s = item.get('start', {})
+        e = item.get('end', {})
+        events.append({
+            'summary': item.get('summary', '(no title)'),
+            'start': s.get('dateTime') or s.get('date', ''),
+            'end': e.get('dateTime') or e.get('date', ''),
+            'location': item.get('location', ''),
+        })
+    return events
+
 def create_calendar_event(summary, start_time, end_time, description='', location='', timezone='America/Denver', recurrence=None):
     """Create a Google Calendar event.
     

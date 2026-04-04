@@ -163,19 +163,23 @@ async function autoGreet(){
     video.setAttribute('playsinline','true');
     await new Promise(r=>video.addEventListener('loadeddata',r,{once:true}));
     await video.play().catch(()=>{});
-    await new Promise(r=>setTimeout(r,3000));
+    await new Promise(r=>setTimeout(r,5000));
     const canvas=document.createElement('canvas');
     canvas.width=video.videoWidth||640;
     canvas.height=video.videoHeight||480;
     const ctx=canvas.getContext('2d');
-    for(let att=0;att<3;att++){
+    for(let att=0;att<5;att++){
       ctx.drawImage(video,0,0,canvas.width,canvas.height);
       const px=ctx.getImageData(0,0,canvas.width,1).data;
       let bright=0;for(let i=0;i<px.length;i+=4){if(px[i]+px[i+1]+px[i+2]>30)bright++;}
       if(bright>canvas.width*0.1)break;
-      await new Promise(r=>setTimeout(r,1500));
+      await new Promise(r=>setTimeout(r,2000));
     }
     stream.getTracks().forEach(t=>t.stop());
+    // Check if frame is still too dark after all retries
+    const finalPx=ctx.getImageData(0,0,canvas.width,1).data;
+    let finalBright=0;for(let i=0;i<finalPx.length;i+=4){if(finalPx[i]+finalPx[i+1]+finalPx[i+2]>30)finalBright++;}
+    if(finalBright<canvas.width*0.1){appendMsg('alex','Camera is still warming up - try clicking the camera button in a moment.');if(vs){vs.textContent='';vs.classList.remove('visible');}_greeted=false;return;}
 
     const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.85));
     const fd=new FormData();

@@ -279,6 +279,20 @@ def _get_calendar_handler(args: Dict[str, Any]) -> Dict[str, Any]:
     return _json.loads(r.stdout.strip())
 
 
+
+def _get_upcoming_calendar_handler(args):
+    import subprocess, json as _json
+    days = args.get('days', 7)
+    r = subprocess.run(
+        ['/usr/bin/python3', '-c',
+         f'import sys, json; sys.path.insert(0,"/home/jes/control-plane"); '
+         f'from google_readers import get_upcoming_calendar; '
+         f'print(json.dumps(get_upcoming_calendar(days={int(days)})))'],
+        capture_output=True, text=True, timeout=20)
+    if r.returncode != 0:
+        return {"ok": False, "error": r.stderr.strip()}
+    return _json.loads(r.stdout.strip())
+
 def _create_calendar_event_handler(args: Dict[str, Any]) -> Dict[str, Any]:
     import subprocess, json as _json
     snippet = (
@@ -839,6 +853,13 @@ def default_registry() -> ToolRegistry:
         handler=_get_calendar_handler,
     ))
 
+
+    r.register(ToolSpec(
+        name="get_upcoming_calendar",
+        description="Get James's calendar events for the next N days. Use this to verify appointments, check upcoming schedule, or look beyond today. Args: days (int, default 14).",
+        schema={"type": "object", "properties": {"days": {"type": "integer", "default": 14}}, "required": [], "additionalProperties": False},
+        handler=_get_upcoming_calendar_handler,
+    ))
     r.register(ToolSpec(
         name="create_calendar_event",
         description="Create a Google Calendar event. Args: summary (required), start_time (ISO, required), end_time (ISO, required), description, location, timezone (default America/Denver), recurrence (RFC5545 RRULE).",
