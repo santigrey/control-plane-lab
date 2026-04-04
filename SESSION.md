@@ -197,3 +197,29 @@ Three-phase build: job search assistant → general-purpose life operator.
 3. Demo video for LinkedIn/portfolio
 4. Per Scholas coursework
 5. Prologis follow-up
+
+## Day 55 Evening — April 4, 2026
+
+**Kokoro TTS Migration — COMPLETE (commit c1e20e3)**
+
+Replaced Piper (robotic) with Kokoro TTS 82M on TheBeast. Isabella (British female) voice.
+
+**Architecture:**
+- TheBeast: kokoro-tts.service (systemd, enabled, port 8800)
+  - FastAPI/Uvicorn server, KPipeline lang_code="b", voice=bf_isabella
+  - Model: kokoro-82m, runs on GPU, ~2-3GB VRAM
+- CiscoKid: voice.py → POST http://192.168.1.152:8800/tts → WAV → ffmpeg → MP3
+- Fallback: Piper (en_GB-jenny_dioco-medium) if Kokoro unavailable
+
+**Bug Fixes (this session):**
+- UFW port 8800 opened on TheBeast for LAN (was blocking CiscoKid→TheBeast TTS)
+- voice.py: Piper fallback block was missing, appended
+- Markdown stripping: _strip_markdown() removes bold, italic, headings, bullets, links, backticks
+- Response cleanup in app.py: asterisks stripped before TTS
+- File I/O path normalization: relative paths resolve to /home/jes/control-plane/
+- ToolCallResponse.result type: Dict→Any (fixes list-returning tools)
+- Chat continuation prompt: prevents premature responses on multi-tool tasks
+- MAX_TOOL_CALLS: 5→8
+
+**Services:** kokoro-tts.service NEW on TheBeast (enabled, active)
+**Platform:** 17 tools, 8 chains, Kokoro TTS (was Piper), Isabella voice
