@@ -1,4 +1,4 @@
-import os
+import os, re
 from dotenv import dotenv_values
 
 _model = None
@@ -23,21 +23,55 @@ def transcribe_audio(audio_path: str) -> str:
     segments, _ = model.transcribe(audio_path, beam_size=1, language="en")
     return " ".join(s.text.strip() for s in segments).strip()
 
+def _strip_markdown(text: str) -> str:
+    """Remove markdown formatting so TTS reads clean prose."""
+    text = re.sub(r'\*\*([^*]+)\*\*', r'\1', text)
+    text = re.sub(r'\*([^*]+)\*', r'\1', text)
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'^[-*]\s+', '', text, flags=re.MULTILINE)
+    text = re.sub(r'\[([^\]]+)\]\([^)]+\)', r'\1', text)
+    text = text.replace('`', '')
+    text = re.sub(r'\n{3,}', '\n\n', text)
+    return text
+
+KOKORO_URL = "http://192.168.1.152:8800/tts"
+
 def synthesize_speech(text: str) -> bytes:
-    from elevenlabs.client import ElevenLabs
-    api_key = _load_api_key()
-    client = ElevenLabs(api_key=api_key)
-    VOICE_ID = "RILOU7YmBhvwJGDGjNmP"
-    audio = client.text_to_speech.convert(
-        text=text,
-        voice_id=VOICE_ID,
-        model_id="eleven_monolingual_v1",
-        output_format="mp3_44100_128",
-    )
-    if isinstance(audio, (bytes, bytearray)):
-        return bytes(audio)
-    chunks = []
-    for chunk in audio:
-        if chunk:
-            chunks.append(chunk)
-    return b"".join(chunks)
+    import subprocess, tempfile, os, requests
+    text = _strip_markdown(text)
+    try:
+        resp = requests.post(KOKORO_URL, json={"text": text}, timeout=30)
+        if resp.status_code == 200 and len(resp.content) > 100:
+            wav_path = tempfile.mktemp(suffix='.wav')
+            mp3_path = tempfile.mktemp(suffix='.mp3')
+            try:
+                with open(wav_path, 'wb') as f:
+                    f.write(resp.content)
+                subprocess.run(['ffmpeg', '-y', '-i', wav_path, '-codec:a', 'libmp3lame', '-qscale:a', '2', mp3_path], capture_output=True, timeout=15)
+                with open(mp3_path, 'rb') as f:
+                    return f.read()
+            finally:
+                for p in [wav_path, mp3_path]:
+                    try: os.unlink(p)
+                    except: pass
+    except Exception:
+        pass
+    # Piper fallback
+    PIPER_MODEL = '/home/jes/models/piper/en_GB-jenny_dioco-medium.onnx'
+    wav_path = tempfile.mktemp(suffix='.wav')
+    mp3_path = tempfile.mktemp(suffix='.mp3')
+    try:
+        try:
+            result = subprocess.run(['python3', '-m', 'piper', '--model', PIPER_MODEL, '--output_file', wav_path], input=text, capture_output=True, text=True, timeout=30)
+            if result.returncode != 0: raise Exception(result.stderr)
+        except Exception:
+            result = subprocess.run(['/home/jes/control-plane/piper/piper', '--model', PIPER_MODEL, '--output_file', wav_path], input=text, capture_output=True, text=True, timeout=30)
+            if result.returncode != 0: raise Exception(f'Piper failed: {result.stderr}')
+        subprocess.run(['ffmpeg', '-y', '-i', wav_path, '-codec:a', 'libmp3lame', '-qscale:a', '2', mp3_path], capture_output=True, timeout=15)
+        with open(mp3_path, 'rb') as f: audio_bytes = f.read()
+        if not audio_bytes: raise Exception('Empty audio output')
+        return audio_bytes
+    finally:
+        for p in [wav_path, mp3_path]:
+            try: os.unlink(p)
+            except: pass
