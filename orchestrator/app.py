@@ -205,7 +205,7 @@ def get_system_prompt() -> str:
         "- Otherwise, respond normally in plain conversational text.\n"
         "- AVAILABLE TOOLS AND WHEN TO USE THEM:\n"
         "  get_live_context: Use this for ANY question about time, weather, temperature, stocks, markets, S&P 500, NASDAQ, Bitcoin, news, or headlines. Never hallucinate this data.\n"
-        "  get_emails: Use for any question about emails, inbox, or messages.\n"
+        "  get_emails: Use for any question about emails, inbox, or messages. ALSO use when searching for job postings - Jobright alerts, LinkedIn job notifications, and recruiter messages all arrive here.\n"
         "  get_calendar: Use for any question about schedule, meetings, or calendar events.\n"
         "  create_calendar_event: Use to create calendar events. Args: summary, start_time (ISO format), end_time (ISO format), description (optional), location (optional), timezone (optional).\n"
         "  get_system_status: Use when James asks about system status, stack health, servers, services, disk, memory, or Tailscale.\n"
@@ -775,7 +775,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
                         "Continue. If the original request involves multiple actions (e.g. fetch data AND write a file), you MUST complete ALL actions before responding. "
                         "If you still have pending actions, output only the next tool JSON. "
                         "Only respond conversationally when ALL requested actions are done. "
-                        "If a tool returned no useful results, try a DIFFERENT tool or approach before giving up. For example: if get_job_pipeline has no match, try research_topic or get_emails. Be resourceful. "
+                        "If a tool returned no useful results, try a DIFFERENT tool before giving up. IMPORTANT fallback order for job-related queries: 1) get_emails (job alerts from Jobright, LinkedIn, recruiters live here), 2) research_topic (web search), 3) get_job_pipeline (tracked applications), 4) web_fetch (direct URLs). Always check emails for jobs - most postings arrive via alerts. Be resourceful and exhaust ALL relevant tools. "
                         "Do NOT output any JSON in your final answer. Do NOT mention tool names. "
                         "Remember: You are Alexandra. Stay in character. Never identify as Claude or an AI assistant."
                     )
