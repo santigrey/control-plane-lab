@@ -624,19 +624,22 @@ def _beast_embed(text: str):
     with _ur.urlopen(req, timeout=10) as r:
         return _jj.loads(r.read())['embedding']
 
-def _load_chat_history(sid: str, limit: int = 10):
+def _load_chat_history(sid: str, limit: int = 30):
     try:
         import psycopg as _pg
         conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
         cur = conn.cursor()
         cur.execute(
-            'SELECT role, content FROM chat_history WHERE session_id=%s ORDER BY created_at ASC LIMIT %s',
+            'SELECT role, content FROM chat_history WHERE session_id=%s ORDER BY created_at DESC LIMIT %s',
             (sid, limit)
         )
         rows = cur.fetchall()
         conn.close()
-        return [{'role': r[0], 'content': r[1]} for r in rows]
-    except Exception:
+        result = [{'role': r[0], 'content': r[1]} for r in reversed(rows)]
+        import logging; logging.getLogger('alexandra').info(f'Loaded {len(result)} history rows for {sid}')
+        return result
+    except Exception as e:
+        import logging; logging.getLogger('alexandra').error(f'chat_history load failed for {sid}: {e}')
         return []
 
 def _save_chat_turn(sid: str, role: str, content: str):
@@ -650,14 +653,15 @@ def _save_chat_turn(sid: str, role: str, content: str):
         )
         cur.execute(
             '''DELETE FROM chat_history WHERE session_id=%s AND id NOT IN (
-                SELECT id FROM chat_history WHERE session_id=%s ORDER BY created_at DESC LIMIT 20
+                SELECT id FROM chat_history WHERE session_id=%s ORDER BY created_at DESC LIMIT 40
             )''',
             (sid, sid)
         )
         conn.commit()
         conn.close()
-    except Exception:
-        pass
+        import logging; logging.getLogger('alexandra').info(f'Saved {role} turn for {sid}')
+    except Exception as e:
+        import logging; logging.getLogger('alexandra').error(f'chat_history save failed for {sid}: {e}')
 
 def _store_memory_async(text: str, source: str = 'chat'):
     import threading as _thr
@@ -681,7 +685,9 @@ def _store_memory_async(text: str, source: str = 'chat'):
 
 def _needs_memory_search(msg: str) -> bool:
     triggers = ['remember','recall','last time','we talked','you mentioned','previously',
-                'before','yesterday','last week','what did','did i tell','did we','history']
+                'before','yesterday','last week','what did','did i tell','did we','history',
+                'check that','you just','you said','i said','correct that','fix that',
+                'i told you','talking about','no that','wrong','not what i']
     m = msg.lower()
     return any(t in m for t in triggers)
 
