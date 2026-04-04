@@ -618,6 +618,8 @@ def _read_file_handler(args):
     path = args.get("path", "")
     if not path or not path.strip():
         return {"ok": False, "tool": "read_file", "error": "path cannot be empty"}
+    if path and not os.path.isabs(path):
+        path = os.path.join("/home/jes/control-plane", path)
     try:
         resolved = os.path.realpath(path)
         jail_err = _check_jail(resolved, "read_file")
@@ -640,6 +642,8 @@ def _write_file_handler(args):
     content = args.get("content", "")
     if not path or not path.strip():
         return {"ok": False, "tool": "write_file", "error": "path cannot be empty"}
+    if path and not os.path.isabs(path):
+        path = os.path.join("/home/jes/control-plane", path)
     try:
         resolved = os.path.realpath(path)
         jail_err = _check_jail(resolved, "write_file")
@@ -671,6 +675,8 @@ def _write_file_handler(args):
 def _list_files_handler(args):
     import os
     path = args.get("path", "/home/jes/control-plane/")
+    if path and not os.path.isabs(path):
+        path = os.path.join("/home/jes/control-plane", path)
     try:
         resolved = os.path.realpath(path)
         jail_err = _check_jail(resolved, "list_files")

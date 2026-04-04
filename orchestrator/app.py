@@ -80,7 +80,7 @@ class AskRequest(BaseModel):
 class ToolCallResponse(BaseModel):
     tool: str
     args: Dict[str, Any] = {}
-    result: Optional[Dict[str, Any]] = None
+    result: Optional[Any] = None
 
 
 class AskResponse(BaseModel):
@@ -734,7 +734,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
             if _long_term:
                 _sys = _sys + '\n\nRELEVANT MEMORY FROM PAST CONVERSATIONS:\n' + _long_term
             _msgs = list(history) + [{"role": "user", "content": msg}]
-            MAX_TOOL_CALLS = 5
+            MAX_TOOL_CALLS = 8
             _tool_count = 0
             while _tool_count < MAX_TOOL_CALLS:
                 _r = _cl.messages.create(
@@ -752,14 +752,16 @@ def chat(req: ChatRequest, request: Request) -> dict:
                     _tr = TOOLS.run(_tc["tool"], _tc["args"])
                 except Exception as _ex:
                     _tr = {"ok": False, "error": str(_ex)}
+                print("[CHAT-TOOL] #" + str(_tool_count+1) + ": " + str(_tc.get("tool","?")) + " args=" + str(_tc.get("args",{})) + " result_ok=" + str(_tr.get("ok","?") if isinstance(_tr,dict) else "non-dict"))
                 _msgs.append({"role": "assistant", "content": _raw})
                 _msgs.append({
                     "role": "user",
                     "content": (
                         f"Tool '{_tc['tool']}' executed. Result:\n"
                         f"{json.dumps(_tr, ensure_ascii=False, default=str)}\n\n"
-                        "Continue. If you need another tool call, output only the JSON. "
-                        "If you have enough information to answer James, respond conversationally now. "
+                        "Continue. If the original request involves multiple actions (e.g. fetch data AND write a file), you MUST complete ALL actions before responding. "
+                        "If you still have pending actions, output only the next tool JSON. "
+                        "Only respond conversationally when ALL requested actions are done. "
                         "Do NOT output any JSON in your final answer. Do NOT mention tool names."
                     )
                 })
