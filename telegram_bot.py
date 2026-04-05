@@ -10,6 +10,7 @@ from dotenv import dotenv_values as _dv
 _env = _dv('/home/jes/control-plane/.env')
 BOT_TOKEN = _env.get("TELEGRAM_BOT_TOKEN") or os.getenv("TELEGRAM_BOT_TOKEN")
 API_BASE = "http://localhost:8000"
+GATE_API_BASE = "http://127.0.0.1:8002"
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,6 +22,21 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+# --- IoT Approval Gate helpers ---
+
+async def _gate_post(endpoint: str, payload: dict) -> dict:
+    """POST to the approval gate HTTP API."""
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            f"{GATE_API_BASE}{endpoint}",
+            json=payload,
+            timeout=aiohttp.ClientTimeout(total=10),
+        ) as resp:
+            return await resp.json()
+
+
+# --- Handlers ---
 
 async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     user_id = update.effective_user.id
@@ -189,21 +205,42 @@ async def tasks_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 
 async def approve_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     if not context.args:
-        await update.message.reply_text("Usage: /approve <task_id>")
+        await update.message.reply_text("Usage: /approve <task_id or request_id>")
         return
-    task_id = context.args[0]
-    logger.info(f"/approve {task_id} from {update.effective_user.id}")
-    try:
-        async with aiohttp.ClientSession() as session:
-            async with session.post(
-                f"{API_BASE}/tasks/{task_id}/approve",
-                timeout=aiohttp.ClientTimeout(total=30),
-            ) as resp:
-                data = await resp.json()
-                reply = data.get("message") or data.get("status") or f"Task {task_id} approved."
-    except Exception as e:
-        logger.error(f"approve error: {e}")
-        reply = f"Error approving {task_id}: {e}"
+    target_id = context.args[0]
+    user_id = update.effective_user.id
+    logger.info(f"/approve {target_id} from {user_id}")
+
+    # Route: if request_id starts with 'req_' -> IoT approval gate
+    if target_id.startswith('req_'):
+        try:
+            data = await _gate_post('/approve', {
+                'request_id': target_id,
+                'user_id': user_id,
+            })
+            status = data.get('status', 'unknown')
+            action = data.get('action', '')
+            entity = data.get('entity_id', '')
+            if status == 'approved':
+                reply = f"APPROVED: {action} on {entity}\nRequest {target_id} executed."
+            else:
+                reply = f"Gate response: {data}"
+        except Exception as e:
+            logger.error(f"gate approve error: {e}")
+            reply = f"Error approving via gate: {e}"
+    else:
+        # Original orchestrator task approval
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.post(
+                    f"{API_BASE}/tasks/{target_id}/approve",
+                    timeout=aiohttp.ClientTimeout(total=30),
+                ) as resp:
+                    data = await resp.json()
+                    reply = data.get("message") or data.get("status") or f"Task {target_id} approved."
+        except Exception as e:
+            logger.error(f"approve error: {e}")
+            reply = f"Error approving {target_id}: {e}"
     await update.message.reply_text(reply)
 
 
@@ -224,6 +261,95 @@ async def reject_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> 
     except Exception as e:
         logger.error(f"reject error: {e}")
         reply = f"Error rejecting {task_id}: {e}"
+    await update.message.reply_text(reply)
+
+
+async def deny_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Deny a Tier 3 IoT approval request via the approval gate."""
+    if not context.args:
+        await update.message.reply_text("Usage: /deny <request_id>")
+        return
+    request_id = context.args[0]
+    user_id = update.effective_user.id
+    logger.info(f"/deny {request_id} from {user_id}")
+    try:
+        data = await _gate_post('/deny', {
+            'request_id': request_id,
+            'user_id': user_id,
+        })
+        status = data.get('status', 'unknown')
+        action = data.get('action', '')
+        entity = data.get('entity_id', '')
+        if status == 'denied':
+            reply = f"DENIED: {action} on {entity}\nRequest {request_id} rejected."
+        else:
+            reply = f"Gate response: {data}"
+    except Exception as e:
+        logger.error(f"gate deny error: {e}")
+        reply = f"Error denying via gate: {e}"
+    await update.message.reply_text(reply)
+
+
+async def blackout_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Activate camera blackout via the approval gate."""
+    user_id = update.effective_user.id
+    logger.info(f"/blackout from {user_id}")
+    try:
+        data = await _gate_post('/blackout', {'user_id': user_id})
+        if data.get('camera_blackout'):
+            reply = "CAMERA BLACKOUT ACTIVATED\nAll camera access disabled for Alexandra.\nSend /cameras_on to restore."
+        else:
+            reply = f"Gate response: {data}"
+    except Exception as e:
+        logger.error(f"blackout error: {e}")
+        reply = f"Error activating blackout: {e}"
+    await update.message.reply_text(reply)
+
+
+async def cameras_on_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Restore camera access via the approval gate."""
+    user_id = update.effective_user.id
+    logger.info(f"/cameras_on from {user_id}")
+    try:
+        data = await _gate_post('/cameras_on', {'user_id': user_id})
+        if not data.get('camera_blackout', True):
+            reply = "Camera access restored for Alexandra."
+        else:
+            reply = f"Gate response: {data}"
+    except Exception as e:
+        logger.error(f"cameras_on error: {e}")
+        reply = f"Error restoring cameras: {e}"
+    await update.message.reply_text(reply)
+
+
+async def gate_status_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Show approval gate status and pending requests."""
+    user_id = update.effective_user.id
+    logger.info(f"/gate from {user_id}")
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                f"{GATE_API_BASE}/healthz",
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as resp:
+                health = await resp.json()
+            async with session.get(
+                f"{GATE_API_BASE}/pending",
+                timeout=aiohttp.ClientTimeout(total=5),
+            ) as resp:
+                pending = await resp.json()
+
+        lines = [
+            f"Approval Gate: {health.get('status', '?')}",
+            f"Camera Blackout: {'YES' if health.get('camera_blackout') else 'No'}",
+            f"Pending Approvals: {pending.get('count', 0)}",
+        ]
+        for rid, info in pending.get('pending', {}).items():
+            lines.append(f"  {rid}: {info.get('action')} on {info.get('entity_id')}")
+        reply = '\n'.join(lines)
+    except Exception as e:
+        logger.error(f"gate status error: {e}")
+        reply = f"Error checking gate: {e}"
     await update.message.reply_text(reply)
 
 
@@ -250,6 +376,10 @@ def main() -> None:
     app.add_handler(CommandHandler("tasks", tasks_handler))
     app.add_handler(CommandHandler("approve", approve_handler))
     app.add_handler(CommandHandler("reject", reject_handler))
+    app.add_handler(CommandHandler("deny", deny_handler))
+    app.add_handler(CommandHandler("blackout", blackout_handler))
+    app.add_handler(CommandHandler("cameras_on", cameras_on_handler))
+    app.add_handler(CommandHandler("gate", gate_status_handler))
     app.add_handler(CommandHandler("status", status_handler))
     app.add_handler(MessageHandler(filters.VOICE, voice_handler))
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))

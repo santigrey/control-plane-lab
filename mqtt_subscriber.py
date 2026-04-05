@@ -2,6 +2,10 @@
 import sys
 sys.path.insert(0, '/home/jes/control-plane')
 
+import os
+from dotenv import load_dotenv
+load_dotenv('/home/jes/control-plane/.env')
+
 import json
 import logging
 from datetime import datetime, timezone
@@ -17,6 +21,8 @@ log = logging.getLogger('mqtt_subscriber')
 
 BROKER = '192.168.1.40'
 PORT = 1883
+MQTT_USER = os.getenv('MQTT_USER', '')
+MQTT_PASS = os.getenv('MQTT_PASS', '')
 
 def on_connect(client, userdata, flags, rc):
     if rc == 0:
@@ -53,6 +59,8 @@ def main():
     )
     client.on_connect = on_connect
     client.on_message = on_message
+    if MQTT_USER:
+        client.username_pw_set(MQTT_USER, MQTT_PASS)
     client.reconnect_delay_set(1, 30)
     client.connect(BROKER, PORT, keepalive=60)
     log.info('Starting MQTT subscriber on ciscokid')

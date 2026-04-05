@@ -1,229 +1,59 @@
-# SESSION.md — Project Ascension
+# SESSION.md — April 5, 2026 ~12:45 PM MST
 
-## Last Updated
-2026-04-02 (Day 52)
+## RESUME POINT
+IoT Security Protocol (Option C) FULLY DEPLOYED, AUDITED, DOCUMENTED. All 8 verification checks passing. Security protocol doc created (IoT_Security_Protocol.docx). Next: Schlage lock HA integration.
 
-## Completed Day 52 — April 2, 2026
+## Completed This Session (April 5)
 
-**P1 — Security (complete)**
-- CiscoKid: UFW enabled (default deny, LAN-only 22/80/443/8000/8001, deny 5432)
-- CiscoKid: PostgreSQL rebound to 127.0.0.1 via compose.yaml (Docker bypasses UFW iptables). Committed 261dc8f.
-- CiscoKid: .env audit clean — gitignored, not tracked, no hardcoded secrets
-- TheBeast: OLLAMA_HOST=0.0.0.0 + UFW LAN-only on 11434/22 (UFW is the access control layer)
-- fail2ban running on CiscoKid, TheBeast, SlimJim — sshd jail active on all
-- Orchestrator health post-hardening: api=ok, postgres=ok, ollama=ok
+### IoT Security Protocol — DEPLOYED + AUDITED
 
-**P2 — Kernel Updates (complete)**
-- SlimJim: 6.8.0-106 -> 6.8.0-107, clean boot, zero failed units
-- TheBeast: 5.15.0-173 -> 5.15.0-174, Ollama active post-reboot, Tesla T4 healthy
-- CiscoKid: 5.15.0-173 -> 5.15.0-174, all services recovered, UFW intact, PostgreSQL on 127.0.0.1
-- Note: Ubuntu holds kernels back from apt upgrade — dist-upgrade required
+#### Tier Enforcement (iot_security.py)
+- 3-tier classification: T1 auto, T2 notify+15s, T3 approval required
+- Unknown commands default Tier 3 (fail-safe)
+- Camera blackout kill switch, append-only PostgreSQL audit
+- UPDATED: siren.turn_on moved to Tier 3 (weaponization risk)
+- UPDATED: alarm_control_panel.disarm moved to Tier 3 (security-critical)
+- ADDED: alarm domain aliases for alarm_control_panel
 
-**P3 — Housekeeping (complete)**
-- CiscoKid: removed 2 dead Docker containers (thirsty_noyce, heuristic_wozniak)
-- Mac mini: cleared 8.8GB from ~/Library/Caches
-- JesAir: CiscoKid SSH key authorized — CiscoKid can now SSH to JesAir directly
-- KaliPi: Tailscale 1.96.4 installed and authenticated — now in mesh
-- Mac mini: Tailscale launched and authenticated — now in mesh
+#### Approval Gate (approval_gate.py) — RUNNING
+- Separate process (prompt injection defense)
+- MQTT on home/security/request/#, HTTP API 127.0.0.1:8002
+- FIXED: paho-mqtt v2 callback API (no more deprecation warning)
+- systemd: approval-gate.service (enabled, running)
 
-**TheBeast Amber Light**
-- Dell EMC PowerEdge amber health LED — likely RAID controller BBU draining
-- Machine fully operational: Ollama active, Tesla T4 healthy 57-64C
-- Do NOT touch hardware — previous CMOS swap caused full OS loss and rebuild
-- Action: monitor only, investigate via iDRAC non-destructively next session
+#### Telegram Bot (telegram_bot.py) — PATCHED
+- Smart routing: req_* -> gate, others -> orchestrator
+- Commands: /approve /deny /blackout /cameras_on /gate
+- systemd: alexandra-telegram.service (restarted, running)
 
-**MCP Bridge — RESOLVED via mcp-remote**
-- mcp_stdio.py blocking read loop stalls on long SSH commands (60s+), hanging bridge
-- Workaround used: fire-and-forget nohup + polling pattern
-- Permanent fix needed: SSH ControlMaster or async rewrite — Day 53 priority
+#### Infrastructure
+- PostgreSQL: iot_audit_log + iot_security_events (append-only verified)
+- UFW: per-device IoT blocks (11 devices), default deny incoming
+- Cron: hourly snapshot retention (manual 60m, motion 24h)
+- ADDED: mosquitto-clients installed for CLI MQTT debugging
 
-**Services Post-Day-52**
-- All 7 systemd services active and healthy post-reboot
-- pgvector: 907 memory rows | Ollama: 2 models | PostgreSQL: 127.0.0.1:5432 only
-- UFW: active on CiscoKid and TheBeast | fail2ban: CiscoKid + TheBeast + SlimJim
-## Completed Day 51 — April 2, 2026
+#### Audit Results (8/8 PASS)
+1. Services: orchestrator, alexandra-telegram, approval-gate — all active
+2. Approval Gate API: /healthz OK, 0 pending, blackout off
+3. MQTT Broker: connected rc=0
+4. Tier Classification: all domains verified correct
+5. PostgreSQL: append-only enforced (DELETE blocked)
+6. File Integrity: all 4 core files present, backups in place
+7. Cron Jobs: snapshot retention installed
+8. Telegram Bot: imports clean, GATE_API_BASE set
 
-### Completed
-- Built task_runner.py on CiscoKid (/home/jes/control-plane/task_runner.py) — clean CC task execution via list/get/complete/fail subcommands
-- Logged 4 new job applications (Prologis, HPE, Ascendion, Conscious Minds) — total now 62
-- **JARVIS UPGRADE — 3 major systems built and deployed:**
-  1. **Event Engine** (Phase 1) — event_engine.py (248 lines). Systemd service. Polls Gmail/calendar/tasks every 60s. Priority scoring 1-10. P7+ = Telegram interrupt. P4-6 = pending_events table.
-  2. **Tool Chain Engine** (Phase 2) — tools/chains.py + registry upgrade. 3 chain templates. plan_and_execute tool. MAX_STEPS 5→10. Multi-step autonomous execution.
-  3. **Live Context Engine** (Phase 3) — context_engine.py (147 lines). Real-time: time/energy/class/events/timeline/interaction. Injected into system prompts.
-- All 3 systems verified live — Alexandra adapts to time of day, chains 5 tools, Event Engine tracks tasks
-- 7 systemd services active: orchestrator, alexandra-telegram, recruiter-watcher, calendar-alert, homelab-mcp, mqtt-subscriber, event-engine
+#### Documentation
+- IoT_Security_Protocol.docx created (6 pages)
+- Covers: exec summary, threat model, tiers, architecture, devices, commands, network, audit, retention, emergency procedures
 
-### Services
-- event-engine.service: NEW, active, 60s poll interval
-- All other services: active and healthy
+## Pending (next session)
+1. Schlage lock HA integration (on network at 192.168.1.174, UFW blocked, not in HA)
+2. HA Overview UI cleanup — organize by room
+3. WiZ bulb room assignments + rename
+4. Bedroom + den Apple TVs -> HA
+5. Git commit all security changes
 
-## Completed Day 50
-- Wake word fixed: Haiku model string corrected (20241022 -> 20251001)
-- Error logging added to voice_wake_detect (no more silent failures)
-- MCP bridge migrated from JesAir to Mac mini (permanent, always-on)
-- Telegram photo handler: photos processed via Claude Vision, routed through /chat tool loop
-- Vision endpoint upgraded: accepts prompt parameter for non-webcam use cases (Form import fix)
-- Google Drive API enabled and OAuth re-authorized with drive.readonly scope
-- Course materials downloaded from professor's shared folder to CiscoKid
-- Lirio application submitted + tailored resume/cover letter emailed to Patrick Hunt
-- Applications CSV backfilled: 58 total entries from 12/20/2025 through 4/1/2026
-- LinkedIn profile updated: headline, About section, Open to Work roles, Featured
-- GitHub README created for control-plane-lab (121 lines, architecture diagram, full capability breakdown)
-- Profile data updated in PostgreSQL (salary target, target companies, LinkedIn, Per Scholas, timeline)
-- Twilio toll-free verification submitted (pending review)
-- Course structure mapped: Module 933 (6 lessons, assignments, deadlines)
-
-## Completed Day 49
-- Calendar write tool (OAuth re-auth, create_calendar_event, Per Scholas schedule)
-- parse_tool_call fix (handles JSON + trailing text)
-- Date injection in system prompt
-- Wake word switched to Haiku (~7s response)
-- Agent task pipeline operational (Paco > approve > CC executes > DB)
-- Dashboard upgraded: task lifecycle panel, queue badge, approve/reject
-- Ollama restarted on TheBeast
-- CiscoKid set as primary git node
-
-## Current Platform Status
-- Orchestrator: UP (CiscoKid:8000)
-- Ollama: UP (TheBeast:192.168.1.152:11434)
-- pgvector: UP (798+ memory rows)
-- MCP server: UP (CiscoKid:8001)
-- MCP bridge: Mac mini (always-on, migrated from JesAir Day 50)
-- Alexandra /chat: RESPONDING (Sonnet tool loop, 14 tools)
-- Alexandra wake word: WORKING (Haiku tool loop, ~7s)
-- Alexandra calendar: READ + WRITE
-- Alexandra Telegram: TEXT + VOICE + PHOTO (vision pipeline)
-- Alexandra Google Drive: READ (drive.readonly scope)
-- Dashboard: LIVE (task lifecycle, queue badge, approve/reject)
-- Recruiter watcher: LIVE (Gmail poll every 15 min)
-- Git: CiscoKid primary, JesAir secondary
-
-## Per Scholas Course
-- Course: UCI 3097 AI Solutions Developer (2026-CAX-142)
-- Instructor: Alexandros Karales (akarales@perscholas.org)
-- Schedule: M/W/F 6-9 PM ET, March 30 - June 26 2026 (13 weeks)
-- Current: Module 933 - Intro to AI and Tools for Software Engineering
-- Course materials downloaded to /home/jes/control-plane/course_materials/
-- Canvas: perscholas.instructure.com/courses/3227
-
-## Known Issues
-- Wake word latency ~7s
-- Twilio toll-free verification pending (1-3 business days)
-- Task queue works for research tasks but not code-edit tasks (CC needs direct file access)
-- Anthropic rate limits on Max plan during peak hours
-
-## Next Steps (Day 53+)
-1. Fix MCP bridge - SSH ControlMaster or async rewrite to prevent long-command hangs
-2. TheBeast amber light - investigate via iDRAC/omreport non-destructively
-3. Mac mini Chrome mic fix - switch to OBSBOT Tiny SE for wake word
-4. Per Scholas homework - Lesson 933.2 Google Cloud Skills Boost Intro to GenAI
-5. Demo video of Alexandra for LinkedIn/portfolio
-6. Dashboard file/folder upload UI
-7. Event acknowledgment flow, chain template expansion, context engine tuning
-
-
-## Resume Anchor
-"Paco - read SESSION.md. Day 52. Full homelab hardened: UFW on CiscoKid+TheBeast, PostgreSQL localhost-only, fail2ban on all Linux nodes, all kernels updated (174/107), P3 housekeeping complete. MCP bridge long-command hang is known issue - fix is Day 53 priority. TheBeast amber LED - monitor only, no hardware changes. Alexandra stack fully operational post-reboot. 907 pgvector rows. 62 applications tracked."
-## Day 52 Addendum
-- mcp-remote installed as permanent MCP bridge replacement
-- claude_desktop_config.json: npx mcp-remote http://192.168.1.10:8001/mcp
-- No SSH tunnel. HTTP only. Auto-reconnects on reboot. Bridge stable.
-- TheBeast amber light resolved: inlet temp threshold raised 33C to 37C via iDRAC9 (192.168.1.237)
-- CiscoKid iDRAC: 192.168.1.35
-- Standing Paco rule: search community solutions before declaring a blocker
-
-## Day 52 Evening Addendum
-- Twilio local number provisioned: +1 720 902 7314 (Denver local, replaces failed toll-free)
-- TWILIO_FROM_NUMBER updated in .env, orchestrator restarted
-- A2P 10DLC brand + campaign submitted for carrier approval
-  - Brand: James Sloan (Sole Proprietor, $4.50 one-time + $2/month)
-  - Messaging service: Alexandra
-  - Campaign: Mixed / personal assistant notifications
-  - Status: Under review, ETA 24-48 hours
-- Applications CSV: Oracle AI Engineer + Lirio marked rejected (7 total rejections)
-- Note: bulk sed error wiped applied statuses, restored 45 rows via python script
-
-## Day 53 Morning
-
-**MCP Architecture — Final Form**
-- Tailscale HTTPS cert issued for sloan3.tail1216a3.ts.net (Let's Encrypt via Tailscale)
-- nginx updated: serves dashboard on 443 + MCP on 8443 with valid cert
-- All devices now connect directly to CiscoKid — no Mac mini bridge, no SSH tunnel
-- Cortez: Node.js v20 installed, mcp-remote config written, npm dir created, working
-- Mac mini: updated remotely to HTTPS URL
-- JesAir: updated remotely to HTTPS URL
-- iPhone: manual 30-second setup pending
-- New URLs: dashboard=https://sloan3.tail1216a3.ts.net/dashboard, MCP=https://sloan3.tail1216a3.ts.net:8443/mcp
-- Tailnet name: tail1216a3.ts.net
-- iDRAC IPs: TheBeast=192.168.1.237, CiscoKid=192.168.1.35
-- Cortez now has SSH server accessible from homelab (for future remote ops)
-
-## Day 53 Addendum
-- Mac mini MCP fixed: full node path required in config due to Claude Desktop PATH limitation
-  - command: /opt/homebrew/opt/node@20/bin/node
-  - args: npx-cli.js mcp-remote https://sloan3.tail1216a3.ts.net:8443/mcp
-  - env: PATH includes /opt/homebrew/opt/node@20/bin
-- Alexandra dashboard: must use hostname https://sloan3.tail1216a3.ts.net/dashboard not IP
-- iPhone MCP: not supported for private LAN servers - Telegram is the mobile interface
-- All 3 desktop devices now working: Cortez + Mac mini + JesAir
-
-## Day 55 — April 4, 2026
-
-**Alexandra Tool Chain Engine Upgrade — COMPLETE (commit e953c0a)**
-
-Three-phase build: job search assistant → general-purpose life operator.
-
-**Phase 1 — 7 New Tool Handlers (registry.py: 760→948 lines)**
-- summarize, memory_recall, memory_save, send_telegram, read_file, write_file, list_files
-- Security: _check_jail (realpath+startswith), forbidden file set, rate limiting 5/min
-
-**Phase 2 — Dynamic Chain Planner (chains.py: 30→244 lines)**
-- 8 static chains: research_and_draft, job_search_deep, full_status_report, morning_briefing, class_prep, weekly_review, application_followup, company_deep_dive
-- Dynamic planning: goal→Ollama llama3.1:8b→JSON plan→sequential execution
-- Execution: MAX_STEPS=10, TOTAL_TIMEOUT=120s, context passed between steps
-
-**Phase 3 — System Prompt (app.py: +9 lines, personas untouched)**
-- Added 7 new tool descriptions + updated plan_and_execute + planning instruction
-
-**Verified:** morning_briefing chain, dynamic goal planning, all 17 tools visible, clean restart.
-**Security:** Zero hardcoded secrets, jail on all file I/O, rate limiting, bounded execution.
-**Known:** TheBeast embeddings intermittent, list_files needs full path prefix.
-**Backups:** registry.py.bak.phase1, chains.py.bak.phase2, app.py.bak.phase3
-**Platform:** 17 tools (was 10), 8 static chains (was 3), dynamic planning NEW.
-
-## Next Steps
-1. TheBeast embeddings stability check
-2. Test dynamic goals via Telegram (cooking, class prep, life advice)
-3. Demo video for LinkedIn/portfolio
-4. Per Scholas coursework
-5. Prologis follow-up
-
-## Day 55 Evening — April 4, 2026
-
-**Kokoro TTS Migration — COMPLETE (commit c1e20e3)**
-
-Replaced Piper (robotic) with Kokoro TTS 82M on TheBeast. Isabella (British female) voice.
-
-**Architecture:**
-- TheBeast: kokoro-tts.service (systemd, enabled, port 8800)
-  - FastAPI/Uvicorn server, KPipeline lang_code="b", voice=bf_isabella
-  - Model: kokoro-82m, runs on GPU, ~2-3GB VRAM
-- CiscoKid: voice.py → POST http://192.168.1.152:8800/tts → WAV → ffmpeg → MP3
-- Fallback: Piper (en_GB-jenny_dioco-medium) if Kokoro unavailable
-
-**Bug Fixes (this session):**
-- UFW port 8800 opened on TheBeast for LAN (was blocking CiscoKid→TheBeast TTS)
-- voice.py: Piper fallback block was missing, appended
-- Markdown stripping: _strip_markdown() removes bold, italic, headings, bullets, links, backticks
-- Response cleanup in app.py: asterisks stripped before TTS
-- File I/O path normalization: relative paths resolve to /home/jes/control-plane/
-- ToolCallResponse.result type: Dict→Any (fixes list-returning tools)
-- Chat continuation prompt: prevents premature responses on multi-tool tasks
-- MAX_TOOL_CALLS: 5→8
-
-**Services:** kokoro-tts.service NEW on TheBeast (enabled, active)
-**Platform:** 17 tools, 8 chains, Kokoro TTS (was Piper), Isabella voice
-
-## Resume Anchor — Day 55 Night Session
-
-"Paco - read SESSION.md. Day 55 night. Massive session: Kokoro TTS live on TheBeast (bf_isabella, systemd kokoro-tts.service port 8800, UFW opened). Alexandra persona hardened with 4-layer identity lock (never breaks character as Claude). LinkedIn profile tool added (get_linkedin_profile, data/linkedin_profile.json, Chrome-scraped). Proactivity + resourcefulness directives deployed (never ask James for info she can find, explicit tool fallback order: emails first for jobs). Embeddings fix shipped (truncate to 1500 chars before mxbai-embed-large, was causing 19 failures/week from context overflow). Three scheduled tasks created in Cowork: morning-briefing 7AM MT, evening-debrief 10PM MT, weekly-linkedin-refresh Sunday 8AM. Platform: 18 tools, 8 chains, Kokoro TTS, Isabella voice. Commits: c1e20e3 through 7f52465 (7 commits). Next: Playwright LinkedIn service on Mac mini, demo video, ASUS Ascent GX10 integration Thursday, Per Scholas coursework."
+## System State: ALL HEALTHY
+Services: orchestrator + alexandra-telegram + approval-gate
+Security: iot_security + approval_gate + audit_logging
+Alexandra: home_status + home_control + home_cameras

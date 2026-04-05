@@ -1,3 +1,7 @@
+import os
+from dotenv import load_dotenv
+load_dotenv('/home/jes/control-plane/.env')
+
 import json
 import logging
 from datetime import datetime, timezone
@@ -6,17 +10,21 @@ log = logging.getLogger('mqtt_publisher')
 
 BROKER = '192.168.1.40'
 PORT = 1883
+MQTT_USER = os.getenv('MQTT_USER', '')
+MQTT_PASS = os.getenv('MQTT_PASS', '')
 
 def publish(topic: str, payload: dict):
     try:
         import paho.mqtt.publish as publish_mqtt
+        auth = {'username': MQTT_USER, 'password': MQTT_PASS} if MQTT_USER else None
         publish_mqtt.single(
             topic,
             payload=json.dumps(payload, default=str),
             hostname=BROKER,
             port=PORT,
             client_id='ciscokid_orchestrator',
-            keepalive=10
+            keepalive=10,
+            auth=auth
         )
         log.info(f'Published to {topic}: {str(payload)[:80]}')
         return True

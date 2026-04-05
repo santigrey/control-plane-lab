@@ -1,4 +1,5 @@
 from __future__ import annotations
+from ai_operator.iot_security import enforce_tier, classify_tier
 
 import os
 import time
@@ -733,6 +734,103 @@ def _list_files_handler(args):
         return {"ok": False, "tool": "list_files", "error": str(e)}
 
 
+
+# ---- Home Assistant tools ----
+
+def _ha_request(method, path, json_body=None):
+    from dotenv import dotenv_values
+    env = dotenv_values('/home/jes/control-plane/.env')
+    token = env.get('HA_TOKEN') or os.getenv('HA_TOKEN', '')
+    url = env.get('HA_URL', 'http://localhost:8123')
+    headers = {'Authorization': f'Bearer {token}', 'Content-Type': 'application/json'}
+    if method == 'GET':
+        resp = requests.get(f'{url}{path}', headers=headers, timeout=10)
+    else:
+        resp = requests.post(f'{url}{path}', headers=headers, json=json_body or {}, timeout=10)
+    resp.raise_for_status()
+    return resp.json() if resp.text else {"ok": True}
+
+
+def _home_status_handler(args):
+    try:
+        states = _ha_request('GET', '/api/states')
+        df = args.get('domain', '')
+        result = {}
+        for s in states:
+            eid = s['entity_id']
+            d = eid.split('.')[0]
+            if df and d != df:
+                continue
+            if d in ('light','switch','climate','camera','media_player','alarm_control_panel','sensor','binary_sensor','siren'):
+                if d not in result:
+                    result[d] = []
+                e = {'entity_id': eid, 'state': s['state'], 'name': s.get('attributes',{}).get('friendly_name', eid)}
+                a = s.get('attributes', {})
+                if d == 'light' and 'brightness' in a:
+                    e['brightness'] = a['brightness']
+                if d == 'climate':
+                    e['current_temp'] = a.get('current_temperature')
+                    e['target_temp'] = a.get('temperature')
+                if d == 'sensor' and 'temperature' in eid:
+                    e['unit'] = a.get('unit_of_measurement','')
+                if d == 'media_player':
+                    e['source'] = a.get('source')
+                result[d].append(e)
+        return {"ok": True, "tool": "home_status", "devices": result}
+    except Exception as ex:
+        return {"ok": False, "tool": "home_status", "error": str(ex)}
+
+
+def _home_control_handler(args):
+    try:
+        eid = args['entity_id']
+        act = args['action']
+        ext = args.get('extras', {})
+        # --- IoT Security: Tier Enforcement ---
+        allowed, reason = enforce_tier(eid, act, ext)
+        if not allowed:
+            return {"ok": False, "tool": "home_control", "blocked": True, "tier": classify_tier(eid, act), "reason": reason}
+        # --- End Tier Enforcement ---
+        # Validate entity exists first
+        try:
+            _ha_request('GET', f'/api/states/{eid}')
+        except Exception:
+            return {"ok": False, "tool": "home_control", "error": f"Entity '{eid}' not found in Home Assistant. Call home_status first to get valid entity IDs."}
+        dom = eid.split('.')[0]
+        smap = {
+            'turn_on': f'{dom}/turn_on', 'turn_off': f'{dom}/turn_off', 'toggle': f'{dom}/toggle',
+            'set_temperature': 'climate/set_temperature', 'set_hvac_mode': 'climate/set_hvac_mode',
+            'media_play': 'media_player/media_play', 'media_pause': 'media_player/media_pause',
+            'media_next': 'media_player/media_next_track', 'volume_set': 'media_player/volume_set',
+            'arm_away': 'alarm_control_panel/alarm_arm_away', 'disarm': 'alarm_control_panel/alarm_disarm',
+            'select_source': 'media_player/select_source',
+        }
+        svc = smap.get(act)
+        if not svc:
+            return {"ok": False, "tool": "home_control", "error": f"Unknown action: {act}"}
+        body = {'entity_id': eid}
+        ext = args.get('extras', {})
+        if isinstance(ext, dict):
+            body.update(ext)
+        _ha_request('POST', f'/api/services/{svc}', body)
+        new_state = _ha_request('GET', f'/api/states/{eid}')
+        return {"ok": True, "tool": "home_control", "entity_id": eid, "action": act, "new_state": new_state.get('state', 'unknown'), "friendly_name": new_state.get('attributes', {}).get('friendly_name', eid)}
+    except Exception as ex:
+        return {"ok": False, "tool": "home_control", "error": str(ex)}
+
+
+def _home_cameras_handler(args):
+    try:
+        states = _ha_request('GET', '/api/states')
+        cams = []
+        for s in states:
+            if s['entity_id'].startswith('camera.'):
+                a = s.get('attributes', {})
+                cams.append({'entity_id': s['entity_id'], 'state': s['state'], 'name': a.get('friendly_name', s['entity_id'])})
+        return {"ok": True, "tool": "home_cameras", "cameras": cams}
+    except Exception as ex:
+        return {"ok": False, "tool": "home_cameras", "error": str(ex)}
+
 def default_registry() -> ToolRegistry:
     r = ToolRegistry()
 
@@ -946,6 +1044,9 @@ def default_registry() -> ToolRegistry:
     r.register(ToolSpec(name="write_file", description="Write to /home/jes/control-plane/ (jailed). Args: path, content (max 50KB). Rejects .env, .key, .pem, .git/.", schema={"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"], "additionalProperties": False}, handler=_write_file_handler))
     r.register(ToolSpec(name="get_linkedin_profile", description="Get James's LinkedIn profile data. Args: section (optional: 'experience', 'education', 'certifications', 'projects', 'recent_activity', or 'all'). Returns structured profile data.", schema={"type": "object", "properties": {"section": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_get_linkedin_profile_handler))
     r.register(ToolSpec(name="list_files", description="List files in /home/jes/control-plane/ (jailed). Args: path (optional). Max 100 entries.", schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_list_files_handler))
+    r.register(ToolSpec(name="home_status", description="Get status of all smart home devices. Optional: domain filter.", schema={"type": "object", "properties": {"domain": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_home_status_handler))
+    r.register(ToolSpec(name="home_control", description="Control a smart home device. Args: entity_id, action (turn_on/off/toggle/set_temperature/media_play/pause/volume_set/arm_away/disarm), extras (optional dict).", schema={"type": "object", "properties": {"entity_id": {"type": "string"}, "action": {"type": "string"}, "extras": {"type": "object"}}, "required": ["entity_id", "action"], "additionalProperties": False}, handler=_home_control_handler))
+    r.register(ToolSpec(name="home_cameras", description="Get status of all cameras (Blink, Tapo).", schema={"type": "object", "properties": {}, "required": [], "additionalProperties": False}, handler=_home_cameras_handler))
 
 
     return r
