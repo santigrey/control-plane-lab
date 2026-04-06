@@ -812,7 +812,8 @@ def _home_control_handler(args):
         ext = args.get('extras', {})
         if isinstance(ext, dict):
             body.update(ext)
-        _ha_request('POST', f'/api/services/{svc}', body)
+        _ha_request("POST", f"/api/services/{svc}", body)
+        time.sleep(1.2)  # allow local IoT devices (WiZ UDP) to update state
         new_state = _ha_request('GET', f'/api/states/{eid}')
         return {"ok": True, "tool": "home_control", "entity_id": eid, "action": act, "new_state": new_state.get('state', 'unknown'), "friendly_name": new_state.get('attributes', {}).get('friendly_name', eid)}
     except Exception as ex:

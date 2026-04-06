@@ -58,8 +58,9 @@ def _active_work_state():
         pending_events = [{'source': r[0], 'priority': r[1], 'title': r[2]} for r in cur.fetchall()]
         cur.execute("SELECT title, status FROM agent_tasks WHERE status IN ('pending_approval','approved') ORDER BY created_at DESC LIMIT 5")
         pending_tasks = [{'title': r[0], 'status': r[1]} for r in cur.fetchall()]
-        cur.execute("SELECT COUNT(*) FROM job_applications")
-        app_count = cur.fetchone()[0]
+        cur.execute("SELECT value FROM user_profile WHERE category='context' AND key='application_count'")
+        _ac_row = cur.fetchone()
+        app_count = int(_ac_row[0]) if _ac_row else 0
         cur.close(); conn.close()
     except Exception:
         pass

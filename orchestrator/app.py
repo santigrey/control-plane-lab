@@ -224,6 +224,10 @@ def get_system_prompt() -> str:
         "  write_file: Write a file to control-plane directory. Args: path, content (required). Max 50KB.\n"
         "  list_files: List files in control-plane directory. Args: path (optional).\n"
         "  get_linkedin_profile: Get James's LinkedIn profile data (experience, education, certifications, projects, activity). Args: section (optional). Use when James asks about his LinkedIn, profile, or wants to review/update his professional presence.\n"
+        "  home_status: Get all smart home device states. Optional arg: domain (light, switch, climate, camera, media_player, sensor, alarm_control_panel).\n"
+        "  home_control: Control a smart home device. Args: entity_id, action (turn_on, turn_off, toggle, set_temperature, set_hvac_mode, media_play, media_pause, volume_set, arm_away, disarm), extras (optional dict with brightness_pct, temperature, volume_level, etc).\n"
+        "  home_cameras: Get status of all cameras (Blink, Tapo).\n"
+        "- CRITICAL: Before using home_control, ALWAYS call home_status with NO domain filter first and match devices by friendly_name. Some lights are controlled via switch entities (smart plugs/outlets like Hubspace). The blueroom lamps are switch.tall_switch (Blueroom Tall Lamp) and switch.short_switch (Blueroom Short Lamp). Never filter by domain when searching by room name. Use exact entity_ids from home_status results.\n"
         "- For complex or novel multi-step requests, use plan_and_execute with goal parameter to plan and execute autonomously.\n"
         "- CRITICAL: Never hallucinate real-time data. Always call get_live_context first for weather, time, stocks, or news.\n"
         "- CRITICAL: For ANY action that changes state, you MUST output the tool JSON. Never claim you performed an action without calling the tool.\n\n"
@@ -309,14 +313,37 @@ def healthz() -> Dict[str, Any]:
         ok = False
         details["postgres"] = f"error: {e}"
 
-    # Ollama
+    # Anthropic API (lightweight auth validation)
     try:
-        r = requests.get(f"{get_ollama_url()}/api/tags", timeout=10)
-        r.raise_for_status()
-        details["ollama"] = "ok"
+        from dotenv import dotenv_values
+        _henv = dotenv_values('/home/jes/control-plane/.env')
+        _akey = _henv.get('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
+        if not _akey:
+            details["anthropic"] = "error: no key"
+            ok = False
+        else:
+            _r = requests.get('https://api.anthropic.com/v1/models',
+                headers={'x-api-key': _akey, 'anthropic-version': '2023-06-01'}, timeout=5)
+            if _r.status_code == 200:
+                details["anthropic"] = "ok"
+            else:
+                details["anthropic"] = f"http {_r.status_code}"
+                ok = False
     except Exception as e:
         ok = False
-        details["ollama"] = f"error: {e}"
+        details["anthropic"] = f"error: {e}"
+
+    # nginx
+    try:
+        r = requests.get('http://127.0.0.1:80', timeout=5, allow_redirects=False)
+        if r.status_code in (200, 301, 302):
+            details["nginx"] = "ok"
+        else:
+            details["nginx"] = f"http {r.status_code}"
+            ok = False
+    except Exception as e:
+        ok = False
+        details["nginx"] = f"error: {e}"
 
     # Worker/service status (best effort, only if tasks table exists)
     try:
@@ -378,14 +405,37 @@ def readyz() -> Dict[str, Any]:
         ok = False
         details["postgres"] = f"error: {e}"
 
-    # Ollama
+    # Anthropic API (lightweight auth validation)
     try:
-        r = requests.get(f"{get_ollama_url()}/api/tags", timeout=10)
-        r.raise_for_status()
-        details["ollama"] = "ok"
+        from dotenv import dotenv_values
+        _henv = dotenv_values('/home/jes/control-plane/.env')
+        _akey = _henv.get('ANTHROPIC_API_KEY') or os.getenv('ANTHROPIC_API_KEY')
+        if not _akey:
+            details["anthropic"] = "error: no key"
+            ok = False
+        else:
+            _r = requests.get('https://api.anthropic.com/v1/models',
+                headers={'x-api-key': _akey, 'anthropic-version': '2023-06-01'}, timeout=5)
+            if _r.status_code == 200:
+                details["anthropic"] = "ok"
+            else:
+                details["anthropic"] = f"http {_r.status_code}"
+                ok = False
     except Exception as e:
         ok = False
-        details["ollama"] = f"error: {e}"
+        details["anthropic"] = f"error: {e}"
+
+    # nginx
+    try:
+        r = requests.get('http://127.0.0.1:80', timeout=5, allow_redirects=False)
+        if r.status_code in (200, 301, 302):
+            details["nginx"] = "ok"
+        else:
+            details["nginx"] = f"http {r.status_code}"
+            ok = False
+    except Exception as e:
+        ok = False
+        details["nginx"] = f"error: {e}"
 
     if not ok:
         raise HTTPException(status_code=503, detail=details)

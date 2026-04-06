@@ -58,7 +58,7 @@ def ssh_run(host: str, command: str, timeout: int = 30) -> dict:
 
 class SSHRunInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
-    host: str = Field(..., description="Target host: beast, ciscokid, slimjim, or kalipi")
+    host: str = Field(..., description="Target host: beast, ciscokid, slimjim, kalipi, macmini, or cortez")
     command: str = Field(..., description="Shell command to run", min_length=1, max_length=2000)
     timeout: Optional[int] = Field(default=30, description="Timeout in seconds", ge=1, le=120)
 
@@ -79,7 +79,7 @@ class FileReadInput(BaseModel):
 
 @mcp.tool(name="homelab_ssh_run", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_ssh_run(params: SSHRunInput) -> str:
-    """Execute a shell command on a homelab node via SSH. Allowed hosts: beast, ciscokid, slimjim, kalipi, macmini."""
+    """Execute a shell command on a homelab node via SSH. Allowed hosts: beast, ciscokid, slimjim, kalipi, macmini, cortez."""
     if params.host not in ALLOWED_HOSTS:
         return json.dumps({"error": f"Unknown host '{params.host}'. Allowed: {list(ALLOWED_HOSTS.keys())}"})
     try:
