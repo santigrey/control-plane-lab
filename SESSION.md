@@ -1,95 +1,55 @@
-# SESSION.md — April 5, 2026 ~4:30 PM MST
+# SESSION.md — April 5, 2026 ~9:00 PM MST
 
 ## RESUME POINT
-IoT Security Protocol FULLY DEPLOYED + AUDITED + DOCUMENTED. Security protocol doc saved to docs/alexandra_iot_security_protocol.md (gitignored). Cowork safeguard files verified (live in Cowork session memory only). Next: Telegram bot timeout fix (WiZ-only delay + 180s timeout), then MQTT Tier 3 approval wiring.
+MQTT Tier 3 approval flow FULLY WIRED + TESTED. Telegram bot timeout fixed. All services healthy. Next: monitor evening debrief at 10PM, then Schlage lock integration.
 
 ## Completed This Session (April 5)
 
 ### IoT Security Protocol — DEPLOYED + AUDITED (Morning, P1)
+- 3-tier classification with enforce_tier() wired into all handlers
+- approval_gate.py running as separate process (prompt injection defense)
+- 8/8 audit checks passing
+- Full documentation: IoT_Security_Protocol.docx + docs/alexandra_iot_security_protocol.md
 
-#### Tier Enforcement (iot_security.py)
-- 3-tier classification: T1 auto, T2 notify+15s, T3 approval required
-- Unknown commands default Tier 3 (fail-safe)
-- Camera blackout kill switch, append-only PostgreSQL audit
-- siren.turn_on → Tier 3 (weaponization risk)
-- alarm_control_panel.disarm → Tier 3 (security-critical)
-- alarm domain aliases for alarm_control_panel
+### MQTT Tier 3 Approval Flow — WIRED + TESTED (Evening, P2)
+- iot_security.py: Tier 3 publishes to home/security/request/{action} via MQTT
+- approval_gate.py: receives MQTT, creates pending approval, sends Telegram prompt
+- mqtt_executor.py (NEW): subscribes to home/security/execute/#, calls HA API on approval
+- app.py: starts mqtt_executor background thread on orchestrator boot
+- Camera handler: replaced hard block with enforce_tier() routing
+- Fixed approval_gate.py msg.topicc typo (was crashing all MQTT receives)
+- Fixed SlimJim MQTT ACL: added readwrite for request/# and execute/# (was write-only)
+- E2E tested: unlock command → MQTT → gate → pending → deny path verified
 
-#### Approval Gate (approval_gate.py) — RUNNING
-- Separate process (prompt injection defense)
-- MQTT on home/security/request/#, HTTP API 127.0.0.1:8002
-- paho-mqtt v2 callback API (no deprecation warning)
-- systemd: approval-gate.service (enabled, running)
-
-#### Telegram Bot (telegram_bot.py) — PATCHED
-- Smart routing: req_* -> gate, others -> orchestrator
-- Commands: /approve /deny /blackout /cameras_on /gate
-- systemd: alexandra-telegram.service (restarted, running)
-
-#### Infrastructure
-- PostgreSQL: iot_audit_log + iot_security_events (append-only verified)
-- UFW: per-device IoT blocks (11 devices), default deny incoming
-- Cron: hourly snapshot retention (manual 60m, motion 24h)
-- mosquitto-clients installed for CLI MQTT debugging
-
-#### Audit Results (8/8 PASS)
-1. Services: orchestrator, alexandra-telegram, approval-gate — all active
-2. Approval Gate API: /healthz OK, 0 pending, blackout off
-3. MQTT Broker: connected rc=0
-4. Tier Classification: all domains verified correct
-5. PostgreSQL: append-only enforced (DELETE blocked)
-6. File Integrity: all 4 core files present, backups in place
-7. Cron Jobs: snapshot retention installed
-8. Telegram Bot: imports clean, GATE_API_BASE set
+### Telegram Bot Timeout Fix — DEPLOYED
+- registry.py: 1.2s sleep now WiZ-only (was unconditional for all devices)
+- telegram_bot.py: /chat endpoint timeouts bumped 60s → 180s
+- Both changes tested and verified
 
 ### Reconciliation Follow-Up (Afternoon, P2)
+- IoT security protocol doc saved to docs/ + gitignored
+- Cowork safeguard files verified (Cowork session memory only)
+- SESSION.md updated and pushed
 
-#### 1. IoT Security Protocol Doc — SAVED + GITIGNORED
-- Source: P1-authored 448-line comprehensive security protocol
-- Saved to: /home/jes/control-plane/docs/alexandra_iot_security_protocol.md
-- Transfer: base64 chunked (15 chunks x 1800 bytes) via homelab MCP
-- Verified: 448 lines, correct header and footer
-- Added docs/alexandra_iot_security_protocol.md to .gitignore
-- Classification: INTERNAL — source of truth for all IoT security decisions
+### Scheduled Task Briefs — DIAGNOSED
+- Morning briefing failed silently at 7AM (API credit outage)
+- Auto-reload now enabled by Sloan
+- Monitoring: evening debrief at 10PM MT tonight is first live test
 
-#### 2. Cowork Safeguard Files — VERIFIED
-- Files P1 referenced live in Cowork session memory only
-- They do NOT persist on CiscoKid filesystem (expected)
-- IoT security protocol doc is the authoritative on-disk reference
-
-#### 3. SESSION.md Update — THIS FILE
-- Full state capture from both P1 and P2 work today
-
-### Documentation
-- IoT_Security_Protocol.docx (6 pages, morning session)
-- docs/alexandra_iot_security_protocol.md (448 lines, INTERNAL, gitignored)
-
-## Approved But Not Yet Implemented
-
-### Telegram Bot Timeout Fix (APPROVED by Sloan)
-In registry.py, make 1.2s delay WiZ-only:
-```python
-_ha_request("POST", f"/api/services/{svc}", body)
-if dom == 'light' and 'wiz' in eid.lower():
-    time.sleep(1.2)
-new_state = _ha_request('GET', f'/api/states/{eid}')
-```
-In telegram_bot.py, increase request timeout to 180s.
-Reason: 1.2s delay runs for ALL devices (8x sequential = ~10s). Only WiZ needs it.
+## Git Commits Today
+- c5596c3: SESSION.md update + .gitignore for security protocol doc
+- 3207530: Full MQTT Tier 3 pipeline + Telegram bot timeout fix (6 files, +217/-21)
 
 ## Pending (Next Session)
-1. **Telegram bot timeout fix** — implement approved WiZ-only delay + 180s timeout
-2. **Anthropic API auto-reload** — currently disabled, $23.90 balance; needs Sloan go-ahead
-3. **MQTT Tier 3 approval flow** — wire enforce_tier() T3 through MQTT to approval_gate.py; remove camera hard block when live
-4. **Scheduled task briefs** — morning/evening stopped (API credit outage); confirm self-healing
-5. **Schlage lock HA integration** — on network at 192.168.1.174, UFW blocked, not in HA
-6. **HA Overview UI cleanup** — organize by room
-7. **WiZ bulb room assignments** + rename
-8. **Bedroom + den Apple TVs** -> HA
-9. **Git commit security changes** — .gitignore update + any pending changes
+1. **Monitor evening debrief** — 10PM MT tonight, confirm scheduled briefs self-healed
+2. **Schlage lock HA integration** — on network at 192.168.1.174, UFW blocked, not in HA
+3. **HA Overview UI cleanup** — organize by room
+4. **WiZ bulb room assignments** + rename
+5. **Bedroom + den Apple TVs** → HA
 
 ## System State: ALL HEALTHY
 Services: orchestrator + alexandra-telegram + approval-gate
-Security: iot_security + approval_gate + audit_logging
-Alexandra: home_status + home_control + home_cameras
+Security: iot_security + approval_gate + audit_logging + mqtt_executor
+MQTT: broker (slimjim) + executor (orchestrator) + gate subscriber
+Alexandra: home_status + home_control + home_cameras (via enforce_tier)
 Docs: alexandra_iot_security_protocol.md (on disk, gitignored)
