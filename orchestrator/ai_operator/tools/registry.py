@@ -821,16 +821,15 @@ def _home_control_handler(args):
 
 
 def _home_cameras_handler(args):
-    try:
-        states = _ha_request('GET', '/api/states')
-        cams = []
-        for s in states:
-            if s['entity_id'].startswith('camera.'):
-                a = s.get('attributes', {})
-                cams.append({'entity_id': s['entity_id'], 'state': s['state'], 'name': a.get('friendly_name', s['entity_id'])})
-        return {"ok": True, "tool": "home_cameras", "cameras": cams}
-    except Exception as ex:
-        return {"ok": False, "tool": "home_cameras", "error": str(ex)}
+    # TIER 3 HARD BLOCK: Camera access always requires explicit approval.
+    # Do NOT remove without Sloan's approval.
+    return {
+        "ok": False,
+        "tool": "home_cameras",
+        "blocked": True,
+        "tier": 3,
+        "reason": "This command requires the security approval system which is not yet deployed. Blocked for safety. Ask Sloan to approve manually."
+    }
 
 def default_registry() -> ToolRegistry:
     r = ToolRegistry()
