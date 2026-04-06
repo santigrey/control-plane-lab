@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Tuple
 import psycopg2
 import requests
 from dotenv import dotenv_values
+import paho.mqtt.publish as mqtt_publish
 
 log = logging.getLogger('iot_security')
 
@@ -28,6 +29,12 @@ _env = dotenv_values('/home/jes/control-plane/.env')
 TELEGRAM_BOT_TOKEN = _env.get('TELEGRAM_BOT_TOKEN') or os.getenv('TELEGRAM_BOT_TOKEN', '')
 TELEGRAM_CHAT_ID = _env.get('TELEGRAM_CHAT_ID') or os.getenv('TELEGRAM_CHAT_ID', '')
 AUTHORIZED_TELEGRAM_IDS = [int(_env.get('TELEGRAM_CHAT_ID', '0'))]  # Sloan only
+
+# MQTT config for Tier 3 approval gate
+MQTT_BROKER = '192.168.1.40'
+MQTT_PORT = 1883
+MQTT_USER = _env.get('MQTT_USER') or os.getenv('MQTT_USER', 'alexandra')
+MQTT_PASS = _env.get('MQTT_PASS') or os.getenv('MQTT_PASS', '')
 
 # Database config for audit log (uses alexandra_user — append-only)
 AUDIT_DB_HOST = '127.0.0.1'
@@ -289,17 +296,40 @@ def enforce_tier(entity_id: str, action: str, extras: dict = None,
         return True, 'tier2_notify_executed'
 
     elif tier == 3:
+        request_id = f'req_{int(time.time())}_{entity_id.split(".")[-1][:8]}'
         log_iot_command(
             f'{action}:{entity_id}', params, tier, 'pending_approval',
             source=source, executed=False,
-            notes='Awaiting explicit Telegram approval via approval gate'
+            notes=f'Published to MQTT gate, request_id={request_id}'
         )
-        _send_telegram(
-            f'TIER 3 APPROVAL REQUIRED\n'
-            f'Command: {action} on {entity_id}\n'
-            f'Reply /approve or /deny'
-        )
-        return False, 'approval_required'
+        # Publish to approval gate via MQTT (gate handles Telegram prompts)
+        try:
+            mqtt_payload = json.dumps({
+                'entity_id': entity_id,
+                'action': action,
+                'extras': extras or {},
+                'request_id': request_id,
+                'source': source,
+                'timestamp': datetime.now(timezone.utc).isoformat(),
+            })
+            mqtt_publish.single(
+                f'home/security/request/{action}',
+                payload=mqtt_payload,
+                hostname=MQTT_BROKER, port=MQTT_PORT,
+                auth={'username': MQTT_USER, 'password': MQTT_PASS},
+                qos=1,
+            )
+            log.info(f'Tier 3 MQTT published: {request_id}')
+        except Exception as e:
+            log.error(f'Tier 3 MQTT publish failed: {e}')
+            _send_telegram(
+                f'TIER 3 APPROVAL REQUIRED (MQTT failed)\n'
+                f'Command: {action} on {entity_id}\n'
+                f'Request ID: {request_id}\n'
+                f'MQTT error: {e}'
+            )
+        return False, f'approval_required:{request_id}'
+
 
     return False, 'unknown_tier'
 

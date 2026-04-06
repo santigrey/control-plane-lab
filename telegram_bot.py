@@ -47,7 +47,7 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
             async with session.post(
                 f"{API_BASE}/chat",
                 json={"message": text, "session_id": f"telegram-{user_id}"},
-                timeout=aiohttp.ClientTimeout(total=60),
+                timeout=aiohttp.ClientTimeout(total=180),
             ) as resp:
                 data = await resp.json()
                 reply = data.get("response") or data.get("message") or str(data)
@@ -92,7 +92,7 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
             async with session.post(
                 f"{API_BASE}/chat",
                 json={"message": text, "session_id": f"telegram-{user_id}"},
-                timeout=aiohttp.ClientTimeout(total=60),
+                timeout=aiohttp.ClientTimeout(total=180),
             ) as resp:
                 cd = await resp.json()
                 reply = cd.get("response") or str(cd)
@@ -143,7 +143,7 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
                 async with session.post(
                     f"{API_BASE}/vision/analyze",
                     data=form,
-                    timeout=aiohttp.ClientTimeout(total=60),
+                    timeout=aiohttp.ClientTimeout(total=180),
                 ) as resp:
                     vd = await resp.json()
                     vision_text = vd.get('response') or vd.get('text') or vd.get('description') or str(vd)

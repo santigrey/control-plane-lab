@@ -28,12 +28,16 @@ from ai_operator.context_engine import build_live_context
 from ai_operator.agent.agent import run_agent, AgentRequest, AgentResponse
 from fastapi.middleware.cors import CORSMiddleware
 from ai_operator.dashboard.dashboard import router as dashboard_router
+from ai_operator.mqtt_executor import start as start_mqtt_executor
 
 app = FastAPI()
 app.add_middleware(RequestLoggingMiddleware)
 app.add_middleware(CORSMiddleware,allow_origins=["*"],allow_methods=["*"],allow_headers=["*"])
 app.include_router(dashboard_router)
 TOOLS = default_registry()
+
+# Start MQTT executor for Tier 3 approved commands
+start_mqtt_executor()
 
 # ---- tool call parsing ----
 def parse_tool_call(text: str) -> Optional[Dict[str, Any]]:

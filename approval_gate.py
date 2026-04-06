@@ -149,7 +149,7 @@ def _on_connect(client, userdata, flags, reason_code, properties):
 
 def _on_message(client, userdata, msg):
     """Handle incoming Tier 3 approval requests from the orchestrator."""
-    topic = msg.topicc
+    topic = msg.topic
     log.info(f'Received request on {topic}')
 
     try:

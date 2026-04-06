@@ -813,7 +813,8 @@ def _home_control_handler(args):
         if isinstance(ext, dict):
             body.update(ext)
         _ha_request("POST", f"/api/services/{svc}", body)
-        time.sleep(1.2)  # allow local IoT devices (WiZ UDP) to update state
+        if dom == 'light' and 'wiz' in eid.lower():
+            time.sleep(1.2)  # WiZ bulbs use UDP; need delay for state sync
         new_state = _ha_request('GET', f'/api/states/{eid}')
         return {"ok": True, "tool": "home_control", "entity_id": eid, "action": act, "new_state": new_state.get('state', 'unknown'), "friendly_name": new_state.get('attributes', {}).get('friendly_name', eid)}
     except Exception as ex:
@@ -821,15 +822,25 @@ def _home_control_handler(args):
 
 
 def _home_cameras_handler(args):
-    # TIER 3 HARD BLOCK: Camera access always requires explicit approval.
-    # Do NOT remove without Sloan's approval.
-    return {
-        "ok": False,
-        "tool": "home_cameras",
-        "blocked": True,
-        "tier": 3,
-        "reason": "This command requires the security approval system which is not yet deployed. Blocked for safety. Ask Sloan to approve manually."
-    }
+    """Camera access routed through Tier 3 approval via MQTT gate."""
+    action = args.get('action', 'snapshot')
+    entity_id = args.get('entity_id', 'camera.unknown')
+    extras = args.get('extras', {})
+    allowed, reason = enforce_tier(entity_id, action, extras)
+    if not allowed:
+        return {
+            "ok": False,
+            "tool": "home_cameras",
+            "blocked": True,
+            "tier": classify_tier(entity_id, action),
+            "reason": reason,
+        }
+    # If allowed (e.g. Tier 2 after delay), execute
+    try:
+        result = _ha_request('GET', f'/api/camera_proxy/{entity_id}')
+        return {"ok": True, "tool": "home_cameras", "entity_id": entity_id, "action": action}
+    except Exception as ex:
+        return {"ok": False, "tool": "home_cameras", "error": str(ex)}
 
 def default_registry() -> ToolRegistry:
     r = ToolRegistry()
