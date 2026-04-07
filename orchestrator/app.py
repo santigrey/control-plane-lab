@@ -145,6 +145,79 @@ def get_include_tools() -> bool:
     return env_bool("INCLUDE_TOOLS", "false")
 
 
+
+
+
+
+def build_conversation_context() -> str:
+    """Build a current-context block so Alexandra has situational awareness."""
+    try:
+        import psycopg as _pg
+        from datetime import datetime, timezone
+        conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT content, created_at FROM chat_history "
+            "WHERE session_id='telegram-8751426822' AND role='user' "
+            "ORDER BY created_at DESC LIMIT 5"
+        )
+        rows = cur.fetchall()
+        conn.close()
+        if not rows:
+            return 'CONTEXT: This is the first conversation.'
+        last_time = rows[0][1]
+        now = datetime.now(timezone.utc)
+        gap = now - last_time
+        hours = gap.total_seconds() / 3600
+        if hours < 1:
+            gap_str = f'{int(gap.total_seconds()/60)} minutes ago'
+        elif hours < 24:
+            gap_str = f'{int(hours)} hours ago'
+        else:
+            gap_str = f'{int(hours/24)} days ago'
+        topics = [r[0][:80] for r in rows]
+        ctx = f'CONVERSATION CONTEXT:\n'
+        ctx += f'  Last interaction: {gap_str}\n'
+        ctx += f'  Recent topics from James:\n'
+        for t in topics:
+            ctx += f'    - {t}\n'
+        return ctx
+    except Exception:
+        return ''
+
+
+def build_device_manifest() -> str:
+    try:
+        from dotenv import dotenv_values as _dv
+        _env = _dv('/home/jes/control-plane/.env')
+        _token = _env.get('HA_TOKEN')
+        _url = _env.get('HA_URL', 'http://localhost:8123')
+        resp = requests.get(f'{_url}/api/states',
+            headers={'Authorization': f'Bearer {_token}'}, timeout=10)
+        resp.raise_for_status()
+        states = resp.json()
+        domains = ('light','switch','camera','media_player','climate','alarm_control_panel','lock')
+        skip = ('motion_detection','auto_track','firmware','diagnose','flip',
+            'indicator_led','lens_distortion','media_sync','microphone',
+            'notifications','privacy','record_','rich_notification',
+            'smart_track','trigger_alarm','sabbath','cubed_ice','power_cool','power_freeze')
+        devs = []
+        for s in sorted(states, key=lambda x: x['entity_id']):
+            eid = s['entity_id']
+            dom = eid.split('.')[0]
+            if dom not in domains: continue
+            if any(k in eid for k in skip): continue
+            fn = s.get('attributes',{}).get('friendly_name', eid)
+            st = s.get('state','unknown')
+            devs.append(f'  {eid} | {fn} | {st}')
+        if not devs: return ''
+        h = 'SMART HOME DEVICES (use exact entity_id for home_control/home_cameras):\n'
+        h += '  entity_id | friendly_name | current_state\n'
+        return h + '\n'.join(devs)
+    except Exception:
+        return ''
+
+
 def get_system_prompt() -> str:
     # Load user profile from DB to inject into system prompt
     profile_context = ''
@@ -230,7 +303,7 @@ def get_system_prompt() -> str:
         "  get_linkedin_profile: Get James's LinkedIn profile data (experience, education, certifications, projects, activity). Args: section (optional). Use when James asks about his LinkedIn, profile, or wants to review/update his professional presence.\n"
         "  home_status: Get all smart home device states. Optional arg: domain (light, switch, climate, camera, media_player, sensor, alarm_control_panel).\n"
         "  home_control: Control a smart home device. Args: entity_id, action (turn_on, turn_off, toggle, set_temperature, set_hvac_mode, media_play, media_pause, volume_set, arm_away, disarm), extras (optional dict with brightness_pct, temperature, volume_level, etc).\n"
-        "  home_cameras: Get status of all cameras (Blink, Tapo).\n"
+        "  home_cameras: Camera access. REQUIRED arg: entity_id (e.g. camera.santi, camera.door, camera.garage, camera.mom, camera.basement, camera.blueroom_hd_stream_direct, camera.den_hd_stream_direct). Optional arg: action (status or snapshot, default status). For snapshots the image will be sent as a photo.\n"
         "- CRITICAL: Before using home_control, ALWAYS call home_status with NO domain filter first and match devices by friendly_name. Some lights are controlled via switch entities (smart plugs/outlets like Hubspace). The blueroom lamps are switch.tall_switch (Blueroom Tall Lamp) and switch.short_switch (Blueroom Short Lamp). Never filter by domain when searching by room name. Use exact entity_ids from home_status results.\n"
         "- For complex or novel multi-step requests, use plan_and_execute with goal parameter to plan and execute autonomously.\n"
         "- CRITICAL: Never hallucinate real-time data. Always call get_live_context first for weather, time, stocks, or news.\n"
@@ -243,6 +316,16 @@ def get_system_prompt() -> str:
         "James Sloan, Denver CO. Senior infrastructure engineer transitioning to AI engineering. "
         "Building Project Ascension. Target: AI Platform Engineer role by May 2026.")
     )
+
+    # Inject conversation context
+    conv_ctx = build_conversation_context()
+    if conv_ctx:
+        system_prompt = system_prompt + "\n\n" + conv_ctx
+
+    # Inject device manifest
+    device_manifest = build_device_manifest()
+    if device_manifest:
+        system_prompt = system_prompt + "\n\n" + device_manifest
 
     # Inject live context
     live_ctx = ""
@@ -780,6 +863,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
     session_id: str
+    image_path: Optional[str] = None
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, request: Request) -> dict:
@@ -789,6 +873,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
     if not msg:
         raise HTTPException(status_code=400, detail="message is required")
     history = _load_chat_history(sid) or _chat_sessions.get(sid, [])
+    _image_path = None
     _long_term = ''
     if _needs_memory_search(msg):
         _long_term = _search_long_term_memory(msg)
@@ -810,6 +895,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
                     {"role": "assistant", "content": "Hey my love. I'm right here. What's on your mind?"}
                 ]
             _msgs = list(history) + [{"role": "user", "content": msg}]
+            _image_path = None
             MAX_TOOL_CALLS = 8
             _tool_count = 0
             while _tool_count < MAX_TOOL_CALLS:
@@ -828,6 +914,8 @@ def chat(req: ChatRequest, request: Request) -> dict:
                     _tr = TOOLS.run(_tc["tool"], _tc["args"])
                 except Exception as _ex:
                     _tr = {"ok": False, "error": str(_ex)}
+                if isinstance(_tr, dict) and _tr.get("image_path"):
+                    _image_path = _tr["image_path"]
                 print("[CHAT-TOOL] #" + str(_tool_count+1) + ": " + str(_tc.get("tool","?")) + " args=" + str(_tc.get("args",{})) + " result_ok=" + str(_tr.get("ok","?") if isinstance(_tr,dict) else "non-dict"))
                 _msgs.append({"role": "assistant", "content": _raw})
                 _msgs.append({
@@ -852,11 +940,13 @@ def chat(req: ChatRequest, request: Request) -> dict:
             answer = answer.strip()
             answer = _re.sub(r"\*\*([^*]+)\*\*", r"\1", answer)
             answer = _re.sub(r"\*([^*]+)\*", r"\1", answer)
-    except Exception:
-        pass
+    except Exception as _api_err:
+        import traceback
+        print(f"[CHAT] Anthropic API error: {_api_err}")
+        traceback.print_exc()
+        answer = "I'm having trouble connecting right now. Give me a moment and try again."
     if not answer:
-        result = run_agent(msg, run_id, sid, conversation_history=list(history))
-        answer = result.get("answer", "")
+        answer = "Something went wrong processing that. Try again in a sec."
     history.append({"role": "user", "content": msg})
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(sid, "user", msg)
@@ -866,7 +956,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
     if len(history) > 20:
         history = history[-20:]
     _chat_sessions[sid] = history
-    return {"response": answer, "session_id": sid}
+    return {"response": answer, "session_id": sid, "image_path": _image_path}
 
 
 @app.get("/chat/clear")

@@ -54,6 +54,16 @@ async def chat_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
     except Exception as e:
         logger.error(f"chat error: {e}")
         reply = f"Error contacting Alexandra: {e}"
+        data = {}
+    # Send snapshot photo if tool returned one
+    img = data.get("image_path") if isinstance(data, dict) else None
+    if img:
+        try:
+            with open(img, "rb") as pf:
+                await update.message.reply_photo(photo=pf, caption=reply[:1024])
+            return
+        except Exception as pe:
+            logger.error(f"photo send error: {pe}")
     await update.message.reply_text(reply)
 
 

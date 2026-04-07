@@ -822,23 +822,39 @@ def _home_control_handler(args):
 
 
 def _home_cameras_handler(args):
-    """Camera access routed through Tier 3 approval via MQTT gate."""
-    action = args.get('action', 'snapshot')
+    """Camera access: status or snapshot."""
+    action = args.get('action', 'status')
     entity_id = args.get('entity_id', 'camera.unknown')
     extras = args.get('extras', {})
     allowed, reason = enforce_tier(entity_id, action, extras)
     if not allowed:
-        return {
-            "ok": False,
-            "tool": "home_cameras",
-            "blocked": True,
-            "tier": classify_tier(entity_id, action),
-            "reason": reason,
-        }
-    # If allowed (e.g. Tier 2 after delay), execute
+        return {"ok": False, "tool": "home_cameras", "blocked": True,
+                "tier": classify_tier(entity_id, action), "reason": reason}
     try:
-        result = _ha_request('GET', f'/api/camera_proxy/{entity_id}')
-        return {"ok": True, "tool": "home_cameras", "entity_id": entity_id, "action": action}
+        if action == 'status':
+            state = _ha_request('GET', f'/api/states/{entity_id}')
+            attrs = state.get('attributes', {})
+            return {"ok": True, "tool": "home_cameras", "entity_id": entity_id,
+                    "action": "status", "state": state.get('state', 'unknown'),
+                    "friendly_name": attrs.get('friendly_name', entity_id),
+                    "motion": attrs.get('motion_detection', None)}
+        elif action == 'snapshot':
+            from dotenv import dotenv_values
+            env = dotenv_values('/home/jes/control-plane/.env')
+            token = env.get('HA_TOKEN')
+            url = env.get('HA_URL', 'http://localhost:8123')
+            import time as _t
+            resp = requests.get(f'{url}/api/camera_proxy/{entity_id}?time={int(_t.time())}',
+                headers={'Authorization': f'Bearer {token}'}, timeout=15)
+            resp.raise_for_status()
+            path = f'/tmp/cam_{entity_id.split(".")[1]}.jpg'
+            with open(path, 'wb') as f:
+                f.write(resp.content)
+            return {"ok": True, "tool": "home_cameras", "entity_id": entity_id,
+                    "action": "snapshot", "image_path": path,
+                    "size_bytes": len(resp.content)}
+        else:
+            return {"ok": False, "tool": "home_cameras", "error": f"Unknown action: {action}"}
     except Exception as ex:
         return {"ok": False, "tool": "home_cameras", "error": str(ex)}
 
@@ -1057,7 +1073,7 @@ def default_registry() -> ToolRegistry:
     r.register(ToolSpec(name="list_files", description="List files in /home/jes/control-plane/ (jailed). Args: path (optional). Max 100 entries.", schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_list_files_handler))
     r.register(ToolSpec(name="home_status", description="Get status of all smart home devices. Optional: domain filter.", schema={"type": "object", "properties": {"domain": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_home_status_handler))
     r.register(ToolSpec(name="home_control", description="Control a smart home device. Args: entity_id, action (turn_on/off/toggle/set_temperature/media_play/pause/volume_set/arm_away/disarm), extras (optional dict).", schema={"type": "object", "properties": {"entity_id": {"type": "string"}, "action": {"type": "string"}, "extras": {"type": "object"}}, "required": ["entity_id", "action"], "additionalProperties": False}, handler=_home_control_handler))
-    r.register(ToolSpec(name="home_cameras", description="Get status of all cameras (Blink, Tapo).", schema={"type": "object", "properties": {}, "required": [], "additionalProperties": False}, handler=_home_cameras_handler))
+    r.register(ToolSpec(name="home_cameras", description="Camera access (snapshot/status). Available cameras: camera.santi (Santi), camera.door (Door), camera.garage (Garage), camera.mom (Mom), camera.basement (Basement), camera.blueroom_hd_stream_direct (BlueRoom), camera.den_hd_stream_direct (Den). Args: entity_id (required), action (snapshot or status), extras (optional dict).", schema={"type": "object", "properties": {"entity_id": {"type": "string", "description": "Camera entity ID e.g. camera.santi"}, "action": {"type": "string", "description": "snapshot or status"}, "extras": {"type": "object"}}, "required": ["entity_id"], "additionalProperties": False}, handler=_home_cameras_handler))
 
 
     return r
