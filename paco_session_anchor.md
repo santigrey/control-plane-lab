@@ -13,7 +13,6 @@
 2. Fine-tuning POC: LoRA run on GB10
 3. Pull qwen2.5:72b for coding workloads
 4. Demo video for portfolio
-5. Update Cowork runbook: orchestrator health is :8000/healthz NOT :8001/health
 6. Tier 3 MQTT approval gate wiring (still pending from earlier)
 7. Schlage lock integration (still pending)
 
