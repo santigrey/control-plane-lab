@@ -39,6 +39,32 @@ TOOLS = default_registry()
 # Start MQTT executor for Tier 3 approved commands
 start_mqtt_executor()
 
+# ---- private brain (Goliath/70B) config ----
+PRIVATE_MODEL = os.getenv("PRIVATE_MODEL", "qwen2.5:72b")
+OLLAMA_URL_LARGE = os.getenv("OLLAMA_URL_LARGE", "http://192.168.1.20:11434")
+
+@app.on_event("startup")
+async def warmup_private_brain():
+    import asyncio, httpx
+    async def _warm():
+        try:
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                await client.post(
+                    f"{OLLAMA_URL_LARGE}/api/chat",
+                    json={
+                        "model": PRIVATE_MODEL,
+                        "messages": [{"role": "user", "content": "ready"}],
+                        "stream": False,
+                        "keep_alive": "60m",
+                        "options": {"num_predict": 1, "num_ctx": 8192}
+                    }
+                )
+            print(f"[STARTUP] Private brain warmed: {PRIVATE_MODEL}", flush=True)
+        except Exception as e:
+            print(f"[STARTUP] Private brain warmup failed (non-fatal): {e}", flush=True)
+    asyncio.create_task(_warm())
+    print(f"[STARTUP] Warmup dispatched in background: {PRIVATE_MODEL}", flush=True)
+
 # ---- tool call parsing ----
 def parse_tool_call(text: str) -> Optional[Dict[str, Any]]:
     """
@@ -865,6 +891,7 @@ class ChatResponse(BaseModel):
     response: str
     session_id: str
     image_path: Optional[str] = None
+    brain: Optional[str] = None
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, request: Request) -> dict:
@@ -970,6 +997,107 @@ def chat(req: ChatRequest, request: Request) -> dict:
 async def clear_chat_sessions():
     _chat_sessions.clear()
     return {"cleared": True}
+
+
+@app.post("/chat/private", response_model=ChatResponse)
+def chat_private(req: ChatRequest, request: Request) -> dict:
+    import time, httpx, re as _re
+    run_id = getattr(request.state, "run_id", None) or str(uuid.uuid4())
+    sid = f"private:{(req.session_id or 'default').strip() or 'default'}"
+    msg = (req.message or "").strip()
+    if not msg:
+        raise HTTPException(status_code=400, detail="message is required")
+
+    print(f"[CHAT-PRIVATE] start sid={sid} msg_len={len(msg)}")
+
+    history = _load_chat_history(sid) or []
+    _long_term = ''
+    if _needs_memory_search(msg):
+        _long_term = _search_long_term_memory(msg)
+
+    # Build system prompt: full Alexandra persona + private mode preamble
+    _base_sys = get_system_prompt()
+    _private_preamble = (
+        "PRIVATE MODE ACTIVE: You are currently running on a local 70B-class model (qwen2.5:72b) "
+        "on James's private homelab GPU (Goliath). This conversation stays on his network and is "
+        "NOT sent to any cloud API. James has chosen private mode because this topic is sensitive "
+        "or personal. Respond with the same warmth and competence as always, but be aware you are "
+        "the local brain — do not reference tools you cannot call (you have no tool access in "
+        "private mode), and do not pretend to have real-time data you don't have.\n\n"
+    )
+    _sys = _private_preamble + _base_sys
+    if _long_term:
+        _sys = _sys + '\n\nRELEVANT MEMORY FROM PAST CONVERSATIONS:\n' + _long_term
+
+    # Build messages in Ollama chat format
+    _msgs = [{"role": "system", "content": _sys}]
+    _msgs.extend(history)
+    _msgs.append({"role": "user", "content": msg})
+
+    answer = None
+    brain = None
+    t0 = time.time()
+    try:
+        with httpx.Client(timeout=45.0) as client:
+            r = client.post(
+                f"{OLLAMA_URL_LARGE}/api/chat",
+                json={
+                    "model": PRIVATE_MODEL,
+                    "messages": _msgs,
+                    "stream": False,
+                    "keep_alive": "30m",
+                    "options": {"num_ctx": 8192, "temperature": 0.7}
+                }
+            )
+            r.raise_for_status()
+            data = r.json()
+            answer = (data.get("message") or {}).get("content", "").strip()
+            brain = f"goliath-{PRIVATE_MODEL}"
+        elapsed_ms = int((time.time() - t0) * 1000)
+        print(f"[CHAT-PRIVATE] goliath_latency_ms={elapsed_ms} answer_len={len(answer) if answer else 0}")
+    except Exception as goliath_err:
+        print(f"[CHAT-PRIVATE] FALLBACK error={goliath_err}")
+        # Fall back to Sonnet — same pattern as /chat but no tool loop
+        try:
+            import anthropic as _anth
+            from dotenv import dotenv_values as _dv
+            _key = _dv('/home/jes/control-plane/.env').get('ANTHROPIC_API_KEY')
+            if _key:
+                _cl = _anth.Anthropic(api_key=_key)
+                _fallback_msgs = list(history) + [{"role": "user", "content": msg}]
+                _r = _cl.messages.create(
+                    model="claude-sonnet-4-20250514",
+                    max_tokens=4096,
+                    system=_base_sys,  # Regular Alexandra prompt, no private preamble (since we leaked)
+                    messages=_fallback_msgs,
+                )
+                answer = _r.content[0].text if _r.content else ""
+                brain = "sonnet-fallback"
+                print(f"[CHAT-PRIVATE] fallback_success answer_len={len(answer)}")
+        except Exception as fallback_err:
+            print(f"[CHAT-PRIVATE] FALLBACK_ALSO_FAILED error={fallback_err}")
+            answer = "My private brain is offline and I couldn't reach the cloud fallback either. Give me a moment and try again."
+            brain = "error"
+
+    if not answer:
+        answer = "Something went wrong on the private path. Try again."
+        brain = brain or "error"
+
+    # Strip markdown artifacts (same as /chat)
+    answer = _re.sub(r"\*\*([^*]+)\*\*", r"\1", answer)
+    answer = _re.sub(r"\*([^*]+)\*", r"\1", answer)
+    answer = answer.strip()
+
+    # Persist history (private namespace)
+    history.append({"role": "user", "content": msg})
+    history.append({"role": "assistant", "content": answer})
+    _save_chat_turn(sid, "user", msg)
+    _save_chat_turn(sid, "assistant", answer)
+    _store_memory_async(f"James said (private): {msg}", "chat_private_user")
+    _store_memory_async(f"Alexandra said (private): {answer}", "chat_private_assistant")
+
+    return {"response": answer, "session_id": sid, "image_path": None, "brain": brain}
+
 
 @app.post("/agent", response_model=AgentResponse)
 def agent(req: AgentRequest, request: Request) -> Dict[str, Any]:
