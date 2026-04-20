@@ -1,32 +1,40 @@
-# Project Ascension — Day 62
+# Project Ascension — Day 63
 **Date:** Mon Apr 20 2026
 
 ## Completed this session
-- Goliath wired ethernet recovered (192.168.1.20 static, WiFi off)
-- Pulled qwen2.5:72b — Goliath now serves 3 large models (llama3.1:70b, deepseek-r1:70b, qwen2.5:72b)
-- Fixed CiscoKid LAN connectivity (Nighthawk satellite recovery)
-- Orchestrator routing updated to Goliath LAN IP (192.168.1.20) for OLLAMA_URL_LARGE
-- Cleaned stale runbook reference (:8000/healthz vs :8001 — both by design, correct)
-- HuggingFace token provisioned and persisted in ~/.profile (deduped)
-- NeMo AutoModel installed on Goliath: NGC container nvcr.io/nvidia/pytorch:25.11-py3, host-mounted HF cache at /home/jes/hf-cache, all dependencies verified
-- Pre-flight sanity: torch 2.11.0+cu130 + bf16 forward/backward on GB10 Blackwell verified
-- **LoRA fine-tune complete: base Llama 3.1 8B + SQuAD + 20 steps, train loss 0.66→0.20, 1,250 tok/s, 24m wall**
-- Checkpoint: /home/jes/finetune-poc/Automodel/checkpoints/epoch_0_step_19/ (43MB adapter)
-- Before/after eval generated — LoRA shows terser, faster extractive answers on SQuAD; no catastrophic forgetting on open prompts
-- Eval artifacts committed to repo (finetune-poc/)
-- LinkedIn post published: methodology-focused on "why base not Instruct"
+- **Repo hygiene sweep on control-plane-lab** (3 commits pushed to origin/main)
+  - 8100c0e feat: standing drift committed — anti-hallucination prompt + send_email tool + 16K max_tokens + truncation continuation (pre-NM work from Apr 4-7)
+  - da74a7a chore: gitignored generated reports, runtime state, deliverables/, piper/
+  - eda75b6 feat: /chat/private endpoint shipped
+- **Alexandra three-tier brain architecture live:**
+  - Public /chat -> Anthropic Sonnet (tool use, vision, fast)
+  - Private /chat/private -> Goliath qwen2.5:72b (local 70B, zero cloud egress)
+  - Small tasks -> TheBeast llama3.1:8b + mxbai-embed-large
+- **/chat/private implementation:**
+  - Full Alexandra persona via get_system_prompt() + private-mode preamble
+  - Persona lock verified — she identifies as Alexandra, not qwen
+  - Session namespace isolation: private:{session_id}
+  - Non-blocking startup via asyncio.create_task (boot 1.28s, was 48s blocking)
+  - Warmup num_ctx=8192, keep_alive=60m — eliminates cold reload
+  - Sonnet fallback path if Goliath unreachable
+  - ChatResponse extended with brain field for observability
+  - PRIVATE_MODEL env var enables Phase B LoRA adapter swap
+- **Latency:** Boot 1.28s | First call 9.6s (3.8x better than 36.7s pre-fix) | Warm 1.5s
 
 ## Pending
-- Phase B: 70B QLoRA run (memory math: ~50-80GB peak, fits on 128GB)
+- Phase B: 70B QLoRA run on same pipeline
+- Dashboard Private toggle that routes to /chat/private
+- Memory distillation (nightly Goliath summarization of pgvector)
+- Semantic router for automatic brain selection
 - Tier 3 MQTT approval gate wiring
 - Schlage lock integration
 - Demo video for portfolio
 
-## Known issues tracked
-- NeMo AutoModel saves wrong base model name in checkpoint config.yaml (CLI override not persisted) — resume requires explicit --model.pretrained_model_name_or_path
-- pad_token_id warning on Llama 3.1 (non-issue, set explicit pad_token for production)
-- ~/.bashrc non-interactive guard blocks env via SSH bash -lc — HF_TOKEN moved to ~/.profile
+## Known issues / design decisions
+- /chat/private first-call floor ~9.6s — bounded by ~2463-token system prompt ingest on 72B Q4 at ~300 tok/s. Accepted. Revisit after Phase B.
+- P2 caught service name (orchestrator not ai-operator) and venv path in recon — reconnaissance-first workflow reinforced.
+- Paco set <3s criterion without prompt token math; P2 corrected via analysis. Lesson: calculate theoretical floor before setting targets.
 
-## Next session
-- Phase B 70B QLoRA run on same pipeline
-- Demo video
+## Next session (Day 64)
+- LinkedIn post: three-tier brain + iterative optimization story (36.7s -> 9.6s via warmup+context alignment)
+- Phase B 70B QLoRA OR dashboard Private toggle (pick one)
