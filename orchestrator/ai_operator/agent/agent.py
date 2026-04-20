@@ -144,7 +144,7 @@ def claude_chat(
         client = anthropic.Anthropic(api_key=api_key)
         response = client.messages.create(
             model=model,
-            max_tokens=1024,
+            max_tokens=16384,
             system=system_prompt,
             messages=messages,
         )

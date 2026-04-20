@@ -171,3 +171,56 @@ def create_calendar_event(summary, start_time, end_time, description='', locatio
         'end': result.get('end', {}).get('dateTime', ''),
         'link': result.get('htmlLink', ''),
     }
+
+
+def send_email(to, subject, body, attachment_path=None):
+    """Send an email via Gmail API.
+
+    Args:
+        to: Recipient email address
+        subject: Email subject line
+        body: Plain-text email body
+        attachment_path: Optional file path (jailed to /home/jes/control-plane/)
+
+    Returns:
+        dict with id, threadId, and labelIds of the sent message
+    """
+    import base64
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    from email.mime.base import MIMEBase
+    from email import encoders
+    from googleapiclient.discovery import build
+
+    creds = _load_credentials()
+    service = build('gmail', 'v1', credentials=creds)
+
+    if attachment_path:
+        msg = MIMEMultipart()
+        msg.attach(MIMEText(body, 'plain'))
+        jail = '/home/jes/control-plane'
+        resolved = os.path.realpath(attachment_path)
+        if not resolved.startswith(jail):
+            raise ValueError(f'Attachment path outside jail: {resolved}')
+        if not os.path.isfile(resolved):
+            raise FileNotFoundError(f'Attachment not found: {resolved}')
+        with open(resolved, 'rb') as f:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(f.read())
+        encoders.encode_base64(part)
+        part.add_header('Content-Disposition', f'attachment; filename="{os.path.basename(resolved)}"')
+        msg.attach(part)
+    else:
+        msg = MIMEText(body, 'plain')
+
+    msg['to'] = to
+    msg['subject'] = subject
+    raw = base64.urlsafe_b64encode(msg.as_bytes()).decode()
+    sent = service.users().messages().send(
+        userId='me', body={'raw': raw}
+    ).execute()
+    return {
+        'id': sent.get('id', ''),
+        'threadId': sent.get('threadId', ''),
+        'labelIds': sent.get('labelIds', []),
+    }

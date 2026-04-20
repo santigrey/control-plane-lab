@@ -310,6 +310,23 @@ def _create_calendar_event_handler(args: Dict[str, Any]) -> Dict[str, Any]:
     result["ok"] = True
     return result
 
+def _send_email_handler(args: Dict[str, Any]) -> Dict[str, Any]:
+    import subprocess, json as _json
+    snippet = (
+        'import sys, json; sys.path.insert(0,"/home/jes/control-plane"); '
+        'from google_readers import send_email; '
+        'print(json.dumps(send_email(**json.loads(sys.stdin.read()))))'
+    )
+    r = subprocess.run(
+        ["/usr/bin/python3", "-c", snippet],
+        input=_json.dumps(args), capture_output=True, text=True, timeout=30)
+    if r.returncode != 0:
+        return {"ok": False, "tool": "send_email", "error": r.stderr.strip()[:500]}
+    result = _json.loads(r.stdout.strip())
+    result["ok"] = True
+    result["tool"] = "send_email"
+    return result
+
 def _get_system_status_handler(args):
     import subprocess as _sp, urllib.request as _ur, json as _jj
     r = {}
@@ -1068,12 +1085,14 @@ def default_registry() -> ToolRegistry:
     r.register(ToolSpec(name="memory_save", description="Save content to semantic memory. Args: content (required, max 500 chars), source (optional).", schema={"type": "object", "properties": {"content": {"type": "string"}, "source": {"type": "string"}}, "required": ["content"], "additionalProperties": False}, handler=_memory_save_handler))
     r.register(ToolSpec(name="send_telegram", description="Send a message via Telegram bot. Args: message (required). Rate limited 5/60s.", schema={"type": "object", "properties": {"message": {"type": "string"}}, "required": ["message"], "additionalProperties": False}, handler=_send_telegram_handler))
     r.register(ToolSpec(name="read_file", description="Read a file from /home/jes/control-plane/ (jailed). Args: path (required). Max 50KB.", schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"], "additionalProperties": False}, handler=_read_file_handler))
-    r.register(ToolSpec(name="write_file", description="Write to /home/jes/control-plane/ (jailed). Args: path, content (max 50KB). Rejects .env, .key, .pem, .git/.", schema={"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"], "additionalProperties": False}, handler=_write_file_handler))
+    r.register(ToolSpec(name="write_file", description="Write a file to CiscoKid. Base path: /home/jes/control-plane/ (all paths are jailed here). For user-facing deliverables (guides, reports, drafts), use path=deliverables/<filename>. Args: path (required, relative to base or absolute), content (required, max 50KB). Rejects .env, .key, .pem, .git/. ALWAYS report the full resolved path to the user after writing.", schema={"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"], "additionalProperties": False}, handler=_write_file_handler))
     r.register(ToolSpec(name="get_linkedin_profile", description="Get James's LinkedIn profile data. Args: section (optional: 'experience', 'education', 'certifications', 'projects', 'recent_activity', or 'all'). Returns structured profile data.", schema={"type": "object", "properties": {"section": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_get_linkedin_profile_handler))
     r.register(ToolSpec(name="list_files", description="List files in /home/jes/control-plane/ (jailed). Args: path (optional). Max 100 entries.", schema={"type": "object", "properties": {"path": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_list_files_handler))
     r.register(ToolSpec(name="home_status", description="Get status of all smart home devices. Optional: domain filter.", schema={"type": "object", "properties": {"domain": {"type": "string"}}, "required": [], "additionalProperties": False}, handler=_home_status_handler))
     r.register(ToolSpec(name="home_control", description="Control a smart home device. Args: entity_id, action (turn_on/off/toggle/set_temperature/media_play/pause/volume_set/arm_away/disarm), extras (optional dict).", schema={"type": "object", "properties": {"entity_id": {"type": "string"}, "action": {"type": "string"}, "extras": {"type": "object"}}, "required": ["entity_id", "action"], "additionalProperties": False}, handler=_home_control_handler))
     r.register(ToolSpec(name="home_cameras", description="Camera access (snapshot/status). Available cameras: camera.santi (Santi), camera.door (Door), camera.garage (Garage), camera.mom (Mom), camera.basement (Basement), camera.blueroom_hd_stream_direct (BlueRoom), camera.den_hd_stream_direct (Den). Args: entity_id (required), action (snapshot or status), extras (optional dict).", schema={"type": "object", "properties": {"entity_id": {"type": "string", "description": "Camera entity ID e.g. camera.santi"}, "action": {"type": "string", "description": "snapshot or status"}, "extras": {"type": "object"}}, "required": ["entity_id"], "additionalProperties": False}, handler=_home_cameras_handler))
+    r.register(ToolSpec(name="send_email", description="Send an email via Gmail. Args: to (required, email address), subject (required), body (required, plain text). Optional: attachment_path (jailed to /home/jes/control-plane/). Returns message id on success.", schema={"type": "object", "properties": {"to": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"}, "attachment_path": {"type": "string"}}, "required": ["to", "subject", "body"], "additionalProperties": False}, handler=_send_email_handler))
+
 
 
     return r
