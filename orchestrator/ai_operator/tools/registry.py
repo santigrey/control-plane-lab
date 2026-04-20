@@ -622,14 +622,24 @@ def _memory_save_handler(args):
     try:
         db_pass = os.getenv("CONTROLPLANE_DB_PASS", "adminpass")
         db_url = f"postgresql://admin:{db_pass}@127.0.0.1:5432/controlplane"
-        embed_resp = requests.post("http://192.168.1.152:11434/api/embeddings", json={"model": "nomic-embed-text", "prompt": content}, timeout=30)
+        embed_model = "mxbai-embed-large"
+        embed_resp = requests.post(
+            "http://192.168.1.152:11434/api/embeddings",
+            json={"model": embed_model, "prompt": content},
+            timeout=30
+        )
         embed_resp.raise_for_status()
         embedding = embed_resp.json().get("embedding")
         if not embedding:
             return {"ok": False, "tool": "memory_save", "error": "Failed to embed content"}
+        vec_str = '[' + ','.join(f'{float(v):.8f}' for v in embedding) + ']'
         with psycopg.connect(db_url) as conn:
             with conn.cursor() as cur:
-                cur.execute("INSERT INTO memories (content, source, embedding) VALUES (%s, %s, %s::vector)", (content, source, embedding))
+                cur.execute(
+                    """INSERT INTO memory (id, source, content, embedding, embedding_model, created_at)
+                       VALUES (gen_random_uuid(), %s, %s, %s::vector, %s, NOW())""",
+                    (source, content, vec_str, f"{embed_model}:latest")
+                )
             conn.commit()
         return {"ok": True, "tool": "memory_save", "saved": True, "chars": len(content), "source": source}
     except Exception as e:
