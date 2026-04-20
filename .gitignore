@@ -38,3 +38,15 @@ course_materials/
 *.txt
 architecture_dump.txt
 docs/alexandra_iot_security_protocol.md
+
+# Generated intelligence and health reports (Day 63)
+daily_intel.md
+orchestrator/daily_intel.md
+system_health_report.md
+event_engine_notified.json
+
+# Alexandra output sandbox (local only, selectively promote to portfolio/)
+deliverables/
+
+# Third-party binaries (use package manager instead)
+piper/
