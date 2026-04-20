@@ -19,6 +19,24 @@ def get_ollama_url() -> str:
     return env("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
 
 
+def get_ollama_url_large() -> str:
+    return env("OLLAMA_URL_LARGE", get_ollama_url()).rstrip("/")
+
+
+def get_large_models() -> list:
+    raw = os.getenv("LARGE_MODELS", "")
+    return [m.strip() for m in raw.split(",") if m.strip()]
+
+
+def get_ollama_url_for_model(model: str) -> str:
+    large_list = get_large_models()
+    if model in large_list:
+        return get_ollama_url_large()
+    if ":70b" in model.lower() or ":72b" in model.lower() or ":405b" in model.lower():
+        return get_ollama_url_large()
+    return get_ollama_url()
+
+
 def get_embed_model() -> str:
     return env("EMBED_MODEL", "mxbai-embed-large:latest")
 
@@ -45,8 +63,8 @@ def ollama_embed(text: str) -> List[float]:
 
 
 def ollama_chat(system_prompt: str, user_prompt: str, injected_memories: str = "", history: list = None) -> str:
-    url = f"{get_ollama_url()}/api/chat"
     model = get_chat_model()
+    url = f"{get_ollama_url_for_model(model)}/api/chat"
 
     user_text = user_prompt
     if injected_memories.strip():
