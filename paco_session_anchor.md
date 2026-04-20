@@ -36,3 +36,8 @@
 - ALWAYS sync anchor + SESSION.md first before any work
 - Reconnaissance-first for P2 tasks: verify service names, paths, line numbers before coding
 - Calculate theoretical latency floor before setting targets
+
+## Day 63 late-session findings (Day 64 priority)
+- memory_save tool BROKEN (registry.py ~625): wrong embed model (nomic-embed-text not on TheBeast; use mxbai-embed-large) + wrong table (memories -> memory). Silent failures unknown duration. Auto-write path in app.py works fine.
+- Anti-hallucination gap: Alexandra fabricated 'TheBeast endpoint down' diagnosis from generic tool error. Prompt needs: 'On tool failure, report verbatim error; do not diagnose without verification.'
+- Tool registry audit needed: if memory_save drifted, other handlers may have similar bugs.
