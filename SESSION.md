@@ -1,27 +1,28 @@
-# Project Ascension — Day 61
-**Date:** Sun Apr 19 2026
+# Project Ascension — Day 62
+**Date:** Sun Apr 20 2026
 
 ## Completed
-- Goliath (ASUS Ascent GX10) provisioned, named sloan4
-- WiFi networking at 192.168.1.175 (wired ethernet deferred — no-carrier issue with switch port)
-- Tailscale joined: 100.112.126.63
-- Passwordless sudo + SSH keys propagated (Cortez, Mac mini, CiscoKid → Goliath)
-- Ollama installed, bound 0.0.0.0:11434, NVIDIA GPU detected
-- Pulled llama3.1:70b + deepseek-r1:70b (84GB total)
-- First 70B inference verified
-- Dual-backend Ollama routing deployed (commit bf3682c) — LARGE_MODELS env allowlist + suffix match (:70b/:72b/:405b)
-- Mathematical proof: 70B requests hit Goliath, embeddings + 8B stay on TheBeast
-- LinkedIn post published with proof screenshot
+- Goliath provisioned (Tailscale: 100.112.126.63, WiFi: 192.168.1.175 currently down)
+- Ollama: llama3.1:70b + deepseek-r1:70b, dual-backend routing (bf3682c)
+- NeMo AutoModel LoRA POC env ready (Steps 1-8 complete)
+  - Container: nemo-finetune (pytorch:25.11-py3), GPU: GB10, CUDA 13.0
+  - torch=2.11.0+cu130, transformers=5.5.0, datasets=4.2.0
+  - bitsandbytes=0.49.2, nemo_automodel=0.4.0, HF_TOKEN set
+  - CUDA matmul verified, aarch64 packages resolved cleanly
+  - Workdir: /workspace/Automodel, venv at .venv/, 199 pkgs installed
+
+## Alexandra Phase 1 (Day 61)
+- Camera tool schema + handler fixed, device manifest + context injection
+- Silent Ollama fallback killed, Telegram sends camera photos
+- Known: Blink cameras return stale cached thumbnails
 
 ## Pending
-- Wired 10GbE on Goliath (cable/switch port investigation)
-- TheBeast SSH host key rotation noted (re-keyed during Tailscale router config)
-- Pull qwen2.5:72b for coding workloads
-- Fine-tuning POC: LoRA run on GB10
-- Update Cowork runbook: orchestrator health is :8000/healthz not :8001/health
-- Demo video for portfolio
+- NeMo POC Steps 9-10: Sloan confirms checkpoint, then LoRA training run
+- Camera snapshot force-refresh (camera.snapshot HA service call)
+- Goliath wired 10GbE + WiFi troubleshooting
+- qwen2.5:72b pull, demo video
 
 ## Next session
-- Fine-tuning POC on Goliath
-- Wired ethernet resolution for Goliath
-- qwen2.5:72b pull + integration test
+- LoRA training run on GB10 (pending Sloan approval)
+- Camera stale image fix
+- Goliath network troubleshooting
