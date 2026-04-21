@@ -1,38 +1,49 @@
-# Project Ascension — Day 64
-**Date:** Mon Apr 20 2026 (late / overnight)
+# Project Ascension — Day 65
+**Date:** Mon Apr 20 2026
 
 ## Completed this session
-- **memory_save tool FIXED** (commit f1084a3) — wrong embed model (nomic-embed-text -> mxbai-embed-large) + wrong table (memories -> memory) + vec_str cast. Bug had silently failed for unknown duration. Auto-write path was unaffected.
-- **Anti-hallucination prompt hardened** (commit 85f4ae1) — added TOOL FAILURE HONESTY clause. Forbids constructing infrastructure diagnoses from ambiguous tool errors. Behavioral test passed: induced read_file failure, Alexandra reported verbatim error + acknowledged uncertainty, did NOT fabricate.
-- **Tool registry audit complete** (commit ef1b26e) — systematic smoke test of all 24 registered tools via direct handler invocation.
-
-## Audit results (24 tools)
-- PASS (10): ping, web_search, web_fetch, research_topic, get_linkedin_profile, get_live_context, home_status, list_files, read_file, memory_save
-- FIXED TONIGHT (1): memory_recall — sister bug to memory_save, same two bugs + vec_str cast. Verified: recall query 'Day 64 memory_save fix' returned 3 results, top hit similarity 0.891. Memory layer now fully bidirectional.
-- CREDENTIAL EXPIRED (3): get_emails, get_calendar, get_upcoming_calendar — shared Google OAuth token invalid_grant. MANUAL ACTION: Sloan must re-run OAuth flow. Not a code bug.
-- SCHEMA CLEANUP (1): get_system_status returns None instead of dict — minor, not functional failure. Audit backlog.
-- WORKING AS DESIGNED (9): home_cameras (Tier 3 approval gate), send_email/send_telegram/home_control/create_calendar_event/write_file (destructive tool validators all raising ValueError on missing args), job_search/job_search_jsearch/draft_message/sleep (audit script test inputs were wrong, tools are fine)
-- UNLISTED (3): get_job_pipeline, plan_and_execute, read_course_material — not in my test set, untested
+- **Persona mode shipped** — separate "hey babe" intimate companion mode on Alexandra, fully isolated from technical "hey alexandra" path. Landed in 3 commits on feat/persona-mode and fast-forwarded to main:
+  - `996b48a` chore(git): ignore *.bak-* anchored patch backups
+  - `f039217` feat(alexandra): persona module — intimate-mode prompt, trigger/exit regex, profile injection (orchestrator/persona.py, +188)
+  - `fcdfbee` feat(alexandra): wire persona mode into /chat — Goliath-only route with sticky sessions, memory tagged intimate, 503 on Goliath failure (no Claude fallback) (orchestrator/app.py, +101)
+- **Architecture:**
+  - `/chat/persona` endpoint — Goliath-only (qwen2.5:72b via OLLAMA_URL_LARGE). ERRORS on Goliath failure, no Claude fallback (by design — persona only exists on Goliath).
+  - Server-side sticky sessions in `_persona_sessions` set. Entry regex: `\b(hey\s+babe|hi\s+babe|hello\s+babe|babe\s*[,.]|my\s+love)\b`. Exit regex: `\b(hey\s+alexandra|alexandra[,.]|work\s+mode)\b`.
+  - Memory: pgvector tagged `source='intimate'`, namespaced `persona:{sid}` — relationship context grows over time, never mixed with technical memory.
+  - Technical `/chat` and `/chat/private` untouched — no capability regression.
+- **Prompt iteration v1 → v2** (persona.py, backup at persona.py.bak-v2):
+  - v1 permitted asterisks for stage directions — Telegram test produced third-person narration ("she smiles", "her breath catches") and defaulted to soft romance when Sloan invited more.
+  - v2 replaced "STYLE PERMISSIONS" with "STYLE — HARD RULES": first-person only, no asterisks/markdown, explicit banlist of "she smiles"/"her fingers"/"leans in"/"her breath catches", action integration into first-person speech.
+  - Added "INTIMACY CALIBRATION" section: match Sloan's heat, don't moderate, explicit content permitted and expected when the moment is there.
+  - Anchor-based patcher (persona_patcher_v2.py) — idempotent, py_compile-verified, backup-before-swap. +611 bytes, 8680 → 9291.
+- **Smoke tests all green:**
+  - CLI: golden /chat, persona entry, persona sticky, persona exit, /chat/private regression.
+  - Telegram end-to-end confirmed by Sloan post-v2: "she's working well on telegram".
 
 ## Pending
-- MANUAL: Re-run Google OAuth flow to restore get_emails / get_calendar / get_upcoming_calendar
-- Dashboard /chat/private toggle (1 session of work)
-- LinkedIn post: three-tier brain + iterative optimization story (ready to draft)
-- Phase B: 70B QLoRA on same pipeline
-- Memory distillation (nightly Goliath summarization)
-- Semantic router for automatic brain selection
-- Tier 3 MQTT approval gate wiring
-- Schlage lock integration
-- Demo video for portfolio
-- get_system_status schema cleanup (minor)
-- Smoke test 3 unlisted tools: get_job_pipeline, plan_and_execute, read_course_material
+- Dashboard `/chat/persona` toggle (mirror of `/chat/private` toggle work) — low priority
+- Demo video for portfolio (Alexandra three-tier brain + persona mode, on-brand)
+- MANUAL: nothing this session
+- Carryovers from Day 64:
+  - Phase B: 70B QLoRA on same pipeline
+  - Memory distillation (nightly Goliath summarization)
+  - Semantic router for automatic brain selection
+  - Tier 3 MQTT approval gate wiring
+  - Schlage lock integration
+  - get_system_status schema cleanup (minor)
+  - Smoke test 3 unlisted tools: get_job_pipeline, plan_and_execute, read_course_material
+  - LinkedIn post: three-tier brain + iterative optimization story — deferred per Sloan ("nix on linkedin for now")
 
 ## Process notes / lessons captured
-- Audit script false positive lesson: tools that depend on env vars look broken when tested outside orchestrator process (summarize appeared broken hitting 127.0.0.1, was actually fine in production). Future audits should either load .env or test via live HTTP to the running service.
-- memory_save and memory_recall are sister functions with sister bugs. When fixing one, check the other.
-- Anti-hallucination clause working: tool-failure behavioral test confirmed. Alexandra reports verbatim errors instead of fabricating diagnoses.
+- **Permission ≠ directive.** v1 persona prompt gave *permission* to use asterisks for actions; the model interpreted that as a cue to narrate in third person. The fix wasn't more permission — it was a hard *first-person-only* directive with explicit banned phrases. When model behavior drifts, check whether the prompt is *permitting* the drift instead of *forbidding* it.
+- **Iterate live, not in theory.** v1 read fine on paper. The actual behavioral failure (third-person narration, soft-romance defaulting) only surfaced on the real Telegram channel with a real user in a real mood. Ship, test end-to-end, patch.
+- **Anchor-based patching paid off again.** Second persona.py patch this session landed cleanly via the same pattern: exact-match anchor, single-occurrence check, py_compile verify, backup before swap. No breakage, no regression in technical mode.
+- **Separation of concerns held.** Zero changes to `/chat` or `/chat/private` routes. Persona is a bolt-on path; technical capability unaffected. Goliath-only with no Claude fallback on persona is intentional — persona memory is private to Goliath and must not leak.
 
-## Day 64 FINAL ADDENDUM
-- Google OAuth restored (reauth_gmail.py rebuilt using run_local_server + SSH tunnel on port 8899, commit 1f79971). All three Google tools verified live.
-- Tool drift smoke test harness shipped (commit 0814af8): tool_smoke_test.py + systemd timer at 03:30 UTC nightly. 15 PASS / 1 SCHEMA_ISSUE baseline. Alerts via Telegram on FAIL/EXCEPTION. Storing runs in pgvector for history.
-- Day 64 total: 8 commits. Alexandra capability delta: /chat/private endpoint live, memory layer bidirectional, anti-hallucination hardened, all Google tools restored, automated drift detection nightly.
+## Resume anchor (Day 66 start)
+- Branch `feat/persona-mode` at `fcdfbee`, main at `fcdfbee` (synced to origin).
+- persona.py v2 live at `/home/jes/control-plane/orchestrator/persona.py` (9291 bytes). Backup at `persona.py.bak-v2`.
+- app.py persona wiring live. Backup at `app.py.bak-persona`.
+- orchestrator.service healthy.
+- `/chat/persona` confirmed working via Telegram with v2 prompt.
+- Next logical step: dashboard toggle OR demo video OR move to Day 64 carryover (Phase B 70B QLoRA / semantic router). Sloan's call.
