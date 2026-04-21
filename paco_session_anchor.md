@@ -1,43 +1,46 @@
-# Paco Session Anchor — Day 64+
-**Last session:** Day 63, Mon Apr 20 2026
+# Paco Session Anchor — Day 65+
+**Last session:** Day 64, Mon Apr 20 2026 (overnight)
 
 ## Stack state
-- Goliath (GX10) at 192.168.1.20 (wired, static) + 100.112.126.63 (Tailscale), hostname sloan4
+- Goliath (GX10) at 192.168.1.20 + Tailscale 100.112.126.63, hostname sloan4
 - 128GB unified memory, GB10 Grace Blackwell
-- Ollama serving: llama3.1:70b, deepseek-r1:70b, qwen2.5:72b
-- Dual-backend routing: small/embed -> TheBeast, 70B+ -> Goliath over LAN
-- NeMo AutoModel env live: container nemo-finetune, HF cache /home/jes/hf-cache
+- Ollama: llama3.1:70b, deepseek-r1:70b, qwen2.5:72b
+- Dual-backend routing: small/embed -> TheBeast, 70B+ -> Goliath LAN
+- NeMo AutoModel container live, HF cache /home/jes/hf-cache
 - LoRA POC checkpoint: /home/jes/finetune-poc/Automodel/checkpoints/epoch_0_step_19/
 
-## Alexandra brain architecture (NEW Day 63)
+## Alexandra brain architecture (Day 63)
 - Public /chat -> Anthropic Sonnet (tool use, vision)
 - Private /chat/private -> Goliath qwen2.5:72b (zero cloud egress, persona-locked, Sonnet fallback)
 - PRIVATE_MODEL env var ready for Phase B LoRA swap
-- Boot 1.28s, warm call 1.5s, cold call 9.6s (prompt-eval bound)
+- Boot 1.28s, warm 1.5s, cold 9.6s (prompt-eval bound)
 
-## Pending work
-1. LinkedIn post: three-tier brain + optimization story (36.7s -> 9.6s)
-2. Phase B: 70B QLoRA on same pipeline
-3. Dashboard Private toggle
-4. Memory distillation (nightly Goliath summarization)
-5. Semantic router for automatic brain selection
-6. Tier 3 MQTT approval gate wiring
-7. Schlage lock integration
-8. Demo video for portfolio
+## Alexandra memory layer (Day 63-64 fixes)
+- memory_save: FIXED Day 64 (f1084a3) - mxbai-embed-large + memory table + vec_str cast
+- memory_recall: FIXED Day 64 (ef1b26e) - sister bug to save, same fix pattern
+- Auto-write path (_store_memory_async in app.py): working, untouched
+- Memory table is 'memory' (singular), vector(1024), hnsw cosine index
+- Verified bidirectional: save -> recall @ similarity 0.891 on exact match
 
-## Active context
-- Sloan in Denver
-- Per Scholas continues M/W/F 6-9pm ET
-- Min 3 job applications/week for unemployment cert
-- LinkedIn posts shipped: Day 61 (GX10 integration), Day 62 (LoRA methodology)
-- Next LinkedIn target: Day 63 private reasoning + optimization narrative
+## Pending work (priority order)
+1. MANUAL: Re-run Google OAuth flow (get_emails/get_calendar/get_upcoming_calendar returning invalid_grant)
+2. Dashboard /chat/private toggle (1-session P2 task)
+3. LinkedIn post: three-tier brain + optimization story
+4. Phase B: 70B QLoRA on same pipeline
+5. Memory distillation (nightly Goliath summarization)
+6. Semantic router for automatic brain selection
+7. Tier 3 MQTT approval gate wiring
+8. Schlage lock integration
+9. Demo video for portfolio
 
-## Process notes (reinforce next session)
-- ALWAYS sync anchor + SESSION.md first before any work
-- Reconnaissance-first for P2 tasks: verify service names, paths, line numbers before coding
-- Calculate theoretical latency floor before setting targets
+## Day 64 commits
+- f1084a3 memory_save handler fix
+- 85f4ae1 TOOL FAILURE HONESTY prompt clause
+- ef1b26e memory_recall handler fix
 
-## Day 63 late-session findings (Day 64 priority)
-- memory_save tool BROKEN (registry.py ~625): wrong embed model (nomic-embed-text not on TheBeast; use mxbai-embed-large) + wrong table (memories -> memory). Silent failures unknown duration. Auto-write path in app.py works fine.
-- Anti-hallucination gap: Alexandra fabricated 'TheBeast endpoint down' diagnosis from generic tool error. Prompt needs: 'On tool failure, report verbatim error; do not diagnose without verification.'
-- Tool registry audit needed: if memory_save drifted, other handlers may have similar bugs.
+## Process notes (reinforce)
+- Sync anchor + SESSION.md first, always
+- Reconnaissance-first for P2 tasks
+- Audit scripts must load .env or hit orchestrator via HTTP
+- Batch shell commands to conserve tool budget
+- Sister functions share sister bugs
