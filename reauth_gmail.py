@@ -1,7 +1,15 @@
 """
-Run this once interactively to add gmail.send scope to google_token.json.
-Usage: python3 /home/jes/control-plane/reauth_gmail.py
-It will print a URL -- open it in a browser, authorize, paste the code back.
+Google OAuth re-auth script (Day 64 rebuild).
+Restores tokens for gmail.send, gmail.readonly, calendar.readonly.
+
+Usage from your LAPTOP (Mac mini), not from CiscoKid directly:
+  ssh -L 8765:localhost:8765 jes@ciscokid
+  cd /home/jes/control-plane
+  /home/jes/control-plane/orchestrator/.venv/bin/python reauth_gmail.py
+
+The script will print a URL. Open it in your Mac mini browser.
+Google will redirect to http://localhost:8765/... which SSH tunnels to CiscoKid.
+The script captures the token, writes google_token.json, and exits.
 """
 from google_auth_oauthlib.flow import InstalledAppFlow
 import json
@@ -13,9 +21,12 @@ SCOPES = [
 ]
 CREDS_PATH = "/home/jes/control-plane/google_credentials.json"
 TOKEN_PATH = "/home/jes/control-plane/google_token.json"
+PORT = 8899
 
 flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
-creds = flow.run_console()  # prints URL, prompts for paste-back code
+print(f"Starting local OAuth server on port {PORT}...")
+print("Open the URL below in your browser (the one with the SSH tunnel).")
+creds = flow.run_local_server(port=PORT, open_browser=False)
 
 token_data = {
     "access_token": creds.token,
@@ -26,5 +37,6 @@ token_data = {
 }
 with open(TOKEN_PATH, "w") as f:
     json.dump(token_data, f, indent=2)
-print(f"Token written to {TOKEN_PATH}")
-print("Scopes:", creds.scopes)
+print(f"\n✓ Token written to {TOKEN_PATH}")
+print(f"✓ Scopes authorized: {creds.scopes}")
+print(f"✓ Refresh token present: {bool(creds.refresh_token)}")
