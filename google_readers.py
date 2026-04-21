@@ -14,11 +14,37 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 CREDS_FILE = os.path.join(BASE_DIR, 'google_credentials.json')
 TOKEN_FILE = os.path.join(BASE_DIR, 'google_token.json')
 
+# AUTHORITATIVE SCOPE LIST -- single source of truth for Alexandra's Google access.
+# reauth_gmail.py imports this. Add new scopes here when adding new Google tools.
+# Day 65 lesson: scope drift between this file and reauth script caused silent
+# HTTP 403s. Never hardcode scopes elsewhere -- import from here.
+SCOPES = [
+    "https://www.googleapis.com/auth/gmail.send",
+    "https://www.googleapis.com/auth/gmail.readonly",
+    "https://www.googleapis.com/auth/calendar.events",
+]
+
+class ScopeMismatchError(RuntimeError):
+    pass
+
+def _assert_token_scopes(token_data):
+    """Raise ScopeMismatchError if token is missing any required SCOPE.
+    Fails loud at credential load so smoke test catches scope drift nightly."""
+    have = set((token_data.get('scope') or '').split())
+    need = set(SCOPES)
+    missing = need - have
+    if missing:
+        raise ScopeMismatchError(
+            f"Token is missing required scopes: {sorted(missing)}. "
+            f"Run reauth_gmail.py to refresh."
+        )
+
 def _load_credentials():
     from google.oauth2.credentials import Credentials
     from google.auth.transport.requests import Request
     with open(TOKEN_FILE) as f:
         token_data = json.load(f)
+    _assert_token_scopes(token_data)
     with open(CREDS_FILE) as f:
         creds_data = json.load(f)
     app = creds_data.get('installed') or creds_data.get('web')

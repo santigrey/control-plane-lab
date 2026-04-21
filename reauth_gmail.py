@@ -1,27 +1,36 @@
 """
-Google OAuth re-auth script (Day 64 rebuild).
-Restores tokens for gmail.send, gmail.readonly, calendar.readonly.
+Google OAuth re-auth for Alexandra's Gmail + Calendar access.
 
-Usage from your LAPTOP (Mac mini), not from CiscoKid directly:
-  ssh -L 8765:localhost:8765 jes@ciscokid
+SCOPES are imported from google_readers.py (single source of truth).
+When adding a new Google tool, add its scope to google_readers.SCOPES --
+this script will automatically request it on next re-auth.
+
+Usage (from any device with OpenSSH):
+  ssh -L 8899:localhost:8899 jes@192.168.1.10
   cd /home/jes/control-plane
   /home/jes/control-plane/orchestrator/.venv/bin/python reauth_gmail.py
 
-The script will print a URL. Open it in your Mac mini browser.
-Google will redirect to http://localhost:8765/... which SSH tunnels to CiscoKid.
-The script captures the token, writes google_token.json, and exits.
+Open the printed URL in your browser, sign in, approve. Script writes
+google_token.json and exits.
 """
-from google_auth_oauthlib.flow import InstalledAppFlow
 import json
+import os
+import sys
 
-SCOPES = [
-    "https://www.googleapis.com/auth/gmail.send",
-    "https://www.googleapis.com/auth/gmail.readonly",
-    "https://www.googleapis.com/auth/calendar.readonly",
-]
+# Import authoritative scope list from the module that uses them.
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from google_readers import SCOPES
+
+from google_auth_oauthlib.flow import InstalledAppFlow
+
 CREDS_PATH = "/home/jes/control-plane/google_credentials.json"
 TOKEN_PATH = "/home/jes/control-plane/google_token.json"
 PORT = 8899
+
+print(f"Requesting scopes from google_readers.SCOPES:")
+for s in SCOPES:
+    print(f"  - {s}")
+print()
 
 flow = InstalledAppFlow.from_client_secrets_file(CREDS_PATH, SCOPES)
 print(f"Starting local OAuth server on port {PORT}...")
@@ -37,6 +46,6 @@ token_data = {
 }
 with open(TOKEN_PATH, "w") as f:
     json.dump(token_data, f, indent=2)
-print(f"\n✓ Token written to {TOKEN_PATH}")
-print(f"✓ Scopes authorized: {creds.scopes}")
-print(f"✓ Refresh token present: {bool(creds.refresh_token)}")
+print(f"\n[OK] Token written to {TOKEN_PATH}")
+print(f"[OK] Scopes authorized: {creds.scopes}")
+print(f"[OK] Refresh token present: {bool(creds.refresh_token)}")
