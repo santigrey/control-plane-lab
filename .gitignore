@@ -50,3 +50,6 @@ deliverables/
 
 # Third-party binaries (use package manager instead)
 piper/
+
+# Tool smoke test runtime output (regenerates nightly)
+tool_smoke_test_results.json
