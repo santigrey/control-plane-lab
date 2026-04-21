@@ -56,3 +56,19 @@
 - ef1b26e memory_recall fix
 - cb96a50 session close (earlier)
 - 1f79971 reauth_gmail.py rebuild
+
+## Day 64 absolute close
+- Tool drift smoke test LIVE (commit 0814af8): /home/jes/control-plane/orchestrator/tool_smoke_test.py + systemd timer at 03:30 UTC nightly. First scheduled run Tue 2026-04-21 03:30 UTC. Baseline: 15 PASS, 1 SCHEMA_ISSUE (get_system_status). Fires Telegram alert on any FAIL/EXCEPTION.
+- Day 64 complete commit trail (8 commits): f1084a3, 85f4ae1, ef1b26e, cb96a50, 1f79971, 041922f, 0814af8, plus this anchor update.
+
+## Pending for Day 65+
+1. Dashboard /chat/private toggle (1-session P2 task)
+2. LinkedIn post: three-tier brain + optimization story (draft-ready)
+3. get_system_status schema cleanup (return {ok: True, ...} envelope so smoke test stops flagging)
+4. Phase B: 70B QLoRA on same pipeline
+5. Memory distillation (nightly Goliath summarization)
+6. Semantic router for automatic brain selection
+7. Tier 3 MQTT approval gate wiring
+8. Schlage lock integration
+9. Demo video for portfolio
+10. Smoke test unlisted tools: get_job_pipeline, plan_and_execute, read_course_material

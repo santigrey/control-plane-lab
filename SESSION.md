@@ -31,3 +31,8 @@
 - Audit script false positive lesson: tools that depend on env vars look broken when tested outside orchestrator process (summarize appeared broken hitting 127.0.0.1, was actually fine in production). Future audits should either load .env or test via live HTTP to the running service.
 - memory_save and memory_recall are sister functions with sister bugs. When fixing one, check the other.
 - Anti-hallucination clause working: tool-failure behavioral test confirmed. Alexandra reports verbatim errors instead of fabricating diagnoses.
+
+## Day 64 FINAL ADDENDUM
+- Google OAuth restored (reauth_gmail.py rebuilt using run_local_server + SSH tunnel on port 8899, commit 1f79971). All three Google tools verified live.
+- Tool drift smoke test harness shipped (commit 0814af8): tool_smoke_test.py + systemd timer at 03:30 UTC nightly. 15 PASS / 1 SCHEMA_ISSUE baseline. Alerts via Telegram on FAIL/EXCEPTION. Storing runs in pgvector for history.
+- Day 64 total: 8 commits. Alexandra capability delta: /chat/private endpoint live, memory layer bidirectional, anti-hallucination hardened, all Google tools restored, automated drift detection nightly.
