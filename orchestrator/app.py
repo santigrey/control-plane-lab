@@ -882,6 +882,22 @@ def _search_long_term_memory(msg: str, top_k: int = 3) -> str:
 
 # ---- in-memory conversation sessions ----
 _chat_sessions: dict = {}
+_persona_sessions: set = set()  # sids currently in persona ("hey babe") mode
+
+# ---- persona mode (babe) — isolated, Goliath-only ----
+try:
+    from persona import (
+        get_persona_system_prompt as _persona_prompt,
+        is_persona_trigger as _is_persona_trigger,
+        is_persona_exit as _is_persona_exit,
+    )
+    _PERSONA_OK = True
+except Exception as _persona_err:
+    print(f"[STARTUP] persona module not loaded: {_persona_err}", flush=True)
+    _PERSONA_OK = False
+    def _is_persona_trigger(_m): return False
+    def _is_persona_exit(_m): return False
+    def _persona_prompt(extra_memory=""): return ""
 
 class ChatRequest(BaseModel):
     message: str
@@ -900,6 +916,16 @@ def chat(req: ChatRequest, request: Request) -> dict:
     msg = (req.message or "").strip()
     if not msg:
         raise HTTPException(status_code=400, detail="message is required")
+
+    # ---- persona mode routing (server-side sticky) ----
+    if _PERSONA_OK and _is_persona_exit(msg):
+        _persona_sessions.discard(sid)
+        print(f"[CHAT] persona exit sid={sid}")
+    elif _PERSONA_OK and (_is_persona_trigger(msg) or sid in _persona_sessions):
+        _persona_sessions.add(sid)
+        print(f"[CHAT] persona route sid={sid} trigger={_is_persona_trigger(msg)} sticky={sid in _persona_sessions}")
+        return _chat_persona_handler(sid, msg)
+
     history = _load_chat_history(sid) or _chat_sessions.get(sid, [])
     _image_path = None
     _long_term = ''
@@ -1097,6 +1123,81 @@ def chat_private(req: ChatRequest, request: Request) -> dict:
     _store_memory_async(f"Alexandra said (private): {answer}", "chat_private_assistant")
 
     return {"response": answer, "session_id": sid, "image_path": None, "brain": brain}
+
+
+def _chat_persona_handler(sid: str, msg: str) -> dict:
+    """Persona ("hey babe") handler. Goliath qwen2.5:72b only, NO Claude fallback.
+    Raises HTTPException(503) if Goliath is unreachable or returns empty.
+    """
+    import time as _t_time, httpx as _t_httpx, re as _t_re
+    if not _PERSONA_OK:
+        raise HTTPException(status_code=503, detail="persona module not loaded")
+    persona_sid = f"persona:{sid}"
+    print(f"[CHAT-PERSONA] start sid={persona_sid} msg_len={len(msg)}")
+
+    history = _load_chat_history(persona_sid) or []
+    _long_term = ''
+    if _needs_memory_search(msg):
+        _long_term = _search_long_term_memory(msg)
+
+    _sys = _persona_prompt(extra_memory=_long_term)
+    _msgs = [{"role": "system", "content": _sys}]
+    _msgs.extend(history)
+    _msgs.append({"role": "user", "content": msg})
+
+    t0 = _t_time.time()
+    try:
+        with _t_httpx.Client(timeout=60.0) as client:
+            r = client.post(
+                f"{OLLAMA_URL_LARGE}/api/chat",
+                json={
+                    "model": PRIVATE_MODEL,
+                    "messages": _msgs,
+                    "stream": False,
+                    "keep_alive": "30m",
+                    "options": {"num_ctx": 8192, "temperature": 0.85},
+                },
+            )
+            r.raise_for_status()
+            data = r.json()
+            answer = (data.get("message") or {}).get("content", "").strip()
+            brain = f"goliath-{PRIVATE_MODEL}-persona"
+        elapsed_ms = int((_t_time.time() - t0) * 1000)
+        print(f"[CHAT-PERSONA] goliath_latency_ms={elapsed_ms} answer_len={len(answer) if answer else 0}")
+    except Exception as goliath_err:
+        print(f"[CHAT-PERSONA] GOLIATH_FAILED error={goliath_err}")
+        raise HTTPException(status_code=503, detail=f"persona brain offline: {goliath_err}")
+
+    if not answer:
+        raise HTTPException(status_code=503, detail="persona brain returned empty response")
+
+    answer = _t_re.sub(r"\*\*([^*]+)\*\*", r"\1", answer)
+    answer = _t_re.sub(r"\*([^*]+)\*", r"\1", answer)
+    answer = answer.strip()
+
+    history.append({"role": "user", "content": msg})
+    history.append({"role": "assistant", "content": answer})
+    _save_chat_turn(persona_sid, "user", msg)
+    _save_chat_turn(persona_sid, "assistant", answer)
+    _store_memory_async(f"James said (intimate): {msg}", "intimate")
+    _store_memory_async(f"Alexandra said (intimate): {answer}", "intimate")
+
+    return {"response": answer, "session_id": sid, "image_path": None, "brain": brain}
+
+
+@app.post("/chat/persona", response_model=ChatResponse)
+def chat_persona(req: ChatRequest, request: Request) -> dict:
+    run_id = getattr(request.state, "run_id", None) or str(uuid.uuid4())
+    sid = (req.session_id or "default").strip() or "default"
+    msg = (req.message or "").strip()
+    if not msg:
+        raise HTTPException(status_code=400, detail="message is required")
+    # Direct call to /chat/persona is an explicit opt-in — mark sticky.
+    if _PERSONA_OK and _is_persona_exit(msg):
+        _persona_sessions.discard(sid)
+        raise HTTPException(status_code=409, detail="persona mode exited; use /chat")
+    _persona_sessions.add(sid)
+    return _chat_persona_handler(sid, msg)
 
 
 @app.post("/agent", response_model=AgentResponse)
