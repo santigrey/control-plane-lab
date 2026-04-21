@@ -596,14 +596,15 @@ def _memory_recall_handler(args):
     try:
         db_pass = os.getenv("CONTROLPLANE_DB_PASS", "adminpass")
         db_url = f"postgresql://admin:{db_pass}@127.0.0.1:5432/controlplane"
-        embed_resp = requests.post("http://192.168.1.152:11434/api/embeddings", json={"model": "nomic-embed-text", "prompt": query}, timeout=30)
+        embed_resp = requests.post("http://192.168.1.152:11434/api/embeddings", json={"model": "mxbai-embed-large", "prompt": query}, timeout=30)
         embed_resp.raise_for_status()
         embedding = embed_resp.json().get("embedding")
         if not embedding:
             return {"ok": False, "tool": "memory_recall", "error": "Failed to embed query"}
+        vec_str = '[' + ','.join(f'{float(v):.8f}' for v in embedding) + ']'
         with psycopg.connect(db_url) as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT content, source, created_at, 1 - (embedding <=> %s::vector) as similarity FROM memories ORDER BY embedding <=> %s::vector LIMIT %s", (embedding, embedding, top_k))
+                cur.execute("SELECT content, source, created_at, 1 - (embedding <=> %s::vector) as similarity FROM memory ORDER BY embedding <=> %s::vector LIMIT %s", (vec_str, vec_str, top_k))
                 rows = cur.fetchall()
         if not rows:
             return {"ok": True, "tool": "memory_recall", "query": query, "results": []}
