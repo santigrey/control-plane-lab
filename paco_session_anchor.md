@@ -44,3 +44,15 @@
 - Audit scripts must load .env or hit orchestrator via HTTP
 - Batch shell commands to conserve tool budget
 - Sister functions share sister bugs
+
+## Day 64 late-session final updates
+- Google OAuth re-auth COMPLETE: get_emails/get_calendar/get_upcoming_calendar all live. Refresh token persisted.
+- reauth_gmail.py rebuilt (commit 1f79971) for modern google-auth-oauthlib. Uses run_local_server on port 8899. Docstring has the SSH tunnel command.
+- P2 handoff drafted: nightly tool_smoke_test.py + systemd timer to detect tool drift before Alexandra encounters it. Spec ready for next session.
+
+## Day 64 commits total
+- f1084a3 memory_save fix
+- 85f4ae1 TOOL FAILURE HONESTY prompt clause
+- ef1b26e memory_recall fix
+- cb96a50 session close (earlier)
+- 1f79971 reauth_gmail.py rebuild
