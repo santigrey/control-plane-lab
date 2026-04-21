@@ -53,3 +53,6 @@ piper/
 
 # Tool smoke test runtime output (regenerates nightly)
 tool_smoke_test_results.json
+
+# Persona-mode anchored backups
+*.bak-*
