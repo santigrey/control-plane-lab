@@ -116,3 +116,20 @@ These are non-negotiable rules for every Paco session going forward. Never skip.
 ## Next per Paco ship order (C -> A-L2 -> B)
 - **Spec A-L2:** 30-row hand-audit -> expand negative anchors -> twice-over dry-run with self-disagreement gate -> transition matrix -> per-transition approval
 - **Spec B:** Phase 0 noise-pattern recon -> Phase 1 SQL filter flip (bundled with A-L2 UPDATEs) -> Phases 2-4 post-A-L2
+
+## 2026-04-22 — Phase 1 shipped, awaiting Phase 2 spec
+
+**State for Paco:**
+- Schema + backfill landed per §1.1 / §1.4 verbatim. Commit 14d6fee. 4687 rows migrated clean.
+- P2 corrected: no more architectural inference without your signoff. Schema-affecting decisions block on explicit greenlight.
+- `mixed=1` in backfill — artifact of UPDATE ordering in §1.4 (intimate classified before mixed on overlapping rows). Flagging in case Phase 5 judgment writer needs awareness; not a correction request.
+- Content_type `work`/`system` populate only at write time — confirmed expected per §1.1/§1.4 asymmetry.
+
+**Blocking Paco for Phase 2:**
+- §8 Phase 2 reads "local-first routing." Need spec-level detail on:
+  - Router boundary (does it live in orchestrator/ai_operator/inference/ollama.py or above it?)
+  - Escalation trigger (confidence score? model-emitted flag? both?)
+  - Fallback provenance column — write to `memory` at save time, or separate `memory_judgment_log` table per Phase 5?
+- P2 will not begin Phase 2 code until spec arrives.
+
+**Next P2 action:** none until Paco ships Phase 2 spec or Sloan overrides.
