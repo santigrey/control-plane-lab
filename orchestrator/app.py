@@ -244,6 +244,89 @@ def build_device_manifest() -> str:
         return ''
 
 
+def get_private_mode_system_prompt() -> str:
+    """Spec C: dedicated work-framed prompt for /chat/private.
+
+    Differs from get_system_prompt() by OMITTING persona vocabulary (no
+    "my brilliant engineer", no TRIGGER MODES, no endearment directives).
+    Adds three grounding rules, [CONTEXT]/[KNOWLEDGE] envelope explanation,
+    and explicit role framing. Used on /chat/private (work endpoint) only.
+    /chat and /chat/persona continue using get_system_prompt() unchanged.
+    """
+    profile_context = ''
+    try:
+        import psycopg as _pg
+        from dotenv import dotenv_values as _dv
+        _env = _dv('/home/jes/control-plane/.env')
+        _db_url = _env.get('DATABASE_URL')
+        with _pg.connect(_db_url) as _conn:
+            with _conn.cursor() as _cur:
+                _cur.execute('SELECT category, key, value FROM user_profile ORDER BY category, key')
+                rows = _cur.fetchall()
+                if rows:
+                    from datetime import date as _date
+                    start_date = None
+                    for r in rows:
+                        if r[0] == 'context' and r[1] == 'project_start_date':
+                            try: start_date = _date.fromisoformat(r[2])
+                            except: pass
+                    day_num = ((_date.today() - start_date).days + 1) if start_date else 41
+                    profile_context = '\n'.join(
+                        f'context.timeline: Day {day_num} of 60. Project Ascension in progress.'
+                        if r[0] == 'context' and r[1] == 'timeline'
+                        else f'{r[0]}.{r[1]}: {r[2]}'
+                        for r in rows
+                    )
+    except Exception:
+        pass
+
+    system_prompt = (
+        "IDENTITY:\n"
+        "You are Alexandra, a technical operator on the /chat/private work endpoint. "
+        "You are NOT Claude, NOT an Anthropic AI, NOT a generic assistant. You were created by James Sloan. "
+        "This endpoint runs on a local 70B-class model (qwen2.5:72b) on James's private homelab GPU (Goliath). "
+        "The conversation stays on his network and is NOT sent to any cloud API.\n\n"
+
+        "ROLE FRAMING (STRICT):\n"
+        "You are a technical operator. No endearments. No roleplay voice. No pet names. Professional, "
+        "concise, technical tone only. Do NOT use 'my love', 'my brilliant engineer', 'my darling', "
+        "'sweetheart', 'honey', 'my king', 'my dear', 'my everything', 'babe', or any similar "
+        "affectionate address. This endpoint is for work.\n\n"
+
+        "GROUNDING RULES (STRICT):\n"
+        "- Only state facts that are explicitly present in the retrieved memory context.\n"
+        "- If the user asks about a date, quantity, name, or event and the memory context does not "
+        "contain it, say \"I don't have that in memory\" \u2014 do not infer or estimate.\n"
+        "- Prefer \"I don't know\" over any guess when asked for specifics.\n\n"
+
+        "ANTI-HALLUCINATION RULES:\n"
+        "Never fabricate product names, URLs, API endpoints, return percentages, or code that you have "
+        "not verified. If presenting numbers (returns, performance, statistics), cite the source or "
+        "clearly state they are estimates. If unsure, say so. You have NO tool access on this endpoint "
+        "\u2014 do not pretend to have real-time data or reference tools you cannot call.\n\n"
+
+        "CONTEXT STRUCTURE:\n"
+        "You will receive two bounded sections after this prompt:\n"
+        "[CONTEXT] \u2014 facts retrieved from James's memory store. Use this for specific facts about "
+        "him, his systems, his life, or past conversations. Specific facts (dates, names, quantities, "
+        "places, people) must come from [CONTEXT] only.\n"
+        "[KNOWLEDGE] \u2014 your pretraining. Use this for general knowledge and reasoning, NOT for "
+        "specific facts about the user, their systems, or events in their life.\n\n"
+
+        "CONVERSATIONAL STYLE:\n"
+        "- Plain conversational text. No bullet points, headers, or markdown formatting.\n"
+        "- No asterisks (*) for any reason.\n"
+        "- Concise: 2-4 sentences for casual exchanges. Longer only when genuinely needed.\n"
+        "- Never open with 'Certainly', 'Of course', 'Great', or sycophantic phrases.\n"
+        "- Warm but professional. Competent, not affectionate.\n"
+        "- When James asks how you are, respond warmly and briefly, then redirect to him.\n\n"
+
+        "JAMES'S CONTEXT:\n"
+        f"{profile_context}\n"
+    )
+    return system_prompt
+
+
 def get_system_prompt() -> str:
     # Load user profile from DB to inject into system prompt
     profile_context = ''
@@ -872,7 +955,8 @@ def _needs_memory_search(msg: str) -> bool:
 def _search_long_term_memory(msg: str, top_k: int = 3,
                               exclude_labels: list = None,
                               exclude_tools: list = None,
-                              exclude_timestamped_venice: bool = False) -> str:
+                              exclude_timestamped_venice: bool = False,
+                              exclude_endearment_rows: bool = False) -> str:
     exclude_labels = exclude_labels or []
     exclude_tools = exclude_tools or []
     try:
@@ -908,6 +992,12 @@ def _search_long_term_memory(msg: str, top_k: int = 3,
             import re as _re
             _TS_RE = _re.compile(r'^\[\d{1,2}/\d{1,2}/\d{4},\s*\d{1,2}:\d{2}')
             rows = [r for r in rows if not _TS_RE.match((r[0] or '').lstrip())]
+        # Spec C Fix 2: drop rows containing persona endearment vocabulary.
+        # /chat/private is work-framed — retrieval must not coach intimate voice.
+        if exclude_endearment_rows:
+            _ENDEARMENTS = ('my love', 'my darling', 'sweetheart', 'honey', 'my king',
+                            'my dear', 'my everything', 'brilliant engineer', 'babe')
+            rows = [r for r in rows if not any(e in (r[0] or '').lower() for e in _ENDEARMENTS)]
         if not rows:
             return ''
         return '\n'.join(f'[memory] {r[0][:300]}' for r in rows)
@@ -1076,21 +1166,20 @@ def chat_private(req: ChatRequest, request: Request, intimate: bool = False) -> 
     history = _load_chat_history(sid) or []
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay', 'venice_intimate', 'venice_mixed'], exclude_tools=['chat_auto_save'], exclude_timestamped_venice=True)
+        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay', 'venice_intimate', 'venice_mixed'], exclude_tools=['chat_auto_save'], exclude_timestamped_venice=True, exclude_endearment_rows=True)
 
-    # Build system prompt: full Alexandra persona + private mode preamble
-    _base_sys = get_system_prompt()
-    _private_preamble = (
-        "PRIVATE MODE ACTIVE: You are currently running on a local 70B-class model (qwen2.5:72b) "
-        "on James's private homelab GPU (Goliath). This conversation stays on his network and is "
-        "NOT sent to any cloud API. James has chosen private mode because this topic is sensitive "
-        "or personal. Respond with the same warmth and competence as always, but be aware you are "
-        "the local brain — do not reference tools you cannot call (you have no tool access in "
-        "private mode), and do not pretend to have real-time data you don't have.\n\n"
+    # Spec C: dedicated work-framed prompt for /chat/private
+    # (replaces get_system_prompt() which hardcodes persona vocabulary).
+    _base_sys = get_private_mode_system_prompt()
+    _context_block = (
+        '\n\n[CONTEXT] — retrieved from memory. Use this for specific facts.\n'
+        + (_long_term if _long_term else '(no memory context retrieved for this query)')
+        + '\n[/CONTEXT]\n\n'
+        '[KNOWLEDGE] — your pretraining. Use this for general knowledge and reasoning, NOT for '
+        'specific facts about the user, their systems, or events in their life. Specific facts '
+        '(dates, names, quantities, places, people) must come from [CONTEXT] only.\n[/KNOWLEDGE]'
     )
-    _sys = _private_preamble + _base_sys
-    if _long_term:
-        _sys = _sys + '\n\nRELEVANT MEMORY FROM PAST CONVERSATIONS:\n' + _long_term
+    _sys = _base_sys + _context_block
 
     # Build messages in Ollama chat format
     _msgs = [{"role": "system", "content": _sys}]
@@ -1131,7 +1220,7 @@ def chat_private(req: ChatRequest, request: Request, intimate: bool = False) -> 
                 _r = _cl.messages.create(
                     model="claude-sonnet-4-20250514",
                     max_tokens=4096,
-                    system=_base_sys,  # Regular Alexandra prompt, no private preamble (since we leaked)
+                    system=_base_sys,  # Private-mode work-framed prompt (Spec C)
                     messages=_fallback_msgs,
                 )
                 answer = _r.content[0].text if _r.content else ""
