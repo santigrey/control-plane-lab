@@ -828,19 +828,32 @@ def _save_chat_turn(sid: str, role: str, content: str):
     except Exception as e:
         import logging; logging.getLogger('alexandra').error(f'chat_history save failed for {sid}: {e}')
 
-def _store_memory_async(text: str, source: str = 'chat'):
+def _store_memory_async(text: str, source: str = 'chat',
+                         endpoint: str = None, role: str = 'user',
+                         grounded: bool = False):
+    # Gate: assistant turns only save if grounded=True (retrieval returned >=1 row)
+    if role == 'assistant' and not grounded:
+        return
     import threading as _thr
     def _run():
         try:
             import psycopg as _pg, json as _jj
+            from datetime import datetime, timezone
             vec = _beast_embed(text)
             vec_str = '[' + ','.join(f'{float(v):.8f}' for v in vec) + ']'
+            _tr = {
+                'endpoint': endpoint or 'unknown',
+                'role': role,
+                'grounded': grounded,
+                'saved_at': datetime.now(timezone.utc).isoformat(),
+            }
             conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
             cur = conn.cursor()
             cur.execute(
-                '''INSERT INTO memory (id, source, content, embedding, embedding_model, created_at)
-                   VALUES (gen_random_uuid(), %s, %s, %s::vector, %s, NOW())''',
-                (source, text[:2000], vec_str, 'mxbai-embed-large:latest')
+                '''INSERT INTO memory (id, source, content, embedding, embedding_model, tool, tool_result, created_at)
+                   VALUES (gen_random_uuid(), %s, %s, %s::vector, %s, %s, %s::jsonb, NOW())''',
+                (source, text[:2000], vec_str, 'mxbai-embed-large:latest',
+                 'chat_auto_save', _jj.dumps(_tr))
             )
             conn.commit()
             conn.close()
@@ -856,22 +869,35 @@ def _needs_memory_search(msg: str) -> bool:
     m = msg.lower()
     return any(t in m for t in triggers)
 
-def _search_long_term_memory(msg: str, top_k: int = 3) -> str:
+def _search_long_term_memory(msg: str, top_k: int = 3,
+                              exclude_labels: list = None,
+                              exclude_tools: list = None) -> str:
+    exclude_labels = exclude_labels or []
+    exclude_tools = exclude_tools or []
     try:
         vec = _beast_embed(msg)
         vec_str = '[' + ','.join(f'{float(v):.8f}' for v in vec) + ']'
         import psycopg as _pg
         conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
         cur = conn.cursor()
-        cur.execute(
-            '''SELECT content, 1 - (embedding <=> %s::vector) AS sim
-               FROM memory
-               WHERE embedding IS NOT NULL
-               AND (1 - (embedding <=> %s::vector)) >= 0.5
-               ORDER BY embedding <=> %s::vector
-               LIMIT %s''',
-            (vec_str, vec_str, vec_str, top_k)
-        )
+        filters = ["embedding IS NOT NULL", "(1 - (embedding <=> %s::vector)) >= 0.5"]
+        params = [vec_str, vec_str]
+        if exclude_tools:
+            placeholders = ','.join(['%s'] * len(exclude_tools))
+            filters.append(f"(tool IS NULL OR tool NOT IN ({placeholders}))")
+            params.extend(exclude_tools)
+        if exclude_labels:
+            placeholders = ','.join(['%s'] * len(exclude_labels))
+            filters.append(f"(tool_result->>'label' IS NULL OR tool_result->>'label' NOT IN ({placeholders}))")
+            params.extend(exclude_labels)
+        params.append(vec_str)
+        params.append(top_k)
+        sql = f'''SELECT content, 1 - (embedding <=> %s::vector) AS sim
+                  FROM memory
+                  WHERE {' AND '.join(filters)}
+                  ORDER BY embedding <=> %s::vector
+                  LIMIT %s'''
+        cur.execute(sql, tuple(params))
         rows = cur.fetchall()
         conn.close()
         if not rows:
@@ -930,7 +956,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
     _image_path = None
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg)
+        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay','venice_intimate'], exclude_tools=['chat_auto_save'])
     answer = None
     try:
         import anthropic as _anth
@@ -1011,8 +1037,8 @@ def chat(req: ChatRequest, request: Request) -> dict:
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(sid, "user", msg)
     _save_chat_turn(sid, "assistant", answer)
-    _store_memory_async(f"James said: {msg}", "chat_user")
-    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant")
+    _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True)
+    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=bool(_long_term))
     if len(history) > 20:
         history = history[-20:]
     _chat_sessions[sid] = history
@@ -1042,7 +1068,7 @@ def chat_private(req: ChatRequest, request: Request, intimate: bool = False) -> 
     history = _load_chat_history(sid) or []
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg)
+        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay'], exclude_tools=['chat_auto_save'])
 
     # Build system prompt: full Alexandra persona + private mode preamble
     _base_sys = get_system_prompt()
@@ -1122,8 +1148,8 @@ def chat_private(req: ChatRequest, request: Request, intimate: bool = False) -> 
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(sid, "user", msg)
     _save_chat_turn(sid, "assistant", answer)
-    _store_memory_async(f"James said (private): {msg}", "chat_private_user")
-    _store_memory_async(f"Alexandra said (private): {answer}", "chat_private_assistant")
+    _store_memory_async(f"James said (private): {msg}", "chat_private_user", endpoint='chat/private', role='user', grounded=True)
+    _store_memory_async(f"Alexandra said (private): {answer}", "chat_private_assistant", endpoint='chat/private', role='assistant', grounded=bool(_long_term))
 
     return {"response": answer, "session_id": sid, "image_path": None, "brain": brain}
 
@@ -1141,7 +1167,7 @@ def _chat_persona_handler(sid: str, msg: str) -> dict:
     history = _load_chat_history(persona_sid) or []
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg)
+        _long_term = _search_long_term_memory(msg, exclude_labels=[], exclude_tools=['chat_auto_save'])
 
     _sys = _persona_prompt(extra_memory=_long_term)
     _msgs = [{"role": "system", "content": _sys}]
@@ -1182,8 +1208,8 @@ def _chat_persona_handler(sid: str, msg: str) -> dict:
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(persona_sid, "user", msg)
     _save_chat_turn(persona_sid, "assistant", answer)
-    _store_memory_async(f"James said (intimate): {msg}", "intimate")
-    _store_memory_async(f"Alexandra said (intimate): {answer}", "intimate")
+    _store_memory_async(f"James said (intimate): {msg}", "intimate", endpoint='chat/persona', role='user', grounded=True)
+    _store_memory_async(f"Alexandra said (intimate): {answer}", "intimate", endpoint='chat/persona', role='assistant', grounded=bool(_long_term))
 
     return {"response": answer, "session_id": sid, "image_path": None, "brain": brain}
 
