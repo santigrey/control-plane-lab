@@ -871,7 +871,8 @@ def _needs_memory_search(msg: str) -> bool:
 
 def _search_long_term_memory(msg: str, top_k: int = 3,
                               exclude_labels: list = None,
-                              exclude_tools: list = None) -> str:
+                              exclude_tools: list = None,
+                              exclude_timestamped_venice: bool = False) -> str:
     exclude_labels = exclude_labels or []
     exclude_tools = exclude_tools or []
     try:
@@ -900,6 +901,13 @@ def _search_long_term_memory(msg: str, top_k: int = 3,
         cur.execute(sql, tuple(params))
         rows = cur.fetchall()
         conn.close()
+        # Spec A Layer 1: drop venice dream-world chunks identifiable by
+        # leading [MM/DD/YYYY, HH:MM...] timestamp. Catches rows that slipped
+        # past label filtering due to classifier mislabels.
+        if exclude_timestamped_venice:
+            import re as _re
+            _TS_RE = _re.compile(r'^\[\d{1,2}/\d{1,2}/\d{4},\s*\d{1,2}:\d{2}')
+            rows = [r for r in rows if not _TS_RE.match((r[0] or '').lstrip())]
         if not rows:
             return ''
         return '\n'.join(f'[memory] {r[0][:300]}' for r in rows)
@@ -956,7 +964,7 @@ def chat(req: ChatRequest, request: Request) -> dict:
     _image_path = None
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay','venice_intimate'], exclude_tools=['chat_auto_save'])
+        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay','venice_intimate'], exclude_tools=['chat_auto_save'], exclude_timestamped_venice=True)
     answer = None
     try:
         import anthropic as _anth
@@ -1068,7 +1076,7 @@ def chat_private(req: ChatRequest, request: Request, intimate: bool = False) -> 
     history = _load_chat_history(sid) or []
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay'], exclude_tools=['chat_auto_save'])
+        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay', 'venice_intimate', 'venice_mixed'], exclude_tools=['chat_auto_save'], exclude_timestamped_venice=True)
 
     # Build system prompt: full Alexandra persona + private mode preamble
     _base_sys = get_system_prompt()
