@@ -1,3 +1,11 @@
+## PRODUCT VISION (READ FIRST)
+
+See: [docs/alexandra_product_vision.md](./docs/alexandra_product_vision.md)
+
+Alexandra = Jarvis-shaped. Two postures: Alexandra (public+work) and Companion (intimate). One memory, both postures read all. Local-first Qwen2.5:72B on Goliath; Sonnet frontier-fallback that Alexandra herself calls. Autonomy earned through tiered observability. Reject proposals that defend postures by filtering at the data layer.
+
+---
+
 # Paco Session Anchor — Day 67+
 **Last session:** Day 66, Wed Apr 22 2026
 
