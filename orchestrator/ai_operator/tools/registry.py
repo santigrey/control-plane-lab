@@ -615,6 +615,18 @@ def _memory_recall_handler(args):
 
 def _memory_save_handler(args):
     import os, requests, psycopg
+    # Defense-in-depth kill-switch (Day N: memory retrieval/auto-save PR).
+    # The canonical memory-save path is framework-level auto-save in app.py
+    # (_store_memory_async with grounded=True). Tool-based memory_save is
+    # disabled by default so model-emitted {"tool":"memory_save",...} JSON
+    # cannot reach the INSERT path via registry dispatch.
+    if os.getenv("ALEXANDRA_MEMORY_SAVE_TOOL_ENABLED", "0") != "1":
+        return {
+            "ok": False,
+            "tool": "memory_save",
+            "error": "memory_save tool disabled by default (defense-in-depth). Set ALEXANDRA_MEMORY_SAVE_TOOL_ENABLED=1 to enable.",
+            "disabled": True,
+        }
     content = args.get("content", "")
     source = args.get("source", "alexandra_chain")
     content = content[:500] if content else ""
