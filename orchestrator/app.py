@@ -1026,13 +1026,16 @@ async def clear_chat_sessions():
 
 
 @app.post("/chat/private", response_model=ChatResponse)
-def chat_private(req: ChatRequest, request: Request) -> dict:
+def chat_private(req: ChatRequest, request: Request, intimate: bool = False) -> dict:
     import time, httpx, re as _re
     run_id = getattr(request.state, "run_id", None) or str(uuid.uuid4())
     sid = f"private:{(req.session_id or 'default').strip() or 'default'}"
     msg = (req.message or "").strip()
     if not msg:
         raise HTTPException(status_code=400, detail="message is required")
+
+    if intimate:
+        return _chat_persona_handler(sid, msg)
 
     print(f"[CHAT-PRIVATE] start sid={sid} msg_len={len(msg)}")
 
