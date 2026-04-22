@@ -1,5 +1,5 @@
-# Paco Session Anchor — Day 66+
-**Last session:** Day 65, Tue Apr 21 2026
+# Paco Session Anchor — Day 67+
+**Last session:** Day 66, Wed Apr 22 2026
 
 ## STANDING DISCIPLINE (NEVER FORGET - locked Day 65 by Sloan directive)
 These are non-negotiable rules for every Paco session going forward. Never skip. Never shortcut.
@@ -31,6 +31,13 @@ These are non-negotiable rules for every Paco session going forward. Never skip.
 - Auto-write path (_store_memory_async in app.py): working
 - Memory table 'memory' (singular), vector(1024), hnsw cosine
 - Verified bidirectional @ similarity 0.891
+- **Venice corpus (Day 66):** 3,134 chunks ingested, tool='venice_ingest'
+  - Labels: trading, work, intimate, roleplay, mixed, anchor
+  - JSONB metadata in tool_result: label, ts_start, ts_end, n_turns, char_len, speakers, content_hash, idx
+  - Pipeline: /home/jes/venice_import/{parse.py, ingest.py}
+  - Chunker bounds tuned for mxbai 512-tok cap: max_chars=1400, wall_threshold=1500
+  - 41 chunks (1.3%) failed embed (dense code/JSON >512 tok) — accepted
+  - Retrieval validated: top-1 sim 0.65-0.78 on canary queries
 
 ## Google OAuth (Day 65 hardened)
 - SCOPES authoritative list: google_readers.py (NOT reauth_gmail.py)
@@ -79,3 +86,7 @@ These are non-negotiable rules for every Paco session going forward. Never skip.
 
 ## Day 65 commits
 - 281d382 fix(auth): lock Google OAuth scope management
+
+## Day 66 commits
+- Venice corpus ingested to memory table (no orchestrator code changes)
+- parse.py + ingest.py added under /home/jes/venice_import/ (operator tooling, not in control-plane repo)
