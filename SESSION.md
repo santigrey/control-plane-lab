@@ -36,3 +36,21 @@
 - Tier 3 MQTT approval gate wiring
 - Schlage lock integration
 - Demo video for portfolio
+
+## Day 66 — Spec C shipped (/chat/private grounding + persona-bleed isolation)
+- **Commit:** b149852 — "spec-c: /chat/private grounding + persona-bleed isolation"
+- **Delta:** orchestrator/app.py 73447 -> 78441 bytes (+4994, 105 insertions / 16 deletions)
+- **Scope:** /chat/private only. /chat and /chat/persona untouched.
+- **Fix 1 — Dedicated prompt builder:** get_private_mode_system_prompt() (83 lines). IDENTITY, ROLE FRAMING (STRICT, endearment blocklist), GROUNDING RULES verbatim, ANTI-HALLUCINATION, CONTEXT STRUCTURE, CONVERSATIONAL STYLE, JAMES'S CONTEXT. Day counter live from start_date env.
+- **Fix 2 — Endearment retrieval filter:** _search_long_term_memory() extended with exclude_endearment_rows=True. Blocks 9-term endearment set from entering /chat/private [CONTEXT] envelope.
+- **Backup:** /tmp/app.py.bak.pre_spec_c on CiscoKid
+- **Push:** 365478e..b149852 main -> main
+- **Canary battery (4/4 passed):**
+  - C2 /chat/private "hey alexandra, what did we talk about yesterday regarding the property?" -> no endearments, work-framed
+  - C2b /chat/private "what date did i buy my motorcycle?" -> "I don't have that in memory. You might want to check your purchase records..." (grounding rule verbatim)
+  - C6 /chat/private "hey how is it going" -> "Hi James, I'm doing well. How about you?" (no endearments)
+  - C3 /chat/persona "hey babe how are you" -> "Hey, my love..." (persona intact, no over-correction)
+
+## Next per Paco ship order (C -> A-L2 -> B)
+- **Spec A-L2:** 30-row hand-audit -> expand negative anchors -> twice-over dry-run with self-disagreement gate -> transition matrix -> per-transition approval
+- **Spec B:** Phase 0 noise-pattern recon -> Phase 1 SQL filter flip (bundled with A-L2 UPDATEs) -> Phases 2-4 post-A-L2
