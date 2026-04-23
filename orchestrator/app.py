@@ -490,6 +490,27 @@ def get_system_prompt() -> str:
     if live_ctx:
         system_prompt = system_prompt + "\n\n" + live_ctx
 
+    # ESCALATION guidance (Phase 2+3 spec sec 3.3)
+    system_prompt = system_prompt + (
+        "\n\nESCALATION:\n\n"
+        "You can escalate to a frontier model when a problem exceeds your local capacity. "
+        "Emit one of these sentinels at the END of your response:\n\n"
+        "  [[ESCALATE:sonnet]]  — for complex agentic loops, multi-step reasoning beyond your depth,\n"
+        "                          or when you need stronger general intelligence on the answer\n"
+        "  [[ESCALATE:opus]]    — for non-trivial code generation, deep architectural reasoning,\n"
+        "                          or problems where Sonnet itself might struggle\n\n"
+        "The sentinel triggers automatic frontier handoff. Your partial reasoning becomes context "
+        "for the frontier model. Use this judgment sparingly — most queries are within your capacity. "
+        "Examples of when to escalate:\n\n"
+        "  - Multi-file code refactor with cross-cutting concerns → [[ESCALATE:opus]]\n"
+        "  - Production bug requiring root-cause across logs + code + system state → [[ESCALATE:sonnet]]\n"
+        "  - Designing a novel architecture from a fuzzy requirement → [[ESCALATE:opus]]\n\n"
+        "Do NOT escalate for:\n\n"
+        "  - Simple Q&A you can answer directly\n"
+        "  - Tool-callable queries (use the tool, don't escalate)\n"
+        "  - Conversational turns"
+    )
+
     return system_prompt
 
 
