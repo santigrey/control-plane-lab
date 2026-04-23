@@ -102,6 +102,50 @@ def parse_tool_call(text: str) -> Optional[Dict[str, Any]]:
     return None
 
 
+def parse_tool_calls(response: Any) -> List[Dict[str, Any]]:
+    """Extract tool calls from an LLM response. Returns list of {tool, args, id?} dicts.
+
+    Handles:
+      - Ollama /api/chat: dict with message.tool_calls[] where each tc is
+        {"id": str, "function": {"name": str, "arguments": dict|json-str}}
+      - Claude inline JSON: plain string containing {"tool": ..., "args": ...}
+      - None / empty: returns []
+
+    Plural return per unified_alexandra_spec_v1 §8 §3.2 - Ollama can emit
+    multiple tool calls in one turn; Claude inline returns a single-element list.
+    """
+    if not response:
+        return []
+    if isinstance(response, dict):
+        msg = response.get("message") or {}
+        tcs = msg.get("tool_calls") or []
+        out = []
+        for tc in tcs:
+            fn = (tc.get("function") or {})
+            name = fn.get("name")
+            if not name or not isinstance(name, str) or not name.strip():
+                continue
+            args = fn.get("arguments")
+            if args is None:
+                args = {}
+            elif isinstance(args, str):
+                try:
+                    args = json.loads(args) or {}
+                except Exception:
+                    args = {}
+            if not isinstance(args, dict):
+                args = {}
+            entry = {"tool": name.strip(), "args": args}
+            if tc.get("id"):
+                entry["id"] = tc["id"]
+            out.append(entry)
+        return out
+    if isinstance(response, str):
+        single = parse_tool_call(response)
+        return [single] if single else []
+    return []
+
+
 # ---- request/response models ----
 class AskRequest(BaseModel):
     prompt: str
