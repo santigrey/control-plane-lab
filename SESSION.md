@@ -135,3 +135,26 @@ Alexandra = Jarvis-shaped. Two postures: Alexandra (public+work) and Companion (
 ### Next step
 - Phase 4 (sanitizer + NULL-tool backlog) per unified spec §8 dependency graph.
 - Awaiting Paco spec next session.
+
+## Paco ↔ P2 async communication protocol (locked Day 67)
+
+Paco and P2 communicate through pairs of markdown files in `control-plane/docs/`, routed by Sloan. This is the canonical channel going forward — replaces ad-hoc spec embedding in chat.
+
+**File convention:**
+- `docs/paco_request_<topic>.md` — P2 → Paco. Blocking questions, state-of-substrate summary, explicit "what I need from you" section.
+- `docs/paco_response_<topic>.md` — Paco → P2. Spec decisions, ship order, approval gates.
+- `<topic>` is stable across the pair (e.g., `phase4_sanitizer` → both files share the key).
+
+**Rules:**
+- P2 creates request, commits, notifies Sloan with path. Sloan forwards to Paco.
+- Paco creates response, places at matching path, notifies Sloan. Sloan forwards to P2.
+- P2 does not act on a response until Sloan explicitly approves execution.
+- Both files are committed to main — git history is the audit trail.
+- Request file includes: context, blocking questions, what-P2-verified, what-P2-needs, related-docs links.
+- Response file includes: locked answers, file-level placement, canary plan, ship order.
+
+**Precedent:**
+- `docs/paco_response_phase23_merge_approval.md` — Paco's merge approval for Phase 2+3+routing bundle (2026-04-23).
+- `docs/paco_request_phase4_sanitizer.md` — first outbound request (2026-04-23).
+
+**Why this exists:** Paco and P2 run in separate Claude contexts (Paco in claude.ai, P2 in Cowork) and do not share memory across sessions. Git-committed files are the only durable channel. Chat transcripts are lossy.
