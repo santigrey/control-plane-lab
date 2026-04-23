@@ -1147,3 +1147,41 @@ def run_tool_call(task_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
 
 def execute_tool(name: str, args: Dict[str, Any]) -> Dict[str, Any]:
     return default_registry().run(name, args)
+
+
+# ---- Ollama tool-schema conversion (Phase 2+3 - unified_alexandra_spec_v1 §8 §3.1) ----
+
+def to_ollama_schema(tool_name: str, tool_def: Dict[str, Any]) -> Dict[str, Any]:
+    """Convert internal tool shape -> Ollama /api/chat tools[] format.
+
+    The Phase 0 canary (2026-04-22, qwen2.5:72b) validated this exact schema.
+
+    Args:
+        tool_name: tool identifier (maps to function.name)
+        tool_def: {"description": str, "parameters": dict}
+
+    Returns:
+        Ollama-native tool dict with {"type": "function", "function": {...}}
+    """
+    return {
+        "type": "function",
+        "function": {
+            "name": tool_name,
+            "description": tool_def.get("description", ""),
+            "parameters": tool_def.get(
+                "parameters",
+                {"type": "object", "properties": {}, "required": []},
+            ),
+        },
+    }
+
+
+def build_ollama_tools(registry: ToolRegistry) -> list:
+    """Materialize a ToolRegistry -> list[dict] for Ollama /api/chat tools=[]."""
+    out = []
+    for name, spec in registry.list().items():
+        out.append(to_ollama_schema(name, {
+            "description": spec.description,
+            "parameters": spec.schema,
+        }))
+    return out
