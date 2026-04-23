@@ -957,7 +957,8 @@ def _save_chat_turn(sid: str, role: str, content: str):
 
 def _store_memory_async(text: str, source: str = 'chat',
                          endpoint: str = None, role: str = 'user',
-                         grounded: bool = False):
+                         grounded: bool = False,
+                         provenance: dict = None):
     # Gate: assistant turns only save if grounded=True (retrieval returned >=1 row)
     if role == 'assistant' and not grounded:
         return
@@ -976,11 +977,12 @@ def _store_memory_async(text: str, source: str = 'chat',
             }
             conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
             cur = conn.cursor()
+            prov_val = _jj.dumps(provenance) if provenance else None
             cur.execute(
-                '''INSERT INTO memory (id, source, content, embedding, embedding_model, tool, tool_result, created_at)
-                   VALUES (gen_random_uuid(), %s, %s, %s::vector, %s, %s, %s::jsonb, NOW())''',
+                '''INSERT INTO memory (id, source, content, embedding, embedding_model, tool, tool_result, provenance, created_at)
+                   VALUES (gen_random_uuid(), %s, %s, %s::vector, %s, %s, %s::jsonb, %s::jsonb, NOW())''',
                 (source, text[:2000], vec_str, 'mxbai-embed-large:latest',
-                 'chat_auto_save', _jj.dumps(_tr))
+                 'chat_auto_save', _jj.dumps(_tr), prov_val)
             )
             conn.commit()
             conn.close()
@@ -1330,8 +1332,8 @@ def chat(req: ChatRequest, request: Request) -> dict:
     _save_chat_turn(sid, "assistant", answer)
     # NOTE: provenance dict built above; step 8 of this bundle wires it into
     # _store_memory_async signature and call sites together.
-    _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True)
-    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=bool(_long_term))
+    _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True, provenance=provenance)
+    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=bool(_long_term), provenance=provenance)
     if len(history) > 20:
         history = history[-20:]
     _chat_sessions[sid] = history
