@@ -1539,10 +1539,13 @@ def chat(req: ChatRequest, request: Request) -> dict:
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(sid, "user", msg)
     _save_chat_turn(sid, "assistant", answer)
-    # NOTE: provenance dict built above; step 8 of this bundle wires it into
-    # _store_memory_async signature and call sites together.
+    # Fix #2 (premerge): widen grounded - true if retrieval hit OR tool loop
+    # made a memory-touching call (memory_recall / memory_save).
+    provenance['grounded'] = bool(_long_term) or bool(
+        {'memory_recall', 'memory_save'} & set(provenance.get('tool_calls_made', []))
+    )
     _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True, provenance=provenance)
-    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=bool(_long_term), provenance=provenance)
+    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=provenance['grounded'], provenance=provenance)
     if len(history) > 20:
         history = history[-20:]
     _chat_sessions[sid] = history
