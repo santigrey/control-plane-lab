@@ -93,3 +93,45 @@ Alexandra = Jarvis-shaped. Two postures: Alexandra (public+work) and Companion (
 
 ### Next step
 - Phase 2 kickoff: read spec §8 Phase 2, restate scope, await Paco spec if architectural gaps.
+
+## 2026-04-23 -- Day 67 -- Phase 2+3 + Routing Cleanup SHIPPED, v0.memory.routing.1 tagged
+
+**Main HEAD:** 4fb7797 (`docs: phase 2/3 premerge verification report + paco merge approval`)
+**Tag:** `v0.memory.routing.1` -> 4fb7797 (pushed)
+**Branch `phase-2-3-routing-bundle`:** merged FF, pending delete
+
+### Completed
+- **Premerge fix commits (per Paco `paco_spec_phase23_premerge_fixes.md`):**
+  - `cceda73` chat: dedicated alexandra prompt, drop persona warmup (fix 1)
+  - `4cc2598` chat: widen grounded flag for tool-path memory (fix 2)
+  - `5bb5ea0` memory: thread role into provenance dict (fix 3)
+  - `2558912` canaries: R-4 endearment blocklist + P2-2 two-row provenance verify
+  - `4fb7797` docs: phase23 premerge report + paco approval
+- **FF merge to main** + tag `v0.memory.routing.1` + push both
+- **Canary battery 9/11 PASS** (`canaries/phase23_results_1776922987.json`)
+  - 2 FAILs diagnosed and deemed non-blocking (P3-1 Jarvis boundary behavior, P2-4 transient Gmail latency)
+
+### Three worth-naming (per Paco response §6)
+
+1. **Two persona-bleed layers closed.** Spec C closed routing-layer (Day 66). v0.memory.routing.1 closed prompt-layer (Day 67). The bug class is two-thirds dead; only the retrieval-layer filter (Spec C `exclude_endearment_rows`) remains as render-time defense, which is correct architecturally.
+
+2. **Phase 5 substrate is now intact.** Assistant-side memory persistence on `/chat` with full provenance is the prerequisite Phase 5 (judgment layer) needs. Without Fix #2 + Fix #3, Phase 5 would have shipped against an empty data set on `/chat` and broken silently. Most important architectural fix in the bundle; easiest to overlook.
+
+3. **Frontier judgment behavior emerged.** Sonnet (P3-1) and Opus (P3-2) both refused artificial escalation requests with explicit reasoning about when escalation IS warranted. Opus: *"It's either a test of my judgment (in which case: passing) or an attempt to game the routing system (in which case: no)."* Autonomy pattern spec §6 is trying to build, emerging organically at model layer. To be documented in `docs/unified_alexandra_spec_v1.md` §2.2.
+
+### Follow-ups queued (non-blocking, separate sessions)
+
+- **Follow-up A -- P3-1 canary redesign.** Current prompt tests instruction-compliance; needs replacement that genuinely warrants frontier escalation (Paco proposed K8s NUMA-aware GPU scheduler as candidate). Three-variant design: P3-1a force-escalate judgment-genuine / P3-1b baseline / P3-1c flipped-pass criteria (refusal expected). Paco spec next session.
+- **Follow-up B -- P2-4 timeout hardening.** Paco recommendation: Option 2 (retry wrapper around `get_emails` tool in `tools/registry.py`, retry once on timeout with 30s backoff). Bundled with Phase 4 sanitizer since we'll be touching registry anyway.
+
+### Task state
+- Task #21 (Phase 2: local-first routing) -> completed
+- Task #16 (Phase 4 sanitizer + NULL-tool backlog) -> unblocked, awaiting Paco spec
+- Task #6 (Venice persona-tuning signals) -> still gated on NeMo POC
+
+### Blockers
+- None. Ready for Phase 4 kickoff on Paco's cue.
+
+### Next step
+- Phase 4 (sanitizer + NULL-tool backlog) per unified spec §8 dependency graph.
+- Awaiting Paco spec next session.
