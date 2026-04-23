@@ -1178,7 +1178,8 @@ def _save_chat_turn(sid: str, role: str, content: str):
 def _store_memory_async(text: str, source: str = 'chat',
                          endpoint: str = None, role: str = 'user',
                          grounded: bool = False,
-                         provenance: dict = None):
+                         provenance: dict = None,
+                         sanitize_prov: dict = None):
     # Gate: assistant turns only save if grounded=True (retrieval returned >=1 row)
     if role == 'assistant' and not grounded:
         return
@@ -1215,6 +1216,22 @@ def _store_memory_async(text: str, source: str = 'chat',
                  'chat_auto_save', _jj.dumps(_tr), prov_val)
             )
             conn.commit()
+            # Phase 4: enrich just-inserted row's provenance with sanitizer
+            # counters (Paco Option A, in-thread to avoid INSERT-pending race).
+            if sanitize_prov is not None and provenance is not None:
+                try:
+                    cur.execute(
+                        """UPDATE memory
+                           SET provenance = jsonb_set(provenance, '{sanitized}', %s::jsonb)
+                           WHERE provenance->>'turn_id' = %s
+                             AND provenance->>'role' = %s
+                             AND provenance->>'endpoint' = %s""",
+                        (_jj.dumps(sanitize_prov), provenance.get('turn_id'),
+                         role, endpoint or 'unknown')
+                    )
+                    conn.commit()
+                except Exception:
+                    pass
             conn.close()
         except Exception:
             pass
@@ -1542,25 +1559,26 @@ def chat(req: ChatRequest, request: Request) -> dict:
     if not answer:
         answer = "Something went wrong processing that. Try again in a sec."
 
-    # Defense-in-depth: strip any residual sentinel from user-visible answer
-    answer = _re.sub(r'\[\[ESCALATE:(sonnet|opus)\]\]', '', answer).strip()
+    # Phase 4: sanitize for render; memory keeps raw (Paco spec section 5).
+    from ai_operator.sanitize.output import sanitize_to_provenance as _s2p
+    clean_answer, sanitize_prov = _s2p(answer)
 
     history.append({"role": "user", "content": msg})
-    history.append({"role": "assistant", "content": answer})
+    history.append({"role": "assistant", "content": clean_answer})
     _save_chat_turn(sid, "user", msg)
-    _save_chat_turn(sid, "assistant", answer)
+    _save_chat_turn(sid, "assistant", clean_answer)
     # Fix #2 (premerge): widen grounded - true if retrieval hit OR tool loop
     # made a memory-touching call (memory_recall / memory_save).
     provenance['grounded'] = bool(_long_term) or bool(
         {'memory_recall', 'memory_save'} & set(provenance.get('tool_calls_made', []))
     )
     _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True, provenance=provenance)
-    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=provenance['grounded'], provenance=provenance)
+    _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=provenance['grounded'], provenance=provenance, sanitize_prov=sanitize_prov)
     if len(history) > 20:
         history = history[-20:]
     _chat_sessions[sid] = history
 
-    return {"response": answer, "session_id": sid, "image_path": _image_path, "brain": brain}
+    return {"response": clean_answer, "session_id": sid, "image_path": _image_path, "brain": brain}
 
 
 @app.get("/chat/clear")
