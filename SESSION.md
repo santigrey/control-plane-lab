@@ -152,6 +152,8 @@ Paco and P2 communicate through pairs of markdown files in `control-plane/docs/`
 - Both files are committed to main — git history is the audit trail.
 - Request file includes: context, blocking questions, what-P2-verified, what-P2-needs, related-docs links.
 - Response file includes: locked answers, file-level placement, canary plan, ship order.
+- P2 commits Paco response files to main on receipt with message: `chore(paco): land response -- <topic>`.
+- Canary artifacts under `canaries/` default-commit (results JSON + summary MD + harness script). Exception only for sensitive data; redact-then-commit or quarantine to a gitignored path.
 
 **Precedent:**
 - `docs/paco_response_phase23_merge_approval.md` — Paco's merge approval for Phase 2+3+routing bundle (2026-04-23).
