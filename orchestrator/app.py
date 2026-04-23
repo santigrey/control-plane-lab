@@ -1197,7 +1197,17 @@ def _store_memory_async(text: str, source: str = 'chat',
             }
             conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
             cur = conn.cursor()
-            prov_val = _jj.dumps(provenance) if provenance else None
+            # Fix #3 (premerge): thread role / grounded / endpoint into
+            # provenance so Paco's verify query (provenance->>'role', etc.)
+            # resolves. Copy first to avoid cross-thread mutation.
+            if provenance is not None:
+                _prov = dict(provenance)
+                _prov['role'] = role
+                _prov['grounded'] = grounded
+                _prov['endpoint'] = endpoint or 'unknown'
+                prov_val = _jj.dumps(_prov)
+            else:
+                prov_val = None
             cur.execute(
                 '''INSERT INTO memory (id, source, content, embedding, embedding_model, tool, tool_result, provenance, created_at)
                    VALUES (gen_random_uuid(), %s, %s, %s::vector, %s, %s, %s::jsonb, %s::jsonb, NOW())''',
