@@ -158,3 +158,38 @@ These are non-negotiable rules for every Paco session going forward. Never skip.
 **Next P2 action:** none until Paco ships Phase 4 spec. Open follow-ups from Paco merge-approval:
 - (a) Canary harness: tag P3-1-style checks as `intended_refusal` vs `regression` so the distinction is machine-readable.
 - (b) Provenance projection index — evaluate PG index on `provenance->>'role'` / `provenance->>'grounded'` once memory table ≥10k rows.
+
+---
+
+## Day 67 (2026-04-23) -- Phase 4 sanitizer: steps 1-5 of 12 complete
+
+### Completed this session
+- Paco Phase 4 response landed: docs/paco_response_phase4_sanitizer.md (7e895d6)
+- Paco kickoff-gates response landed: docs/paco_response_phase4_kickoff_gates.md (d1e1ae1)
+- SESSION protocol rules refined (P2 commits Paco responses; canaries default-commit): f8afd4e
+- 4-commit pre-branch cleanup done; branch cut: phase-4-sanitizer
+- Step 3/12: orchestrator/ai_operator/sanitize/output.py (106 lines, 2 public functions, 11 regexes)
+- Step 4/12: tests/sanitize/test_output.py (12 tests, all passing; pytest 9.0.3 in orchestrator/.venv)
+- Package + tests commit: 5187b8c
+- Step 5/12: /chat handler refactor + _store_memory_async extension: b8a0c38
+  - memory gets raw, client gets clean, provenance.sanitized populated via in-thread jsonb_set
+  - Path B chosen over A (simpler) and C (violates spec ordering)
+
+### Pending (next session)
+- Step 6/12: Refactor /chat/private call site -- same pattern
+- Step 7/12: Refactor _chat_persona_handler call site -- same pattern
+- Step 8/12: Grep verify zero inline strips remain in the three handlers
+- Step 9/12: Run canaries/run_phase4.py -> phase4_results_<ts>.json (8 canaries S1-S8)
+- Step 10/12: Report to Paco via docs/paco_request_phase4_merge_approval.md
+- Step 11/12: --no-ff merge to main + tag v0.memory.sanitizer.1
+- Step 12/12: Update SESSION.md + paco_session_anchor.md post-merge
+
+### Blockers
+None. Clean resume tomorrow.
+
+### Branch state
+- phase-4-sanitizer at b8a0c38 (2 commits ahead of main)
+- main at f8afd4e
+
+### Next step to resume
+Step 6/12 -- refactor /chat/private handler. Anchor: @app.post("/chat/private") decorator around line 1589; inline strip inside handler body (Defense-in-depth comment); assistant _store_memory_async call in tail.
