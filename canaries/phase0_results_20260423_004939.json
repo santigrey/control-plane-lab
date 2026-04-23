@@ -1,0 +1,79 @@
+{
+  "timestamp": "2026-04-23T00:49:39.866442",
+  "model": "qwen2.5:72b",
+  "endpoint": "http://192.168.1.20:11434/api/chat",
+  "passed": 2,
+  "total": 5,
+  "pass_rate": "2/5",
+  "p50_latency_s": 91.39,
+  "p90_latency_s": 77.22,
+  "results": [
+    {
+      "id": 1,
+      "kind": "single_tool_clear",
+      "prompt": "What are my three most recent unread emails?",
+      "latency_s": 91.39,
+      "tool_calls_emitted": 1,
+      "tool_calls_raw": [
+        {
+          "id": "call_zkxxqku1",
+          "function": {
+            "index": 0,
+            "name": "get_emails",
+            "arguments": {
+              "limit": 3,
+              "unread": true
+            }
+          }
+        }
+      ],
+      "content_when_no_tool": null,
+      "pass": true,
+      "failure_reason": null
+    },
+    {
+      "id": 2,
+      "kind": "single_tool_free_text",
+      "prompt": "Search the web for recent news on ASUS Ascent GX10 availability.",
+      "pass": false,
+      "failure_reason": "exception: HTTPConnectionPool(host='192.168.1.20', port=11434): Read timed out. (read timeout=120)"
+    },
+    {
+      "id": 3,
+      "kind": "single_tool_structured_arg",
+      "prompt": "Fetch https://docs.anthropic.com/en/home and summarize.",
+      "latency_s": 77.22,
+      "tool_calls_emitted": 1,
+      "tool_calls_raw": [
+        {
+          "id": "call_pjf9zmhh",
+          "function": {
+            "index": 0,
+            "name": "web_fetch",
+            "arguments": {
+              "url": "https://docs.anthropic.com/en/home"
+            }
+          }
+        }
+      ],
+      "content_when_no_tool": null,
+      "pass": true,
+      "failure_reason": null
+    },
+    {
+      "id": 4,
+      "kind": "single_tool_no_args",
+      "prompt": "Show me my current job application pipeline.",
+      "pass": false,
+      "failure_reason": "exception: HTTPConnectionPool(host='192.168.1.20', port=11434): Read timed out. (read timeout=120)"
+    },
+    {
+      "id": 5,
+      "kind": "multi_step_loop",
+      "prompt": "Check my recent emails for job alerts, then research the top company mentioned.",
+      "pass": false,
+      "failure_reason": "exception: HTTPConnectionPool(host='192.168.1.20', port=11434): Read timed out. (read timeout=120)"
+    }
+  ],
+  "verdict": "FAIL: Option A off the table"
+}

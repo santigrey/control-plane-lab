@@ -1,0 +1,137 @@
+{
+  "timestamp": "2026-04-23T01:38:13.364582",
+  "model": "qwen2.5:72b",
+  "endpoint": "http://192.168.1.20:11434/api/chat",
+  "passed": 5,
+  "total": 5,
+  "pass_rate": "5/5",
+  "p50_latency_s": 6.77,
+  "p90_latency_s": 20.0,
+  "results": [
+    {
+      "id": 1,
+      "kind": "single_tool_clear",
+      "prompt": "What are my three most recent unread emails?",
+      "latency_s": 60.96,
+      "tool_calls_emitted": 1,
+      "tool_calls_raw": [
+        {
+          "id": "call_sk6ed7lg",
+          "function": {
+            "index": 0,
+            "name": "get_emails",
+            "arguments": {
+              "limit": 3,
+              "unread": true
+            }
+          }
+        }
+      ],
+      "content_when_no_tool": null,
+      "pass": true,
+      "failure_reason": null
+    },
+    {
+      "id": 2,
+      "kind": "single_tool_free_text",
+      "prompt": "Search the web for recent news on ASUS Ascent GX10 availability.",
+      "latency_s": 6.77,
+      "tool_calls_emitted": 1,
+      "tool_calls_raw": [
+        {
+          "id": "call_0dhmhozi",
+          "function": {
+            "index": 0,
+            "name": "research_topic",
+            "arguments": {
+              "query": "ASUS Ascent GX10 availability recent news"
+            }
+          }
+        }
+      ],
+      "content_when_no_tool": null,
+      "pass": true,
+      "failure_reason": null
+    },
+    {
+      "id": 3,
+      "kind": "single_tool_structured_arg",
+      "prompt": "Fetch https://docs.anthropic.com/en/home and summarize.",
+      "latency_s": 6.56,
+      "tool_calls_emitted": 1,
+      "tool_calls_raw": [
+        {
+          "id": "call_95tpv49r",
+          "function": {
+            "index": 0,
+            "name": "web_fetch",
+            "arguments": {
+              "url": "https://docs.anthropic.com/en/home"
+            }
+          }
+        }
+      ],
+      "content_when_no_tool": null,
+      "pass": true,
+      "failure_reason": null
+    },
+    {
+      "id": 4,
+      "kind": "single_tool_no_args",
+      "prompt": "Show me my current job application pipeline.",
+      "latency_s": 4.06,
+      "tool_calls_emitted": 1,
+      "tool_calls_raw": [
+        {
+          "id": "call_i0v4w43l",
+          "function": {
+            "index": 0,
+            "name": "get_job_pipeline",
+            "arguments": {}
+          }
+        }
+      ],
+      "content_when_no_tool": null,
+      "pass": true,
+      "failure_reason": null
+    },
+    {
+      "id": 5,
+      "kind": "multi_step_loop",
+      "prompt": "Check my recent emails for job alerts, then research the top company mentioned.",
+      "step1_tool_calls": [
+        {
+          "id": "call_173b2u5v",
+          "function": {
+            "index": 0,
+            "name": "get_emails",
+            "arguments": {
+              "limit": 10,
+              "unread": true
+            }
+          }
+        }
+      ],
+      "step1_latency_s": 6.12,
+      "step1_ok": true,
+      "step2_tool_calls": [
+        {
+          "id": "call_083yx8gf",
+          "function": {
+            "index": 0,
+            "name": "research_topic",
+            "arguments": {
+              "query": "Anthropic company"
+            }
+          }
+        }
+      ],
+      "step2_latency_s": 20.0,
+      "step2_ok": true,
+      "step2_content": "I found a couple of job alerts in your inbox. One is for 5 new Machine Learning Engineer roles at Anthropic, and another is an alert about an Applied AI Engineer position at OpenAI. \n\nSince the email with multiple positions seems more significant, I will start by researching Anthropic. Let me gather some information.\n",
+      "pass": true,
+      "failure_reason": null
+    }
+  ],
+  "verdict": "PROCEED: Option A viable"
+}
