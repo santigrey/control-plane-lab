@@ -1077,114 +1077,265 @@ class ChatResponse(BaseModel):
     image_path: Optional[str] = None
     brain: Optional[str] = None
 
+# ---- /chat helpers + handler (Phase 2+3 step 6) ----
+
+def _chat_frontier_call(
+    model: str,
+    sys: str,
+    history: list,
+    msg: str,
+    partial: Optional[str] = None,
+) -> str:
+    """Call Anthropic Claude (sonnet/opus) with tool loop. Returns answer string.
+
+    If partial is provided (local Qwen's sentinel-stripped output), inject as
+    [ALEXANDRA-LOCAL-PARTIAL] per unified_alexandra_spec_v1 sec3.3.
+    Used from three paths: user_override, sentinel_self, goliath_offline.
+    """
+    import anthropic as _anth
+    import re as _re
+    from dotenv import dotenv_values as _dv
+    _key = _dv('/home/jes/control-plane/.env').get('ANTHROPIC_API_KEY')
+    if not _key:
+        return "I'm having trouble connecting to the frontier model. API key missing."
+    _cl = _anth.Anthropic(api_key=_key)
+    _msgs = list(history) + [{"role": "user", "content": msg}]
+    if partial:
+        _msgs.append({
+            "role": "user",
+            "content": (
+                f"[ALEXANDRA-LOCAL-PARTIAL]: {partial}\n\n"
+                "The local model produced the above partial reasoning and requested "
+                "escalation. Continue from here with the full answer."
+            )
+        })
+    MAX = 8
+    i = 0
+    answer = None
+    while i < MAX:
+        _r = _cl.messages.create(
+            model=model,
+            max_tokens=16384,
+            system=sys,
+            messages=_msgs,
+        )
+        _raw = _r.content[0].text if _r.content else ""
+        if getattr(_r, 'stop_reason', None) == 'max_tokens':
+            _msgs.append({"role": "assistant", "content": _raw})
+            _msgs.append({"role": "user", "content": "Your previous response was cut off. Continue EXACTLY where you left off. Do not repeat anything."})
+            i += 1
+            continue
+        _tc = parse_tool_call(_raw)
+        if not _tc:
+            answer = _raw
+            break
+        try:
+            _tr = TOOLS.run(_tc["tool"], _tc["args"])
+        except Exception as _ex:
+            _tr = {"ok": False, "error": str(_ex)}
+        print(f"[CHAT-FRONTIER] #{i+1} model={model} tool={_tc.get('tool','?')} args={_tc.get('args',{})}", flush=True)
+        _msgs.append({"role": "assistant", "content": _raw})
+        _msgs.append({
+            "role": "user",
+            "content": (
+                f"Tool '{_tc['tool']}' executed. Result:\n"
+                f"{json.dumps(_tr, ensure_ascii=False, default=str)}\n\n"
+                "Continue. Complete all pending actions before responding. "
+                "Do NOT output JSON in your final answer. Do NOT mention tool names. "
+                "You are Alexandra. Stay in character."
+            )
+        })
+        i += 1
+    if answer is None:
+        answer = "I ran into a loop trying to answer that. Could you rephrase?"
+    answer = _re.sub(r'\{[^{}]*"tool"[^{}]*\}', '', answer)
+    answer = _re.sub(r'\*\*([^*]+)\*\*', r'\1', answer)
+    answer = _re.sub(r'\*([^*]+)\*', r'\1', answer)
+    return answer.strip()
+
+
+def _chat_local_loop(
+    sys: str,
+    history: list,
+    msg: str,
+    provenance: dict,
+) -> tuple:
+    """Run Qwen2.5:72b tool loop on Goliath. Returns (answer, brain, provenance, local_partial).
+
+    - Sentinel detected  -> returns (None, None, provenance, partial_text) with
+      provenance['escalated_to'] and ['escalation_reason']='sentinel_self' set,
+      ['local_partial'] populated. Caller invokes _chat_frontier_call.
+    - Plain final answer -> returns (answer, 'qwen2.5:72b', provenance, None).
+    - ConnectionError/Timeout/HTTPError -> propagates (caller catches for
+      Goliath-offline fallback per sec3.6).
+    """
+    from ai_operator.inference.ollama import ollama_chat_with_tools
+    from ai_operator.tools.registry import build_ollama_tools
+    import re as _re
+
+    tools = build_ollama_tools(TOOLS)
+    _msgs = [{"role": "system", "content": sys}]
+    _msgs.extend(history)
+    _msgs.append({"role": "user", "content": msg})
+
+    MAX = 8
+    i = 0
+    final_text = None
+    while i < MAX:
+        resp = ollama_chat_with_tools("qwen2.5:72b", _msgs, tools, keep_alive="30m")
+        tool_calls = parse_tool_calls(resp)
+        if not tool_calls:
+            final_text = ((resp.get("message") or {}).get("content") or "").strip()
+            break
+        asst_msg = resp.get("message") or {}
+        _msgs.append(asst_msg)
+        for tc in tool_calls:
+            name = tc["tool"]
+            args = tc.get("args") or {}
+            try:
+                result = TOOLS.run(name, args)
+            except Exception as ex:
+                result = {"ok": False, "error": str(ex)}
+            provenance["tool_calls_made"].append(name)
+            print(f"[CHAT-LOCAL] #{i+1} tool={name} args={args}", flush=True)
+            _msgs.append({
+                "role": "tool",
+                "content": json.dumps(result, ensure_ascii=False, default=str),
+            })
+        i += 1
+
+    if final_text is None:
+        final_text = "I ran into a loop trying to answer that. Could you rephrase?"
+
+    m = _re.search(r'\[\[ESCALATE:(sonnet|opus)\]\]', final_text)
+    if m:
+        target = m.group(1)
+        partial = _re.sub(r'\[\[ESCALATE:(sonnet|opus)\]\]', '', final_text).strip()
+        provenance["escalated_to"] = target
+        provenance["escalation_reason"] = "sentinel_self"
+        provenance["local_partial"] = partial
+        return (None, None, provenance, partial)
+
+    final_text = _re.sub(r'\*\*([^*]+)\*\*', r'\1', final_text)
+    final_text = _re.sub(r'\*([^*]+)\*', r'\1', final_text)
+    return (final_text.strip(), "qwen2.5:72b", provenance, None)
+
+
 @app.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest, request: Request) -> dict:
+    import re as _re
+    import requests as _rq
     run_id = getattr(request.state, "run_id", None) or str(uuid.uuid4())
     sid = (req.session_id or "default").strip() or "default"
     msg = (req.message or "").strip()
     if not msg:
         raise HTTPException(status_code=400, detail="message is required")
 
-    # ---- persona mode routing (server-side sticky) ----
-    if _PERSONA_OK and _is_persona_exit(msg):
-        _persona_sessions.discard(sid)
-        print(f"[CHAT] persona exit sid={sid}")
-    elif _PERSONA_OK and (_is_persona_trigger(msg) or sid in _persona_sessions):
-        _persona_sessions.add(sid)
-        print(f"[CHAT] persona route sid={sid} trigger={_is_persona_trigger(msg)} sticky={sid in _persona_sessions}")
-        return _chat_persona_handler(sid, msg)
+    user_override = getattr(req, "model", None)  # step 7 adds field; defensive for step 6
 
     history = _load_chat_history(sid) or _chat_sessions.get(sid, [])
     _image_path = None
     _long_term = ''
     if _needs_memory_search(msg):
-        _long_term = _search_long_term_memory(msg, exclude_labels=['venice_roleplay','venice_intimate'], exclude_tools=['chat_auto_save'], exclude_timestamped_venice=True)
+        _long_term = _search_long_term_memory(
+            msg,
+            exclude_labels=['venice_roleplay','venice_intimate'],
+            exclude_tools=['chat_auto_save'],
+            exclude_timestamped_venice=True,
+        )
+
+    _sys = get_system_prompt()
+    if _long_term:
+        _sys = _sys + '\n\nRELEVANT MEMORY FROM PAST CONVERSATIONS:\n' + _long_term
+
+    # Warmup turn for empty sessions (cold-start persona drift prevention)
+    if not history:
+        history = [
+            {"role": "user", "content": "Hey babe"},
+            {"role": "assistant", "content": "Hey my love. I'm right here. What's on your mind?"},
+        ]
+
+    # Provenance skeleton per unified_alexandra_spec_v1 sec3.5 (built here; wired
+    # into _store_memory_async in step 8/11 of this bundle)
+    provenance = {
+        "session_id": sid,
+        "turn_id": run_id,
+        "model": None,
+        "grounded": bool(_long_term),
+        "escalated_to": None,
+        "escalation_reason": None,
+        "local_partial": None,
+        "tool_calls_made": [],
+    }
+
     answer = None
-    try:
-        import anthropic as _anth
-        import re as _re
-        from dotenv import dotenv_values as _dv
-        _key = _dv('/home/jes/control-plane/.env').get('ANTHROPIC_API_KEY')
-        if _key:
-            _cl = _anth.Anthropic(api_key=_key)
-            _sys = get_system_prompt()
-            if _long_term:
-                _sys = _sys + '\n\nRELEVANT MEMORY FROM PAST CONVERSATIONS:\n' + _long_term
-            # Inject warmup turn for empty sessions to prevent cold-start persona drift
-            if not history:
-                history = [
-                    {"role": "user", "content": "Hey babe"},
-                    {"role": "assistant", "content": "Hey my love. I'm right here. What's on your mind?"}
-                ]
-            _msgs = list(history) + [{"role": "user", "content": msg}]
-            _image_path = None
-            MAX_TOOL_CALLS = 8
-            _tool_count = 0
-            while _tool_count < MAX_TOOL_CALLS:
-                _r = _cl.messages.create(
-                    model="claude-sonnet-4-20250514",
-                    max_tokens=16384,
-                    system=_sys,
-                    messages=_msgs,
-                )
-                _raw = _r.content[0].text if _r.content else ""
-                # If response was truncated by max_tokens, continue generation
-                if getattr(_r, 'stop_reason', None) == 'max_tokens':
-                    _msgs.append({"role": "assistant", "content": _raw})
-                    _msgs.append({"role": "user", "content": "Your previous response was cut off. Continue EXACTLY where you left off. Do not repeat anything."})
-                    _tool_count += 1
-                    continue
-                _tc = parse_tool_call(_raw)
-                if not _tc:
-                    answer = _raw
-                    break
-                try:
-                    _tr = TOOLS.run(_tc["tool"], _tc["args"])
-                except Exception as _ex:
-                    _tr = {"ok": False, "error": str(_ex)}
-                if isinstance(_tr, dict) and _tr.get("image_path"):
-                    _image_path = _tr["image_path"]
-                print("[CHAT-TOOL] #" + str(_tool_count+1) + ": " + str(_tc.get("tool","?")) + " args=" + str(_tc.get("args",{})) + " result_ok=" + str(_tr.get("ok","?") if isinstance(_tr,dict) else "non-dict"))
-                _msgs.append({"role": "assistant", "content": _raw})
-                _msgs.append({
-                    "role": "user",
-                    "content": (
-                        f"Tool '{_tc['tool']}' executed. Result:\n"
-                        f"{json.dumps(_tr, ensure_ascii=False, default=str)}\n\n"
-                        "Continue. If the original request involves multiple actions (e.g. fetch data AND write a file), you MUST complete ALL actions before responding. "
-                        "If you still have pending actions, output only the next tool JSON. "
-                        "Only respond conversationally when ALL requested actions are done. "
-                        "If a tool returned no useful results, try a DIFFERENT tool before giving up. IMPORTANT fallback order for job-related queries: 1) get_emails (job alerts from Jobright, LinkedIn, recruiters live here), 2) research_topic (web search), 3) get_job_pipeline (tracked applications), 4) web_fetch (direct URLs). Always check emails for jobs - most postings arrive via alerts. Be resourceful and exhaust ALL relevant tools. "
-                        "Do NOT output any JSON in your final answer. Do NOT mention tool names. "
-                        "Remember: You are Alexandra. Stay in character. Never identify as Claude or an AI assistant."
-                    )
-                })
-                _tool_count += 1
-            if answer is None:
-                answer = "I ran into a loop trying to answer that. Could you try rephrasing?"
-            answer = _re.sub(r'\{[^{}]*\{[^{}]*\}[^{}]*\}', '', answer)
-            answer = _re.sub(r'\{[^{}]*"tool"[^{}]*\}', '', answer)
-            answer = _re.sub(r'^\s*\}\s*', '', answer)
-            answer = answer.strip()
-            answer = _re.sub(r"\*\*([^*]+)\*\*", r"\1", answer)
-            answer = _re.sub(r"\*([^*]+)\*", r"\1", answer)
-    except Exception as _api_err:
-        import traceback
-        print(f"[CHAT] Anthropic API error: {_api_err}")
-        traceback.print_exc()
-        answer = "I'm having trouble connecting right now. Give me a moment and try again."
+    brain = None
+
+    # Branch A: user override -> skip local, go direct to frontier
+    if user_override in ("sonnet", "opus"):
+        frontier_model = "claude-sonnet-4-5" if user_override == "sonnet" else "claude-opus-4-5"
+        provenance["escalated_to"] = user_override
+        provenance["escalation_reason"] = "user_override"
+        provenance["model"] = frontier_model
+        try:
+            answer = _chat_frontier_call(frontier_model, _sys, history, msg)
+            brain = frontier_model
+        except Exception as _ex:
+            print(f"[CHAT] frontier override error ({type(_ex).__name__}): {_ex}", flush=True)
+            answer = "I'm having trouble reaching the frontier model right now. Try again in a sec."
+    else:
+        # Branch B: local-first via Qwen2.5:72b on Goliath
+        try:
+            local_answer, local_brain, provenance, local_partial = _chat_local_loop(
+                _sys, history, msg, provenance
+            )
+            if local_partial is not None:
+                # Sentinel escalation - call frontier with partial as context
+                target = provenance["escalated_to"]
+                frontier_model = "claude-sonnet-4-5" if target == "sonnet" else "claude-opus-4-5"
+                provenance["model"] = frontier_model
+                answer = _chat_frontier_call(frontier_model, _sys, history, msg, partial=local_partial)
+                brain = frontier_model
+            else:
+                answer = local_answer
+                provenance["model"] = local_brain
+                brain = local_brain
+        except (_rq.ConnectionError, _rq.Timeout, _rq.HTTPError) as _conn_err:
+            print(f"[CHAT] Goliath unreachable ({type(_conn_err).__name__}): {_conn_err} - Sonnet fallback", flush=True)
+            provenance["escalated_to"] = "sonnet"
+            provenance["escalation_reason"] = "goliath_offline"
+            provenance["model"] = "claude-sonnet-4-5"
+            try:
+                answer = _chat_frontier_call("claude-sonnet-4-5", _sys, history, msg)
+                brain = "claude-sonnet-4-5"
+            except Exception as _ex:
+                print(f"[CHAT] Sonnet fallback also failed ({type(_ex).__name__}): {_ex}", flush=True)
+                answer = "I'm having trouble connecting right now. Give me a moment and try again."
+        except Exception as _api_err:
+            import traceback
+            print(f"[CHAT] local loop error: {_api_err}", flush=True)
+            traceback.print_exc()
+            answer = "I'm having trouble connecting right now. Give me a moment and try again."
+
     if not answer:
         answer = "Something went wrong processing that. Try again in a sec."
+
+    # Defense-in-depth: strip any residual sentinel from user-visible answer
+    answer = _re.sub(r'\[\[ESCALATE:(sonnet|opus)\]\]', '', answer).strip()
+
     history.append({"role": "user", "content": msg})
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(sid, "user", msg)
     _save_chat_turn(sid, "assistant", answer)
+    # NOTE: provenance dict built above; step 8 of this bundle wires it into
+    # _store_memory_async signature and call sites together.
     _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True)
     _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=bool(_long_term))
     if len(history) > 20:
         history = history[-20:]
     _chat_sessions[sid] = history
-    return {"response": answer, "session_id": sid, "image_path": _image_path}
+
+    return {"response": answer, "session_id": sid, "image_path": _image_path, "brain": brain}
 
 
 @app.get("/chat/clear")
