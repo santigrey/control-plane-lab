@@ -92,3 +92,39 @@ def ollama_chat(system_prompt: str, user_prompt: str, injected_memories: str = "
     data = r.json()
     msg = data.get("message") or {}
     return (msg.get("content") or "").strip()
+
+
+def ollama_chat_with_tools(
+    model: str,
+    messages: list,
+    tools: list,
+    keep_alive: str = "30m",
+    timeout: int = 180,
+) -> dict:
+    """Call Ollama /api/chat with native tool-calling. Returns raw response dict.
+
+    Caller is responsible for:
+      - Building messages (system/user/assistant/tool roles)
+      - Building tools via build_ollama_tools(registry)
+      - Parsing response via parse_tool_calls()
+
+    Raises requests.ConnectionError / Timeout / HTTPError on failure -
+    callers that want Sonnet fallback should catch these per
+    unified_alexandra_spec_v1 sec8 sec3.6.
+
+    keep_alive defaults to 30m to avoid 47GB Qwen72B reload cost.
+    timeout 180s accommodates cold-start on Goliath (Phase 0 p90 ~20s).
+    Routing (OLLAMA_URL vs OLLAMA_URL_LARGE) handled by
+    get_ollama_url_for_model(model).
+    """
+    url = f"{get_ollama_url_for_model(model)}/api/chat"
+    payload = {
+        "model": model,
+        "messages": messages,
+        "tools": tools,
+        "stream": False,
+        "keep_alive": keep_alive,
+    }
+    r = requests.post(url, json=payload, timeout=timeout)
+    r.raise_for_status()
+    return r.json()
