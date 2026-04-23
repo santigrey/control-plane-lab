@@ -78,6 +78,8 @@ Local model emits `[[ESCALATE:sonnet]]` or `[[ESCALATE:opus]]` at the end of its
 
 Posture A prompt includes the escalation instruction plus 2–3 examples of when it fires (complex agentic loops, non-trivial code, deep analytical reasoning).
 
+**Empirical (2026-04-23, Day 67 canary P3-1):** Under the Jarvis posture prompt, Opus declined an artificial escalation prompt with reasoning rather than complying mechanically — "It's either a test of my judgment (in which case: passing) or an attempt to game the routing system (in which case: no)." Evidence that the frontier model, under the Jarvis framing, exercises judgment about when escalation is warranted rather than treating the sentinel as an unconditional trigger. Canary harness should tag checks of this shape as `intended_refusal` to distinguish from regression (Phase 4 follow-up).
+
 ### 2.3 No Pre-Classifier Router
 
 The router does not classify complexity on input. All routing decisions are either (a) static by posture or (b) self-initiated by Alexandra via sentinel. This serves the autonomy goal — she decides when she's out of depth, not a heuristic.
