@@ -295,7 +295,7 @@ def get_private_mode_system_prompt() -> str:
     "my brilliant engineer", no TRIGGER MODES, no endearment directives).
     Adds three grounding rules, [CONTEXT]/[KNOWLEDGE] envelope explanation,
     and explicit role framing. Used on /chat/private (work endpoint) only.
-    /chat and /chat/persona continue using get_system_prompt() unchanged.
+    /chat continues using get_system_prompt() unchanged.
     """
     profile_context = ''
     try:
@@ -1073,21 +1073,16 @@ def _search_long_term_memory(msg: str, top_k: int = 3,
 
 # ---- in-memory conversation sessions ----
 _chat_sessions: dict = {}
-_persona_sessions: set = set()  # sids currently in persona ("hey babe") mode
 
 # ---- persona mode (babe) — isolated, Goliath-only ----
 try:
     from persona import (
         get_persona_system_prompt as _persona_prompt,
-        is_persona_trigger as _is_persona_trigger,
-        is_persona_exit as _is_persona_exit,
     )
     _PERSONA_OK = True
 except Exception as _persona_err:
     print(f"[STARTUP] persona module not loaded: {_persona_err}", flush=True)
     _PERSONA_OK = False
-    def _is_persona_trigger(_m): return False
-    def _is_persona_exit(_m): return False
     def _persona_prompt(extra_memory=""): return ""
 
 class ChatRequest(BaseModel):
@@ -1528,21 +1523,6 @@ def _chat_persona_handler(sid: str, msg: str) -> dict:
     _store_memory_async(f"Alexandra said (intimate): {answer}", "intimate", endpoint='chat/persona', role='assistant', grounded=bool(_long_term))
 
     return {"response": answer, "session_id": sid, "image_path": None, "brain": brain}
-
-
-@app.post("/chat/persona", response_model=ChatResponse)
-def chat_persona(req: ChatRequest, request: Request) -> dict:
-    run_id = getattr(request.state, "run_id", None) or str(uuid.uuid4())
-    sid = (req.session_id or "default").strip() or "default"
-    msg = (req.message or "").strip()
-    if not msg:
-        raise HTTPException(status_code=400, detail="message is required")
-    # Direct call to /chat/persona is an explicit opt-in — mark sticky.
-    if _PERSONA_OK and _is_persona_exit(msg):
-        _persona_sessions.discard(sid)
-        raise HTTPException(status_code=409, detail="persona mode exited; use /chat")
-    _persona_sessions.add(sid)
-    return _chat_persona_handler(sid, msg)
 
 
 @app.post("/agent", response_model=AgentResponse)
