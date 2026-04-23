@@ -1070,6 +1070,7 @@ except Exception as _persona_err:
 class ChatRequest(BaseModel):
     message: str
     session_id: str = "default"
+    model: Optional[str] = None
 
 class ChatResponse(BaseModel):
     response: str
