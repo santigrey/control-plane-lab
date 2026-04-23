@@ -133,3 +133,28 @@ These are non-negotiable rules for every Paco session going forward. Never skip.
 - P2 will not begin Phase 2 code until spec arrives.
 
 **Next P2 action:** none until Paco ships Phase 2 spec or Sloan overrides.
+
+## 2026-04-23 — Day 67 — Phase 2+3+routing shipped, Phase 4 next
+
+**Shipped (Paco merge-approval, docs/paco_response_phase23_merge_approval.md):**
+- FF merge `phase-2-3-routing-bundle` → main: `4fb7797`
+- Tag: `v0.memory.routing.1` (pushed)
+- Premerge fixes: grounded-save gate hardened (tool-result intersection), thread-safe provenance dict copy, provenance row enrichment (role/grounded/endpoint resolve on both user + assistant rows)
+- Canary: 9/11 PASS. P3-1 refusal-to-escalate is intended behavior under Jarvis prompt §ESCALATION, not regression. P2-4 transient Gmail latency.
+
+**Architectural observations (Paco, worth naming):**
+- Persona-bleed closed at two layers: prompt (Spec C, Day 66) + save gate (Phase 2+3, Day 67). Retrieval filter + grounded-only writes are now defense-in-depth.
+- Phase 5 judgment-writer substrate is intact: provenance JSONB is the projection source; `memory_judgment_log` still open as a Phase 5 design choice.
+- Frontier-judgment behavior emerged under Jarvis prompt — Opus declined artificial escalation framing with reasoning ("It's either a test of my judgment (in which case: passing) or an attempt to game the routing system (in which case: no).").
+
+**Current phase: Phase 4 — conversational sanitizer (per unified_alexandra_spec_v1.md §8 dependency graph).**
+
+**Blocking Paco for Phase 4 spec:**
+- Sanitizer boundary — pre-LLM input filter, post-LLM output filter, or both?
+- Scope — PII redaction only, or broader (endearment normalization for /chat, stale-fact scrubbing, prompt-injection guard)?
+- Where does it sit relative to `_search_long_term_memory` endearment filter and the grounded-save gate? Replace, layer, or orthogonal?
+- Provenance — does a sanitized-out span get logged to `memory` with a reason, or dropped silently?
+
+**Next P2 action:** none until Paco ships Phase 4 spec. Open follow-ups from Paco merge-approval:
+- (a) Canary harness: tag P3-1-style checks as `intended_refusal` vs `regression` so the distinction is machine-readable.
+- (b) Provenance projection index — evaluate PG index on `provenance->>'role'` / `provenance->>'grounded'` once memory table ≥10k rows.
