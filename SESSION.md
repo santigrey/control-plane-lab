@@ -339,3 +339,50 @@ No active blockers. Next task sequence from Sloan's ordering:
 2. YELLOW #5 -- apply mosquitto `listener 1883` + `allow_anonymous true` on SlimJim
 3. YELLOW #4 -- Sloan iDRAC action at 192.168.1.237 (PSU redundancy policy check/flip)
 4. YELLOW #6 -- schema patch for `iot_audit_log.created_at` (deferred, low priority)
+
+### Day 68 update (final) -- YELLOW sweep CLOSED
+
+Post-Phase-II-E retire, Sloan flagged scope drift. Paco scope review (`docs/paco_response_session_scope_review.md`) directive: finish the sweep with project-verification discipline. Remaining YELLOWs completed inline, no protocol rounds.
+
+**YELLOW #5 -- SlimJim `snap.mosquitto` (CLOSED):**
+- Real root cause: during physical move, SlimJim disconnected from LAN, mosquitto couldn't bind `192.168.1.40`, systemd retry counter exhausted, service stayed `failed` after cable fix.
+- Fix: `reset-failed` + `restart`. Existing config was always correct.
+- Original audit diagnosis ("Mosquitto 2.x default no-listener") was wrong. P2 briefly made it worse with a conflicting `listener 1883` append; caught by project-verification + reverted.
+- Cascade recovered: CiscoKid `mqtt-subscriber.service` out of 24h crashloop (restart counter 8948) to `active (running)` as `ciscokid_subscriber` user `alexandra`.
+- Hidden YELLOW surfaced: `mqtt-subscriber.service` crashlooping 24h but not in audit (only checked `failed`, not `activating (auto-restart)`). Future audit methodology fix.
+
+**Alert-path trace (Paco Phase A):** Sloan got Alexandra alerts last night despite MQTT outage because `alexandra-telegram.service` speaks directly to Telegram HTTPS API. MQTT is for IoT/internal paths (mqtt_publisher, approval_gate, recruiter_watcher, evening_nudge, iot_security, mqtt_executor, app.py), not user-facing alerts. Architecturally independent.
+
+**YELLOW #1 -- `tool-smoke-test.service` (CLOSED, scoped):**
+- Drop-in `/etc/systemd/system/tool-smoke-test.service.d/env.conf` with `EnvironmentFile=-/home/jes/control-plane/.env`.
+- Alert path verified: `[smoke] telegram alert: {'ok': True, 'message_id': 615, 'sent': True}`.
+- Service still exits 1 because `memory_save` returns `{disabled: True}` per defense-in-depth design; script treats as FAIL. Per Paco scope: "env fix only, no script rewrite." Script logic update deferred.
+- No repo artifact (drop-in is filesystem-only on CiscoKid).
+
+**YELLOW #6 -- `iot_audit_log` missing `created_at` (CLOSED, false positive):**
+- Schema has `timestamp | timestamp with time zone | | | now()` with matching index `idx_iot_audit_timestamp`. Writers in `approval_gate.py` + `orchestrator/ai_operator/iot_security.py` use it correctly.
+- P2 audit finding was a naming-convention error (grepped for `created_at` per convention across 11 other tables; missed that this table uses `timestamp` instead). Not a schema bug.
+
+**YELLOW #4 -- TheBeast PSU redundancy: SKIPPED.** Sloan's call. Closed without iDRAC action.
+
+**YELLOW #3 -- JesAir clawdbot.gateway: DEFERRED.** Laptop service, "it's fine."
+
+### Audit findings corrections (Day 68 meta-learning)
+
+Three Phase 5/6 findings required correction during sweep, all caught by project-verification discipline before bad fixes shipped:
+1. Phase 6 "autonomous loop dormant" -- was cc-poller running-but-deaf + aiop-worker alive-but-migrated. Fully retired via Phase II-E thread.
+2. Phase 5 SlimJim snap.mosquitto -- "no-listener" hypothesis was wrong; real cause was network-timing during move.
+3. Phase 6 `iot_audit_log.created_at` -- naming-convention error; column exists as `timestamp`.
+
+Pattern: audit over-confident on cause attribution. Future audits should separate "symptom observed" from "root cause hypothesis" and hold hypothesis loosely until verified. Also: check `activating (auto-restart)` state not just `failed`.
+
+### Day 68 CLOSED
+
+6 audit YELLOWs -> all disposed: 4 closed via fix/retire, 1 false-positive, 1 skipped-by-Sloan, 1 deferred-by-Sloan.
+
+### Day 69+ queue
+
+- `phase-4-sanitizer` rebase against updated main before resuming step 6/12 (`/chat/private` handler refactor)
+- Google Calendar event 2026-05-24: open event once, add "1 day prior" + "1 hour prior" reminders manually (MCP limitation)
+- tool-smoke-test memory_save script logic (skip-disabled-tools handling) -- deferred from YELLOW #1
+- Future audit methodology doc: symptom vs. hypothesis, `activating` state check
