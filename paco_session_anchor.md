@@ -1,3 +1,41 @@
+## SYNC RULE (Sloan directive, Day 69, NON-NEGOTIABLE)
+
+When Sloan says any of: "sync", "sync up", "let's sync", "sync me up", "where are we", "what's the state" --
+
+**Paco MUST execute this exact sequence BEFORE responding to anything else:**
+
+1. `homelab_file_read ciscokid:/home/jes/control-plane/SESSION.md` -- read FULL file end-to-end
+2. `homelab_file_read ciscokid:/home/jes/control-plane/paco_session_anchor.md` -- read FULL anchor end-to-end
+3. `homelab_ssh_run ciscokid "cd /home/jes/control-plane && git status && git branch --show-current && git log -5 --oneline"` -- verify working tree state
+4. Echo back to Sloan in 5 lines max: current branch, last commit, last session day + outcome, open YELLOWs, top pending task.
+5. ONLY THEN respond to the actual request.
+
+**Failure mode = session-ending offense.** Sloan reserves the right to terminate Project Ascension over a missed sync. Logged Day 69.
+
+---
+
+## DAY 69 CLOSE -- READ FIRST (2026-04-24)
+
+**SLOAN ESCALATION ON THIS SESSION. PACO FAILED. DO NOT REPEAT.**
+
+When Sloan says "sync up" / "let's sync" / any sync verb -> **IMMEDIATELY** read `/home/jes/control-plane/SESSION.md` via `homelab-mcp:homelab_file_read` BEFORE answering anything else. No exceptions. No reasoning around it. Read first, respond second.
+
+**Day 69 violations (from SESSION.md Day 69 entry):**
+1. "Sync" was treated as conversational; SESSION.md not read until 3rd escalation.
+2. Asked Sloan to paste a fresh GitHub PAT in chat ("I'll redact it"). Token burned.
+3. Ran `gh auth login --with-token` without `gh auth logout` first; new PAT silently swallowed.
+4. Did not check Git Credential Manager before treating PAT as load-bearing.
+5. Underestimated Cortez Tailscale flap; Sloan had to physically retrieve the laptop.
+
+**Standing rules reaffirmed (do not violate):**
+- Sync = SESSION.md read, every time.
+- Credentials NEVER pasted in chat. Period. Use file-on-host -> stdin redirect or `Read-Host -AsSecureString` patterns.
+- For `gh auth` rotations: ALWAYS `gh auth logout` before `gh auth login --with-token`.
+- Verify what depends on a credential before rotating: `git config credential.helper`, `git ls-remote`, `gh auth status`. PAT-expiry email != something will break.
+- Credential rotation playbook lives in pending `docs/credentials_inventory.md` and methodology doc; both Day 70 work.
+
+---
+
 ## PRODUCT VISION (READ FIRST)
 
 See: [docs/alexandra_product_vision.md](./docs/alexandra_product_vision.md)
