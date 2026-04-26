@@ -1,7 +1,7 @@
 # B2b -- Logical Replication CiscoKid -> Beast
 
 **Owner:** Paco (spec) -> PD (execute)
-**Status:** DRAFT pending CEO ratification
+**Status:** RATIFIED 2026-04-26 (Day 72) by CEO. All four picks Option 1 (Paco recommendations) approved. Queued for PD execution.
 **Date:** 2026-04-26 (Day 72)
 **Origin:** P2 data plane, B2 split successor (B2a complete)
 **Predecessors:**
