@@ -458,3 +458,141 @@ The only place `cortez_AI_Operator` actually lived was the `gh` CLI keyring. Git
 ### Resume anchor (paste-ready)
 
 Day 69 closed on Paco discipline failure during token rotation. Tokens disposed: alexandra2 deleted, cortez_AI_Operator (old) deleted, cortez_AI_Operator (new) generated but unused (Cortez auths via GCM, not gh CLI). Cortez <-> GitHub verified working. Working tree on `main`. `phase-4-sanitizer` branch ahead 2 commits, untouched since Day 67. No commits this session. **Open Day 70: read SESSION.md before responding.**
+
+## 2026-04-25 -- Day 70 -- Santigrey Enterprises founding (Paco)
+
+**Session type:** Strategic / org design. No code changes. No deploys. No commits.
+
+### Outcome
+
+**Santigrey Enterprises org chart locked at v0.4.** Three-department structure with two CEO-direct functions and one platform substrate.
+
+```
+              CEO -- James Sloan
+                       |
+              COO -- Paco
+                       |
+     +----------------+----------------+
+     v                v                v
+Engineering         L&D          Operations
+(Paco Duece)      (Axiom)         (Atlas, to build)
+
+Platform: Alexandra (substrate, all departments run on her)
+CEO-direct: Brand & Market | Family Office
+```
+
+**Strategic frame established:** Santigrey is internal-only. The product is Sloan. The enterprise exists to demonstrate Sloan's capability to an eventual employer. Every seat serves either internal automation (cost center) or Brand & Market (the only outward-facing function, owned by CEO directly). Alexandra is the flagship demo, not a product to sell.
+
+**Deliverable:** `CHARTERS_v0.1.md` drafted and saved to iCloud at `~/Library/Mobile Documents/com~apple~CloudDocs/AI/Santigrey/CHARTERS_v0.1.md` (164 lines). Contains:
+- Mission/Owns/Decides/Escalates/Measured/Reports for all six seats (CEO, COO, Engineering, L&D, Operations, Brand & Market)
+- Platform charter for Alexandra
+- Deferred items list (Family Office, sub-agents, SOPs, Atlas build spec, shared-state layer, B&M quarterly plan)
+
+### Discipline notes (Paco self-flag, do not soften)
+
+This session repeated the Day 69 pattern early before Sloan corrected it. Three claims made before reading source:
+1. Asserted Claude in Chrome could not access existing browser tabs without verifying actual tool surface.
+2. Asserted Alexandra was "disqualified by paid API rule" for the capstone without checking PRIVATE_MODEL config. She is not -- Qwen 2.5 72B is primary, Anthropic is fallback only and explicitly disabled in persona mode. Sloan flagged. Verified via grep on orchestrator.
+3. Multiple times throughout, drifted into capstone proposal generation when Sloan's stated thread was "unification, structure, order." Sloan corrected each time.
+
+**Pattern (for methodology doc):** Adaptive thinking budget went into proposal generation instead of source verification. The standing rule -- READ SESSION.md AND SOURCE FIRST, claim second -- needs to be the first thinking step every turn, not an afterthought.
+
+### State at close
+
+- No code changes. No commits. No deploys.
+- One new artifact: `CHARTERS_v0.1.md` in iCloud.
+- No infrastructure touched.
+- Cortez `cortez_AI_Operator` PAT (Day 69 carryover) still unused on GitHub.
+- All Day 69 carryovers (phase-4-sanitizer rebase, calendar reminder, methodology docs) still pending.
+
+### Next session entry points (priority)
+
+1. **READ SESSION.md FIRST.** Day 69 rule still standing. Apply on first message of next session.
+2. CEO reviews CHARTERS_v0.1.md, marks edits, ratifies or sends back for revision.
+3. After ratification: pick next charter-pass item. Recommended order: shared-state layer architecture (foundational), then Atlas build spec, then sub-agent definitions, then inter-department SOPs.
+4. Capstone proposal sequencing: Per Scholas instructor meeting Monday 2026-04-27. Lane decision open (Path A: Alexandra-derived; Path B: rubric-suggested; Path C: both as instructor options).
+5. Day 69 carryovers still pending: phase-4-sanitizer rebase + step 6/12; methodology doc; credentials inventory; calendar reminder 2026-05-24.
+
+### Resume anchor (paste-ready)
+
+Day 70 closed. Santigrey Enterprises org chart v0.4 locked. CHARTERS_v0.1.md drafted, awaiting CEO review at `~/Library/Mobile Documents/com~apple~CloudDocs/AI/Santigrey/CHARTERS_v0.1.md`. Strategic frame: internal venture, Sloan-as-product, Alexandra-as-flagship-demo. Three departments (Engineering/L&D/Ops), two CEO-direct functions (Brand & Market, Family Office). Atlas seat exists on chart but agent not yet built -- first Goliath-native owned agent, deferred until charter ratification. Capstone lane decision still open before Monday instructor meeting. **Open Day 71: read SESSION.md, then ask CEO whether charter review or capstone lane is next.**
+
+## 2026-04-25 PM -- Day 70 continuation -- Hardware audit + MCP data plane diagnosis (Paco)
+
+**Session type:** Strategic / hardware audit / architectural diagnosis. No code changes. No deploys. No commits before this entry.
+
+### Outcome
+
+**Hardware org chart drafted (CAPACITY_v1.0, DRAFT pending CEO ratification).** Mapped every node in the fleet to a primary role under the Santigrey org. Materially revises the Atlas charter -- Atlas now lives on Beast, not Goliath. Saved to iCloud at `~/Library/Mobile Documents/com~apple~CloudDocs/AI/Santigrey/CAPACITY_v1.0.md`.
+
+**Inter-node communications restrictions diagnosed.** The MCP-over-SSH fabric (mcp_server.py) is a control plane only, not a data plane. Hard limits identified in code, file ground truth confirmed.
+
+**D1 task spec drafted and CEO-approved.** First atomic step in the data plane fix sequence (D -> A -> B -> C-maybe -> E-deferred). To be executed by Paco Duece (Cowork). Spec saved to iCloud at `~/Library/Mobile Documents/com~apple~CloudDocs/AI/Santigrey/tasks/D1_lift_mcp_input_limits.md`.
+
+### Hardware findings (verified live)
+
+| Node | Arch | Cores | RAM | Disk | Active LAN | Idle high-speed ports |
+|---|---|---|---|---|---|---|
+| CiscoKid | x86_64 | 24 | 62 GB | 2.5 TB | 1 GbE | 9 ports DOWN (likely 10 GbE+) |
+| Beast | x86_64 Xeon Silver 4110 | 32 | 252 GB | 4.4 TB | 1 GbE | 5 ports DOWN (incl. enp59s0f0/f1, likely Mellanox 10/25 GbE) |
+| Goliath | aarch64 GB10 Blackwell | 20 | 121 GB unified | 1.8 TB | 1 GbE | **4x ConnectX-7 200 GbE ports DOWN** |
+| SlimJim | x86_64 | 12 | 30 GB | 271 GB | 1 GbE | 3 ports DOWN |
+| Mac mini | arm64 M4 | 10 | 24 GB | 460 GB | **Wi-Fi (en0 wired inactive)** | All wired ports inactive |
+| KaliPi | aarch64 | 4 | 8 GB | 59 GB | (Tailscale) | n/a |
+| Cortez | (offline 1d) | -- | -- | -- | unreachable | flapping issue per Day 69 |
+| Pi3 | (registered, not probed) | ? | ? | ? | ? | not in MCP allowlist |
+
+**Tailscale topology:** Mac mini direct, JesAir direct, Cortez offline 1d, iPhone offline 1d. All other major nodes on tailnet, direct connections.
+
+**iperf3 not installed anywhere** -- no actual throughput measured tonight, only theoretical link speeds.
+
+### MCP fabric diagnosis (verified in code)
+
+`/home/jes/control-plane/mcp_server.py` (298 lines, 12 tools). Hardcoded restrictions identified:
+
+- Line 65: `homelab_ssh_run` command max_length=2000
+- Line 66: `homelab_ssh_run` timeout max=120s
+- Line 70: `homelab_memory_search` query max_length=2000
+- Line 75: `homelab_memory_store` content max_length=2000
+- Line 53: `ssh_run` uses `subprocess.run(..., capture_output=True, text=True)` -- buffers everything in memory before return; this is the source of the ~1MB practical response cap.
+
+**Tools that DO NOT exist:** file write, file transfer between nodes, streaming output, bulk DB ops, binary blob transfer, append-to-file primitive.
+
+### Five-path data plane plan (CEO-approved sequence)
+
+1. **D first** -- expand mcp_server.py tool surface (lift limits, add file_write, file_transfer, streaming)
+2. **A in parallel** -- discipline shift: rsync/HTTP/native replication for bulk; MCP for control only
+3. **B next** -- MinIO on Beast + Postgres logical replication (proper data plane)
+4. **C only if 1 GbE saturates** -- cable up idle high-speed ports (Goliath ConnectX-7, Beast Mellanox, CiscoKid 10 GbE)
+5. **E deferred** -- replace MCP-over-SSH with MCP-over-HTTP-API; revisit in a quarter
+
+### Charter revision (pending CEO ratification)
+
+**Atlas now lives on Beast, not Goliath.** Reason: Beast has more general compute, more RAM, more disk, can run multiple parallel workloads. Goliath is a specialized inference accelerator and should stay focused. Atlas calls Goliath for big-model reasoning when needed.
+
+### D1 task -- approved, queued for Paco Duece
+
+**Scope:** Lift four input-validation limits in `mcp_server.py`. Nothing else.
+- Line 65: max_length 2000 -> 100000
+- Line 66: le 120 -> le 1800
+- Line 70: max_length 2000 -> 100000
+- Line 75: max_length 2000 -> 100000
+
+Followed by Python AST parse check, systemd service restart, MCP endpoint health check, rollback procedure included.
+
+**Risk:** low. MCP fabric will bounce briefly during restart -- this Paco session may lose homelab tools for seconds.
+
+**Verification gate after PD reports done:** Paco sends a >2000-char test command through `homelab_ssh_run` to prove the limit is lifted and path still works. If pass, D1 is closed. Then we discuss D2 (add `homelab_file_write` tool).
+
+### State at close
+
+- No code changes this segment. No commits.
+- Three new artifacts in iCloud (DRAFT pending CEO ratification): `CAPACITY_v1.0.md`, `tasks/D1_lift_mcp_input_limits.md`, updated `paco_session_anchor.txt`.
+- D1 ready to paste into Cowork.
+- All Day 70 morning carryovers (CHARTERS_v0.1 review, capstone lane decision) still pending.
+- All Day 69 carryovers still pending.
+
+### Open Day 70 PM next entry
+
+Resume on first message of next session: **READ SESSION.md FIRST, including this evening continuation.** Then check whether PD has run D1 (ask CEO) and proceed to D1 verification + D2 spec, or whatever the CEO's chosen direction is.
+
