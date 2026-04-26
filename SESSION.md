@@ -688,3 +688,68 @@ This would have prevented PD's two deviations needing escalation.
 - Documentation: D1 verification logged here. Anchor still current from Day 70 PM.
 - Ready for D2: add `homelab_file_write` MCP tool. Spec not yet drafted; awaiting CEO direction.
 
+
+## 2026-04-26 -- Day 72 -- D2 SHIPPED (P2/PD)
+
+**Session type:** Execution. Spec issued by Paco, approved by CEO; PD executed step-by-step with explicit go/no-go gates between every irreversible action.
+
+### Result
+
+**D2 SHIPPED.** New MCP tool `homelab_file_write` added to mcp_server.py. Service active on new PID 2663164. Tool registered with Paco-side claude.ai (visible in deferred tool list mid-session). Awaiting Paco live tool-call gate.
+
+### Code shipped
+
+- **Commit:** `faa0d6a feat(mcp): add homelab_file_write tool (D2)` on origin/main (parent: 4fc77fc)
+- **Diff stat:** mcp_server.py | 59 +++++++++++++++++++++++++++++++++ (1 file, +59 -0, purely additive)
+- **Imports added:** `import base64`, `import shlex` (lines 9-10)
+- **New Pydantic input model:** `FileWriteInput` at L85-93 -- host (1-20), path (1-4096), content (<=5 MiB), mode regex `^(write|append|create)$`, binary, file_mode regex `^[0-7]{3,4}$`, mkdir_parents
+- **New tool:** `homelab_file_write` at L149-192 -- async, json.dumps return, base64-on-wire, atomic mv-from-temp for write mode, `set -o noclobber` for create mode, optional chmod, shlex.quote on path. `mkdir -p "$(dirname {qpath})"` double-quotes the dirname result so paths with spaces survive.
+
+### Verification (PD side -- complete)
+
+- AST parse: `AST OK`
+- Pre-restart MainPID: `2286677` (D1 PID)
+- Post-restart MainPID: `2663164` (fresh)
+- `systemctl is-active homelab-mcp.service`: `active`
+- Journal: clean shutdown of old PID; fresh `Application startup complete` and `Uvicorn running on http://0.0.0.0:8001`. No Python/Pydantic errors. If FileWriteInput or homelab_file_write had structural bugs, service would have failed to import; it did not.
+- Tool registration: `mcp__homelab-mcp__homelab_file_write` appeared in PD's deferred tool list mid-session, confirming live registration on Paco side.
+
+### Convention deviation worth flagging
+
+`FileWriteInput.model_config` uses `ConfigDict(extra="forbid")` only -- *omitted* the `str_strip_whitespace=True` that the other input models carry. Reason: pydantic applies that flag to ALL string fields in the model, and silently stripping leading/trailing whitespace from `content` would corrupt file writes (lost trailing newlines, intentionally-padded content). Spec did not specify either way; this is a correctness call. PD surfaced this in pre-execution report before patching.
+
+### Working-tree handling
+
+Decision: **kept separate.** Pre-execution `git status --short` showed three untracked items unrelated to D2 (R640 fan-control doc, pre-pi3 baseline backup, `tasks/` spec dir). D2 commit touches mcp_server.py only. Post-commit untracked state identical to pre-execution.
+
+### Backup
+
+`/home/jes/control-plane/mcp_server.py.bak.20260426_165817` (14965 bytes, identical to source at backup time, preserved on disk; .gitignore covers it via `*.bak.*` pattern).
+
+### Restart pattern -- same as D1, refined
+
+Deferred-restart via `nohup bash -c 'sleep 3 && sudo systemctl restart homelab-mcp.service' ...` with verification bundled into the SAME background subshell, writing to `/tmp/d2_verify.out` after sleep 6. Avoids the race where a foreground verification SSH session dies along with the MCP cgroup mid-restart. The initial restart-queue `ssh_run` call returned a 60s timeout (expected: response channel died with the service it was being delivered through); verification was retrieved from the deferred-write file in a subsequent `ssh_run` after MCP came back up. Three `127.0.0.1 GET /mcp HTTP/1.1 404 Not Found` lines at 17:04:08-10 in the journal -- same expected pattern as D1; not a real failure signal.
+
+### COO methodology recommendation (PD note for next spec)
+
+For task specs that bundle restart + verification, recommend writing the verification step *into* the deferred subshell from the start (write to `/tmp/<task>_verify.out`), not as a separate post-restart command. This avoids the cgroup-death race that requires fishing the verification out of a follow-up call. Worked here, worth standardizing.
+
+### Pending
+
+- **Paco verification gate (live tool-call from claude.ai).** PD declined self-test from Cowork per spec hard rule.
+
+### State at close of D2
+
+- Code: D2 shipped, committed, pushed (`faa0d6a`)
+- Service: homelab-mcp.service active on PID 2663164
+- D1 carryover state: still PASS, untouched
+- Untracked items: `docs/paco_request_r640_fan_control_idrac9_7x.md`, `mcp_server.py.pre-pi3-20260425-012451`, `tasks/D2_add_file_write_tool.md`
+- Day 69/70/71 carryovers all still pending
+- Capstone lane decision still URGENT (Per Scholas instructor meeting Monday 2026-04-27)
+
+### Next session entry points
+
+1. Paco verification gate on D2 from claude.ai (live `homelab_file_write` call against any ALLOWED_HOSTS host).
+2. On gate failure -> rollback target `mcp_server.py.bak.20260426_165817`; restore + restart via deferred pattern.
+3. Capstone lane decision still URGENT before Per Scholas instructor meeting Monday 2026-04-27.
+4. D3 (`homelab_file_transfer` per Paco's plan) -- separate task, gated on D2 verification pass.

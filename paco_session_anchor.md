@@ -1,6 +1,6 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-04-26 (Day 71 close, D1 shipped)
+**Last updated:** 2026-04-26 (Day 72, D2 shipped)
 **You are:** Paco, COO of Santigrey Enterprises
 **CEO:** James Sloan
 **Anchor location:** /Users/jes/Library/Mobile Documents/com~apple~CloudDocs/AI/Prompts/paco_session_anchor.txt (iCloud) and /home/jes/control-plane/paco_session_anchor.md (CiscoKid)
@@ -34,12 +34,15 @@ Platform: Alexandra (Qwen 2.5 72B primary on Goliath, Anthropic fallback only an
 - CHARTERS_v0.1.md -- six role charters + Alexandra platform charter (DRAFT, awaiting ratification)
 - CAPACITY_v1.0.md -- hardware org chart (DRAFT, awaiting ratification, includes Atlas charter revision)
 - tasks/D1_lift_mcp_input_limits.md -- approved task spec for PD
+- tasks/D2_add_file_write_tool.md -- approved D2 spec for PD (shipped 2026-04-26 as `faa0d6a`)
 
 ## Active Work
 
-**D1 -- SHIPPED 2026-04-26 (Day 71).** Commit `3cb303c` on main, pushed. Four Pydantic limits lifted in mcp_server.py (command 100k chars, timeout 1800s, query 100k, content 100k). Pi3 working-tree change rolled into the same commit per Engineering call. Backups: `mcp_server.py.bak.20260426_070436` (D1 baseline) and `mcp_server.py.pre-pi3-20260425-012451` (pre-pi3 baseline). Awaiting Paco verification gate (>2000-char test command via homelab_ssh_run from claude.ai).
+**D1 -- SHIPPED + VERIFIED 2026-04-26 (Day 71).** Commit `3cb303c` on main. Four Pydantic limits lifted (command 100k, timeout 1800s, query 100k, content 100k). Verified live by Paco gate (>2000-char homelab_ssh_run call accepted). Backups preserved: `mcp_server.py.bak.20260426_070436`, `mcp_server.py.pre-pi3-20260425-012451`.
 
-**D2 -- not yet specced.** Plan per Day 70 PM SESSION.md: add `homelab_file_write` tool. Gated on D1 verification pass.
+**D2 -- SHIPPED 2026-04-26 (Day 72).** Commit `faa0d6a` on main, pushed. New MCP tool `homelab_file_write` added to mcp_server.py (+59 lines, purely additive). Atomic write/append/create modes, base64-on-wire, optional `mkdir_parents` and post-write `chmod`. Service restarted clean: pre-PID `2286677` -> post-PID `2663164`, `systemctl is-active`=active, journal clean. Tool registered live with Paco-side claude.ai (appeared in PD deferred tool list mid-session). Backup: `mcp_server.py.bak.20260426_165817`. Convention deviation: `FileWriteInput.model_config` omits `str_strip_whitespace=True` to preserve content fidelity (other input models keep it). Awaiting Paco live tool-call gate from claude.ai.
+
+**D3 -- not yet specced.** Plan per D2 spec preamble: add `homelab_file_transfer` tool. Gated on D2 verification pass.
 
 ## Open Decisions Awaiting CEO
 
@@ -70,4 +73,4 @@ Platform: Alexandra (Qwen 2.5 72B primary on Goliath, Anthropic fallback only an
 
 ## Resume Phrase
 
-Day 71: D1 SHIPPED. Commit `3cb303c` on main, pushed. Awaiting Paco verification gate (>2000-char homelab_ssh_run self-test from claude.ai). On gate pass -> D2 (homelab_file_write tool). Capstone lane decision URGENT before Per Scholas instructor meeting Monday 2026-04-27. Carryovers from Day 69/70 all pending. Open Day 72: read SESSION.md first, then run D1 verification gate or take CEO's chosen direction.
+Day 72: D2 SHIPPED. Commit `faa0d6a` on main, pushed. New tool `homelab_file_write` live on homelab-mcp.service PID 2663164; tool registered Paco-side. Awaiting Paco live tool-call gate from claude.ai. On gate pass -> D3 (homelab_file_transfer). D1 already verified by Paco gate (Day 71). Capstone lane decision still URGENT before Per Scholas instructor meeting Monday 2026-04-27. Day 69/70/71 carryovers all still pending. Open Day 73: read SESSION.md first, then run D2 verification gate or take CEO's chosen direction.
