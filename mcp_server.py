@@ -6,6 +6,8 @@ Runs on CiscoKid (192.168.1.10), port 8001.
 
 import json
 import subprocess
+import base64
+import shlex
 import uuid
 from typing import Optional
 
@@ -80,6 +82,17 @@ class FileReadInput(BaseModel):
     host: str = Field(..., description="Target host name")
     path: str = Field(..., description="Absolute file path", min_length=1)
 
+class FileWriteInput(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    host: str = Field(..., description="Target host name", min_length=1, max_length=20)
+    path: str = Field(..., description="Absolute file path on remote host", min_length=1, max_length=4096)
+    content: str = Field(..., description="File content (text). For binary, base64-encode and pass with binary=True.", max_length=5242880)
+    mode: Optional[str] = Field(default="write", description="write (overwrite, atomic), append, or create (fail-if-exists)", pattern="^(write|append|create)$")
+    binary: Optional[bool] = Field(default=False, description="If True, content is already base64-encoded and will be decoded on the remote side")
+    file_mode: Optional[str] = Field(default=None, description="Optional chmod after write (e.g. '0644'). None = system default", pattern="^[0-7]{3,4}$")
+    mkdir_parents: Optional[bool] = Field(default=True, description="Create parent directories if missing")
+
+
 @mcp.tool(name="homelab_ssh_run", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_ssh_run(params: SSHRunInput) -> str:
     """Execute a shell command on a homelab node via SSH. Allowed hosts: beast, ciscokid, slimjim, kalipi, macmini, cortez, goliath."""
@@ -132,6 +145,52 @@ async def homelab_file_read(params: FileReadInput) -> str:
         return json.dumps({"host": params.host, "path": params.path, "content": result["stdout"]}, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
+
+@mcp.tool(name="homelab_file_write", annotations={"readOnlyHint": False, "destructiveHint": False})
+async def homelab_file_write(params: FileWriteInput) -> str:
+    """Write a file to any homelab node via SSH. Atomic write (default), append, or create-only. Content is base64-on-wire to avoid shell-escape issues."""
+    if params.host not in ALLOWED_HOSTS:
+        return json.dumps({"ok": False, "host": params.host, "path": params.path,
+                           "bytes_written": 0, "mode_used": params.mode,
+                           "error": f"host '{params.host}' not in ALLOWED_HOSTS"})
+    try:
+        if params.binary:
+            b64 = params.content
+            raw_bytes = len(base64.b64decode(params.content))
+        else:
+            raw = params.content.encode("utf-8")
+            b64 = base64.b64encode(raw).decode("ascii")
+            raw_bytes = len(raw)
+        qpath = shlex.quote(params.path)
+        qb64 = shlex.quote(b64)
+        parts = []
+        if params.mkdir_parents:
+            parts.append(f'mkdir -p "$(dirname {qpath})"')
+        if params.mode == "write":
+            tmp = f"{qpath}.tmp.$$"
+            parts.append(f"echo {qb64} | base64 -d > {tmp} && mv {tmp} {qpath}")
+        elif params.mode == "append":
+            parts.append(f"echo {qb64} | base64 -d >> {qpath}")
+        elif params.mode == "create":
+            parts.append(f"set -o noclobber && echo {qb64} | base64 -d > {qpath}")
+        if params.file_mode:
+            parts.append(f"chmod {params.file_mode} {qpath}")
+        remote_cmd = " && ".join(parts)
+        result = ssh_run(params.host, remote_cmd, timeout=60)
+        ok = (result.get("exit_code") == 0)
+        return json.dumps({"ok": ok, "host": params.host, "path": params.path,
+                           "bytes_written": raw_bytes if ok else 0,
+                           "mode_used": params.mode,
+                           "error": None if ok else (result.get("stderr") or "unknown error")}, indent=2)
+    except subprocess.TimeoutExpired:
+        return json.dumps({"ok": False, "host": params.host, "path": params.path,
+                           "bytes_written": 0, "mode_used": params.mode,
+                           "error": "ssh timeout"})
+    except Exception as e:
+        return json.dumps({"ok": False, "host": params.host, "path": params.path,
+                           "bytes_written": 0, "mode_used": params.mode,
+                           "error": str(e)})
+
 
 @mcp.tool(name="homelab_agent_status", annotations={"readOnlyHint": True, "destructiveHint": False})
 async def homelab_agent_status() -> str:
