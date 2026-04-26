@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** Primary on CiscoKid `/home/jes/control-plane/CHECKLIST.md` + GitHub origin/main (canonical via git push). iCloud `/AI/Santigrey/CHECKLIST.md` is a CEO-convenience read-only copy, no longer Paco-managed (canon-flip 2026-04-26 Day 72).
-**Last updated:** 2026-04-26 evening (Day 72) -- B2a closed; CAPACITY_v1.1 + iCloud canon-flip ratified
+**Last updated:** 2026-04-26 evening (Day 72) -- B2a closed; CAPACITY_v1.1 + CHARTERS_v0.1 + iCloud canon-flip all ratified
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -42,7 +42,7 @@
 
 ## P4 -- ORG CHARTERS
 
-- [ ] **CHARTERS_v0.1.md ratification** -- six role charters + Alexandra platform charter. Atlas-on-Beast revision must land in canon. **Owner: CEO ratify.**
+- [x] **CHARTERS_v0.1.md ratification** -- six role charters + Alexandra platform charter. RATIFIED 2026-04-26 Day 72 by CEO. Atlas-on-Beast revision applied at ratification per CAPACITY_v1.1 (Atlas builds on Beast for Postgres replica + MinIO + embeddings + tool execution; inference offloaded to Goliath Qwen 2.5 72B over LAN). Pulled from iCloud to CiscoKid as part of iCloud canon-flip; now canonical at `/home/jes/control-plane/CHARTERS_v0.1.md` on CiscoKid + GitHub. 11074 bytes, 7 charters + Platform charter + Ratification audit section.
 - [ ] **PD title communication** -- announce Head of Engineering scope to PD. Deferred until charter ratification. **Owner: CEO + Paco.**
 - [ ] **Family Office charter** -- explicitly drafted or explicitly kept informal. **Owner: CEO direction.**
 - [ ] **Sub-agent definitions** inside each department (Mr Robot, Mercury, future agents). **Owner: Paco draft.**
@@ -86,6 +86,7 @@
 - [x] **2026-04-26 Day 72** -- B2a SHIPPED by PD (ship report md5 `b9d862fcebbe78317a0081d052121294`, 220 lines, on Beast at `/home/jes/postgres-beast/B2a_ship_report.md`). All 7 acceptance gates PASS. Paco independent verification gate from fresh shell: 7/7 PASS, file integrity preserved (compose.yaml `a9a7404d...`, init SQL `899c6932...`), container ID `61acfaf455d8...` running image SHA `8ed3192326bb...`. Two Paco-authorized deviations documented in ship report: (1) Compose v5.1.3 plugin bootstrap (Beast docker.io lacks v2 plugin; sha256 verified against Docker upstream); (2) Spec Step 6 `sleep 15` replaced with health-poll loop (P6 lesson: container-up steps should poll until healthy with explicit timeout cap, not sleep for guessed duration). PG 16.13 + pgvector 0.8.2 running on Beast at 127.0.0.1:5432, controlplane DB owned by admin (Superuser+Replication=t), pgdata 48.21MB. Three P6 methodology lessons captured. B2a CLOSED. B2b (logical replication CiscoKid->Beast) drafting unblocks; Atlas-on-Beast (P3) hard prereq satisfied. Task pipeline `6d5102a5-93e8-4972-846f-9acbabe2b795` ready for CEO mark-done. Doc chain: 10 B2a docs total (2 paco_request, 4 paco_review, 4 paco_response in `/docs/`; ship report on Beast).
 - [x] **2026-04-26 Day 72** -- CAPACITY_v1.1 RATIFIED by CEO as-is. Hardware org chart canon-locked. P3 hardware redistribution unblocks (SlimJim Prometheus+Grafana, Beast=Atlas home, Pi3/JesAir/Cortez role evaluations).
 - [x] **2026-04-26 Day 72** -- iCloud canon-flip RATIFIED by CEO. Standing convention now: CiscoKid + GitHub origin/main are canonical for all Paco-managed artifacts (CHECKLIST, STANDING_RULES, CAPACITY, CHARTERS, /tasks specs, /docs correspondence). iCloud `/AI/Santigrey/` becomes a CEO-convenience read-only copy not maintained by Paco. Macmini SSH pipe is no longer treated as data-sync infrastructure (Rule 1 corollary). Stale iCloud copies will be allowed to drift; CEO can manually pull from GitHub when desired. CHECKLIST + STANDING_RULES Location/Mirror lines updated. Memory edit pending.
+- [x] **2026-04-26 Day 72** -- CHARTERS_v0.1 RATIFIED by CEO with Atlas-on-Beast revision applied (per CAPACITY_v1.1 ratification: Atlas home = Beast, inference = Goliath). Pulled from iCloud one final time as part of canon-flip transition; now canonical on CiscoKid + GitHub. Build status revision: Atlas to be built on Beast (Postgres replica + MinIO + embeddings + tool execution), inference offloaded to Goliath (Qwen 2.5 72B over LAN), depends on B2b + B1 landing first. Six P4 deferred items remain (Family Office charter, sub-agent definitions, inter-dept SOPs, Atlas build spec, shared-state architecture, Brand & Market quarterly plan).
 
 ---
 
