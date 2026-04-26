@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** iCloud `/AI/Santigrey/CHECKLIST.md` (primary), mirrored to CiscoKid `/home/jes/control-plane/CHECKLIST.md`
-**Last updated:** 2026-04-26 evening (Day 72) -- B2 split into B2a + B2b post-probe; B2a drafted
+**Last updated:** 2026-04-26 evening (Day 72) -- B2a ratified, queued for PD
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -25,7 +25,7 @@
 - [ ] **D4** -- streaming output support (move off `subprocess.run capture_output=True`). **Owner: Paco spec, PD execute.**
 - [x] **A** -- discipline shift: rsync/HTTP/native replication for bulk; MCP for control only. RATIFIED by CEO 2026-04-26 as Rule 1 in `docs/STANDING_RULES.md` (3989 bytes, hash 141f04c087c78d2d8b1e02ffa8305cac, 68 lines). Standing rule now effective; all six plan-level decisions verified and approved as-is.
 - [ ] **B1** -- MinIO on Beast (S3-compatible object store). **Owner: Paco spec, PD execute.**
-- [~] **B2a** -- install PostgreSQL on Beast (Docker pgvector/pgvector:pg16, greenfield, no CiscoKid dependency at install time). DRAFTED 2026-04-26 in `tasks/B2a_install_postgres_beast.md`. **Owner: Paco spec, PD execute. Awaiting CEO ratification.**
+- [~] **B2a** -- install PostgreSQL on Beast (Docker pgvector/pgvector:pg16, greenfield, no CiscoKid dependency at install time). RATIFIED 2026-04-26 by CEO; queued for PD via Cowork. Spec at `tasks/B2a_install_postgres_beast.md` (hash 40fc12370eb50bafe0e70f3741feea66). **Owner: Paco spec, PD execute. Awaiting PD ship report.**
 - [ ] **B2b** -- logical replication CiscoKid -> Beast (WAL change + port rebind + pg_hba + UFW + schema bootstrap + publication + subscription + slot). Depends on B2a complete + Q4-Q7 picks already approved. **Owner: Paco spec, PD execute.**
 - [-] **C** -- cable up idle high-speed ports. Defer until 1 GbE actually saturates.
 - [-] **E** -- replace MCP-over-SSH with MCP-over-HTTP-API. Defer one quarter.
@@ -82,6 +82,7 @@
 - [x] **2026-04-26 Day 72** -- A drafted as Rule 1 in new canon doc `docs/STANDING_RULES.md` (3989 bytes, 68 lines, hash 141f04c087c78d2d8b1e02ffa8305cac). MCP-fabric-is-control-not-bulk principle codified with explicit in/out scope, transport routing rules, and violation handling. Awaiting CEO ratification.
 - [x] **2026-04-26 Day 72** -- A RATIFIED by CEO as-is (no rework). All six plan-level decisions verified retroactively (3 already-flagged + 3 surfaced for measure: new doc choice, storage location pattern, 1MB tool-output threshold). Rule 1 (MCP fabric is for control, not bulk data) effective immediately. P2 data plane advances to B2 next.
 - [x] **2026-04-26 Day 72** -- B2 shallow probe complete (commit `a23caf1`, 113-line investigation report). Q3 resolved -> split into B2a + B2b. Q4-Q7 ratified by CEO with Paco picks: Q4=C (public+agent_os, exclude mercury), Q5=A (Docker pgvector/pgvector:pg16), Q6=A (LAN rebind + layered ACLs), Q7=C (bundle WAL change into B2b). B2a spec drafted (6186 bytes, greenfield Postgres on Beast, no CiscoKid dependency at install time). Awaiting CEO ratification.
+- [x] **2026-04-26 Day 72** -- B2a spec RATIFIED by CEO as-is (no rework). Cowork prompt provided; queued for PD execution. Awaiting ship report at `/home/jes/postgres-beast/B2a_ship_report.md` on Beast.
 
 ---
 

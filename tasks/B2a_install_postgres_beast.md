@@ -1,7 +1,7 @@
 # B2a -- Install PostgreSQL on Beast
 
 **Owner:** Paco (spec) -> PD (execute)
-**Status:** DRAFT pending CEO ratification
+**Status:** RATIFIED 2026-04-26 (Day 72) by CEO. Queued for PD execution.
 **Date:** 2026-04-26 (Day 72)
 **Origin:** P2 data plane, B2 split per Q3 + probe outcome
 **Predecessor:** B2 investigation (commit `a23caf1`, `tasks/B2_investigation.md`)
