@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** iCloud `/AI/Santigrey/CHECKLIST.md` (primary), mirrored to CiscoKid `/home/jes/control-plane/CHECKLIST.md`
-**Last updated:** 2026-04-26 mid-morning (Day 72)
+**Last updated:** 2026-04-26 late-morning (Day 72)
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -16,7 +16,7 @@
 
 - [x] D1 -- Lift four Pydantic input limits in `mcp_server.py` (PD shipped; Paco gate PASS). Code commit `3cb303c`, session commits `b43966e` + `1d9cbe8`.
 - [x] **CAPACITY_v1.1** -- DRAFT shipped 2026-04-26 AM. Three v1.0 errors corrected (phantom MCP migration removed, fictional iMessage/HomeKit bridges reclassified as future-conditional, Mac mini scope tightened). 133 lines, hash 1de8a2cc0f01cd7b32e3170bf2ab4e82. Awaiting CEO ratification.
-- [ ] **Mac mini scope lock** -- confirm principle "scope drives workflow, not reverse." Mac mini = Apple-bound infrastructure only + remains CEO's daily-driver workstation (separate concern). Today's verified Mac mini footprint: Claude Desktop / Cowork host, AgentOS Refresh AppleScript (900s cron), Tailscale, OpenSSH. No iMessage bridge, no HomeKit bridge, no MCP server termination. **Owner: CEO ratify.**
+- [x] **Mac mini scope lock** -- RATIFIED by CEO 2026-04-26. Principle locked: scope drives workflow, not reverse. Mac mini = Apple-bound infrastructure only + remains CEO daily-driver workstation (separate concern outside org chart). Footprint verified: Claude Desktop / Cowork host, AgentOS Refresh, Tailscale, OpenSSH. No iMessage/HomeKit bridges, no MCP termination.
 
 ## P2 -- DATA PLANE SEQUENCE (post-D1)
 
@@ -74,6 +74,7 @@
 - [x] **2026-04-26 Day 71** -- D1 SHIPPED by PD (commit `3cb303c`). Paco verification gate PASS.
 - [x] **2026-04-26 Day 72 AM** -- Mac mini footprint verified. MCP migration confirmed phantom (already on CiscoKid). Three v1.0 errors identified for v1.1 correction.
 - [x] **2026-04-26 Day 72** -- CAPACITY_v1.1.md drafted (133 lines, hash 1de8a2cc0f01cd7b32e3170bf2ab4e82). Three v1.0 errors corrected. Saved to iCloud + mirrored to CiscoKid. v1.0 retained as superseded backup.
+- [x] **2026-04-26 Day 72** -- Mac mini scope ratified. Principle locked: scope drives workflow, not reverse.
 
 ---
 
