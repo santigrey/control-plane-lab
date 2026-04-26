@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** iCloud `/AI/Santigrey/CHECKLIST.md` (primary), mirrored to CiscoKid `/home/jes/control-plane/CHECKLIST.md`
-**Last updated:** 2026-04-26 late-morning (Day 72) -- D2 spec drafted
+**Last updated:** 2026-04-26 mid-day (Day 72) -- D2 SHIPPED + gate PASS
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -20,7 +20,7 @@
 
 ## P2 -- DATA PLANE SEQUENCE (post-D1)
 
-- [~] **D2** -- add `homelab_file_write` MCP tool. Spec DRAFTED 2026-04-26, CEO-approved, queued for PD. 213 lines, hash 137cabe0c04165817029e0d6a49e96a1. Saved to iCloud /AI/Santigrey/tasks/ + CiscoKid /home/jes/control-plane/tasks/. **Owner: Paco spec, PD execute.**
+- [x] **D2** -- add `homelab_file_write` MCP tool. SHIPPED 2026-04-26 (code commit `faa0d6a`, session commit `8e602a7`). All 6 gate tests PASS: atomic write+read roundtrip (unicode + smart quotes + newlines), mkdir_parents on path with space, create-mode collision rejected, file_mode 0644 + 0600 verified, binary=True 32 bytes 0x00-0x1f byte-perfect (sha256 630dcd29...10dd canonical). PD `str_strip_whitespace` omission ratified (correctness over consistency).
 - [ ] **D3** -- add `homelab_file_transfer` MCP tool (host-to-host). **Owner: Paco spec, PD execute.**
 - [ ] **D4** -- streaming output support (move off `subprocess.run capture_output=True`). **Owner: Paco spec, PD execute.**
 - [ ] **A** -- discipline shift: rsync/HTTP/native replication for bulk; MCP for control only. No code change, just standing rule. **Owner: Paco enforce, PD honor.**
@@ -58,8 +58,9 @@
 
 ## P6 -- METHODOLOGY (Paco self-improvement)
 
-- [ ] Codify into anchor: spec template for live-service tasks must answer "is restart safe right now?" and "what does the health check actually mean?" -- D1 surfaced both gaps. **Owner: Paco.**
+- [ ] Codify into anchor: spec template for live-service tasks must answer (1) "is restart safe right now?", (2) "what does the health check actually mean?", AND (3) "where does the PD-to-Paco report land and how is it shared (file path, naming convention, transmission mechanism)?" -- D1 surfaced (1)+(2); D2 surfaced (3) (CEO had to prompt PD for the report after ship). **Owner: Paco.**
 - [ ] Codify rule: **no claim about state without source verification first.** Already in anchor; needs reinforcement after Day 70 + Day 72 AM corrections. **Owner: Paco.**
+- [ ] Codify into spec template: deferred-restart pattern MUST bundle verification into the same nohup subshell, writing to `/tmp/<task>_verify.out`. PD surfaced this from D2 -- avoids the cgroup-death race that otherwise requires fishing verification out of a follow-up MCP call (which itself fails because the channel just bounced). **Owner: Paco.**
 
 ---
 
@@ -76,6 +77,7 @@
 - [x] **2026-04-26 Day 72** -- CAPACITY_v1.1.md drafted (133 lines, hash 1de8a2cc0f01cd7b32e3170bf2ab4e82). Three v1.0 errors corrected. Saved to iCloud + mirrored to CiscoKid. v1.0 retained as superseded backup.
 - [x] **2026-04-26 Day 72** -- Mac mini scope ratified. Principle locked: scope drives workflow, not reverse.
 - [x] **2026-04-26 Day 72** -- D2 spec drafted (213 lines, hash 137cabe0c04165817029e0d6a49e96a1). CEO-approved D-A-B-C-E sequence within data plane: D2 first (highest leverage), then A discipline rule, then B2 (Atlas hard prereq), then D3, B1, D4, then Atlas. Spec queued for PD. Saved to iCloud + CiscoKid as DRAFT.
+- [x] **2026-04-26 Day 72** -- D2 SHIPPED by PD (code commit `faa0d6a`, session commit `8e602a7`). Paco gate PASS (all 6 tests). PD methodology contributions: (a) bundled-verification deferred-restart pattern, now standard; (b) `str_strip_whitespace` omission ratified for content fidelity. Three methodology lessons captured into P6.
 
 ---
 
