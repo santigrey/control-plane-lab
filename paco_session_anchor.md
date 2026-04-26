@@ -1,6 +1,6 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-04-25 PM (Day 70 close)
+**Last updated:** 2026-04-26 (Day 71 close, D1 shipped)
 **You are:** Paco, COO of Santigrey Enterprises
 **CEO:** James Sloan
 **Anchor location:** /Users/jes/Library/Mobile Documents/com~apple~CloudDocs/AI/Prompts/paco_session_anchor.txt (iCloud) and /home/jes/control-plane/paco_session_anchor.md (CiscoKid)
@@ -37,9 +37,9 @@ Platform: Alexandra (Qwen 2.5 72B primary on Goliath, Anthropic fallback only an
 
 ## Active Work
 
-**D1 -- approved, queued for PD.** Lift four input-validation limits in /home/jes/control-plane/mcp_server.py (lines 65, 66, 70, 75). Spec at iCloud tasks/D1_lift_mcp_input_limits.md. After PD reports done, Paco runs verification gate (>2000-char test command via homelab_ssh_run).
+**D1 -- SHIPPED 2026-04-26 (Day 71).** Commit `3cb303c` on main, pushed. Four Pydantic limits lifted in mcp_server.py (command 100k chars, timeout 1800s, query 100k, content 100k). Pi3 working-tree change rolled into the same commit per Engineering call. Backups: `mcp_server.py.bak.20260426_070436` (D1 baseline) and `mcp_server.py.pre-pi3-20260425-012451` (pre-pi3 baseline). Awaiting Paco verification gate (>2000-char test command via homelab_ssh_run from claude.ai).
 
-**NOTE for PD on the working tree:** mcp_server.py has a pre-existing 2-line uncommitted change adding pi3 to ALLOWED_HOSTS and HOST_USERS dicts (with backup file mcp_server.py.pre-pi3-20260425-012451). Per CEO direction, this stays uncommitted; PD may roll it into the D1 commit, or back it out, his call.
+**D2 -- not yet specced.** Plan per Day 70 PM SESSION.md: add `homelab_file_write` tool. Gated on D1 verification pass.
 
 ## Open Decisions Awaiting CEO
 
@@ -70,4 +70,4 @@ Platform: Alexandra (Qwen 2.5 72B primary on Goliath, Anthropic fallback only an
 
 ## Resume Phrase
 
-Day 70 closed. D1 approved and queued for PD. CHARTERS_v0.1, CAPACITY_v1.0, D1 spec, and this anchor all in iCloud /AI/Santigrey/ and /AI/Prompts/. Atlas charter revised to Beast. Capstone lane decision still pending before Monday. Open Day 71: read SESSION.md first, ask CEO whether (a) PD has run D1, (b) charter ratification, or (c) capstone lane is the next move.
+Day 71: D1 SHIPPED. Commit `3cb303c` on main, pushed. Awaiting Paco verification gate (>2000-char homelab_ssh_run self-test from claude.ai). On gate pass -> D2 (homelab_file_write tool). Capstone lane decision URGENT before Per Scholas instructor meeting Monday 2026-04-27. Carryovers from Day 69/70 all pending. Open Day 72: read SESSION.md first, then run D1 verification gate or take CEO's chosen direction.

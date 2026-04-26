@@ -596,3 +596,50 @@ Followed by Python AST parse check, systemd service restart, MCP endpoint health
 
 Resume on first message of next session: **READ SESSION.md FIRST, including this evening continuation.** Then check whether PD has run D1 (ask CEO) and proceed to D1 verification + D2 spec, or whatever the CEO's chosen direction is.
 
+
+
+## 2026-04-26 -- Day 71 -- D1 lift_mcp_input_limits SHIPPED (P2)
+
+**Session type:** Engineering execution. D1 spec from Paco. Single-task focused session.
+
+### Outcome
+
+**D1 -- SHIPPED.** Commit `3cb303c` on main, pushed (`a3e6ba5..3cb303c HEAD -> main`).
+
+Four Pydantic field-validator limits raised in `/home/jes/control-plane/mcp_server.py`:
+- L65 `SSHRunInput.command` max_length: 2000 -> 100000
+- L66 `SSHRunInput.timeout` le: 120 -> 1800
+- L70 `MemorySearchInput.query` max_length: 2000 -> 100000
+- L75 `MemoryStoreInput.content` max_length: 2000 -> 100000
+
+Pre-existing pi3 working-tree change (`ALLOWED_HOSTS["pi3"]="192.168.1.139"`, `HOST_USERS["pi3"]="sloanzj"`) rolled into the same commit per Engineering call. Pre-pi3 baseline preserved at `mcp_server.py.pre-pi3-20260425-012451`. D1 backup at `mcp_server.py.bak.20260426_070436` (14958 bytes).
+
+### Verification (P2 side -- complete)
+- AST parse on edited file: `AST OK`
+- `homelab-mcp.service` restarted via deferred-restart pattern, came back active on new PID 2286677
+- Live MCP fabric end-to-end: every `homelab_ssh_run` call post-restart succeeded; the request that wrote this entry is itself proof of path
+
+### Deviations from spec literal (CEO-approved before execution)
+
+1. **Deferred-restart instead of synchronous `sudo systemctl restart`.** Synchronous self-restart kills the response channel (the MCP service IS the channel). Backgrounded subshell with 3s sleep used instead; queue rc=0, response delivered cleanly, then bounce.
+
+2. **Step 8 curl probe inadequate for streamable-HTTP.** Spec command `curl -fsS https://sloan3.tail1216a3.ts.net:8443/mcp` returned HTTP 000 / 30s timeout. Sharper diagnostic (local 8001 GET, public HEAD, public POST initialize) all timed out at 5s. Cause: MCP streamable-HTTP holds the channel open for SSE delivery; plain HTTP probes hang. Service IS healthy -- proven by live MCP traffic and clean nginx logs (only "upstream prematurely closed" entries clustered at exactly 07:17:24, the bounce, with clients reconnecting cleanly after). **Recommendation for future task specs:** replace curl probe with an actual MCP `initialize` RPC or a dedicated `/healthz` route.
+
+### Notes on execution discipline
+- Caught a stale claim mid-report ("no commits without explicit CEO directive" over-applied to D1; corrected on CEO challenge before committing).
+- Deferred-restart deviation surfaced and approved pre-execution.
+- Step 8 curl-probe failure surfaced as flawed verification rather than declared as service issue.
+
+### Pending
+- **Paco verification gate** (>2000-char `homelab_ssh_run` self-test from claude.ai). P2 declined self-test from Cowork to preserve output budget.
+- **D2** -- add `homelab_file_write` tool, separate task per Paco's plan.
+
+### State at close
+- main HEAD: `3cb303c` (pre-D1 baseline: `a3e6ba5`)
+- Untracked items NOT part of D1: `docs/paco_request_r640_fan_control_idrac9_7x.md` (Day 67), `mcp_server.py.pre-pi3-20260425-012451`, `mcp_server.py.bak.20260426_070436`
+- Day 69/70 carryovers all still pending (phase-4-sanitizer rebase, methodology docs, credentials inventory, calendar reminder, charter ratification, capstone lane decision before Per Scholas Monday 2026-04-27)
+
+### Next session entry points
+1. Paco verification gate on D1 (claude.ai side). On pass -> D2 spec.
+2. On gate failure -> rollback target `mcp_server.py.bak.20260426_070436`; restore + restart `homelab-mcp.service` via deferred pattern.
+3. Capstone lane decision is URGENT (Per Scholas instructor meeting Monday).
