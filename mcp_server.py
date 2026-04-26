@@ -32,10 +32,12 @@ ALLOWED_HOSTS = {
     "macmini":  "192.168.1.13",
     "cortez":   "192.168.1.240",
     "goliath":  "192.168.1.20",
+    "pi3":      "192.168.1.139",
 }
 HOST_USERS = {
     "kalipi": "sloan",
     "cortez": "sloan",
+    "pi3": "sloanzj",
 }
 
 mcp = FastMCP("homelab_mcp", host="0.0.0.0")
@@ -60,17 +62,17 @@ def ssh_run(host: str, command: str, timeout: int = 30) -> dict:
 class SSHRunInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
     host: str = Field(..., description="Target host: beast, ciscokid, slimjim, kalipi, macmini, cortez, or goliath")
-    command: str = Field(..., description="Shell command to run", min_length=1, max_length=2000)
-    timeout: Optional[int] = Field(default=30, description="Timeout in seconds", ge=1, le=120)
+    command: str = Field(..., description="Shell command to run", min_length=1, max_length=100000)
+    timeout: Optional[int] = Field(default=30, description="Timeout in seconds", ge=1, le=1800)
 
 class MemorySearchInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
-    query: str = Field(..., description="Natural language search query", min_length=1, max_length=2000)
+    query: str = Field(..., description="Natural language search query", min_length=1, max_length=100000)
     top_k: Optional[int] = Field(default=5, description="Number of results", ge=1, le=20)
 
 class MemoryStoreInput(BaseModel):
     model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
-    content: str = Field(..., description="Text content to store", min_length=1, max_length=2000)
+    content: str = Field(..., description="Text content to store", min_length=1, max_length=100000)
     source: Optional[str] = Field(default="mcp", description="Source label")
 
 class FileReadInput(BaseModel):
