@@ -643,3 +643,48 @@ Pre-existing pi3 working-tree change (`ALLOWED_HOSTS["pi3"]="192.168.1.139"`, `H
 1. Paco verification gate on D1 (claude.ai side). On pass -> D2 spec.
 2. On gate failure -> rollback target `mcp_server.py.bak.20260426_070436`; restore + restart `homelab-mcp.service` via deferred pattern.
 3. Capstone lane decision is URGENT (Per Scholas instructor meeting Monday).
+
+## 2026-04-26 -- Day 71 -- D1 verification gate PASS (Paco)
+
+**Session type:** Verification. PD shipped D1 between Day 70 close and Day 71 open. Paco runs gate.
+
+### Result
+
+**D1 CLOSED. PASS.** All four input-validation limits lifted on `mcp_server.py`. Service healthy. Live MCP transport verified end-to-end.
+
+**Verification command:** ~4,500-char `homelab_ssh_run` payload (well past prior 2000-char wall). Accepted by Pydantic validator, executed on CiscoKid, returned full output. The wall is gone.
+
+### Evidence captured by gate
+
+- Line 65 SSHRunInput.command: `max_length=100000`
+- Line 66 SSHRunInput.timeout: `le=1800`
+- Line 70 MemorySearchInput.query: `max_length=100000`
+- Line 75 MemoryStoreInput.content: `max_length=100000`
+- systemd: `homelab-mcp.service` active, MainPID 2286677 (matches PD report)
+- nginx public endpoint: healthy via prior PD curl probe
+
+### PD performance notes
+
+- Spec executed cleanly. 4/4 edits applied as written.
+- Two deviations from spec, both surfaced to CEO and approved:
+  1. Deferred-restart interpretation
+  2. curl-probe interpretation
+- Pi3 working-tree change rolled into D1 commit per PD's Engineering call (CEO-approved)
+- Code commit: `3cb303c` on origin/main
+- Session commit (PD's): `b43966e` on origin/main
+- Backup: `/home/jes/control-plane/mcp_server.py.bak.20260426_070436`
+
+### COO methodology note (for next spec)
+
+For task specs touching live services, anticipate two recurring questions in the spec itself:
+1. "Is this restart safe right now?" -- explicitly state restart-window expectations or defer-criteria
+2. "What does the health check actually mean?" -- specify which HTTP codes are acceptable for a service that does not implement an unauthenticated GET on /
+
+This would have prevented PD's two deviations needing escalation.
+
+### State at close of D1
+
+- Code: D1 shipped, committed, pushed (3cb303c)
+- Documentation: D1 verification logged here. Anchor still current from Day 70 PM.
+- Ready for D2: add `homelab_file_write` MCP tool. Spec not yet drafted; awaiting CEO direction.
+
