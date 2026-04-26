@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** iCloud `/AI/Santigrey/CHECKLIST.md` (primary), mirrored to CiscoKid `/home/jes/control-plane/CHECKLIST.md`
-**Last updated:** 2026-04-26 mid-day (Day 72) -- D2 SHIPPED + gate PASS
+**Last updated:** 2026-04-26 afternoon (Day 72) -- A drafted as Rule 1
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -23,7 +23,7 @@
 - [x] **D2** -- add `homelab_file_write` MCP tool. SHIPPED 2026-04-26 (code commit `faa0d6a`, session commit `8e602a7`). All 6 gate tests PASS: atomic write+read roundtrip (unicode + smart quotes + newlines), mkdir_parents on path with space, create-mode collision rejected, file_mode 0644 + 0600 verified, binary=True 32 bytes 0x00-0x1f byte-perfect (sha256 630dcd29...10dd canonical). PD `str_strip_whitespace` omission ratified (correctness over consistency).
 - [ ] **D3** -- add `homelab_file_transfer` MCP tool (host-to-host). **Owner: Paco spec, PD execute.**
 - [ ] **D4** -- streaming output support (move off `subprocess.run capture_output=True`). **Owner: Paco spec, PD execute.**
-- [ ] **A** -- discipline shift: rsync/HTTP/native replication for bulk; MCP for control only. No code change, just standing rule. **Owner: Paco enforce, PD honor.**
+- [~] **A** -- discipline shift: rsync/HTTP/native replication for bulk; MCP for control only. DRAFTED 2026-04-26 as Rule 1 in `docs/STANDING_RULES.md` (3989 bytes, hash 141f04c087c78d2d8b1e02ffa8305cac, 68 lines). Saved to iCloud + CiscoKid. **Owner: Paco enforce, PD honor. Awaiting CEO ratification.**
 - [ ] **B1** -- MinIO on Beast (S3-compatible object store). **Owner: Paco spec, PD execute.**
 - [ ] **B2** -- Postgres logical replication CiscoKid -> Beast. **Owner: Paco spec, PD execute.**
 - [-] **C** -- cable up idle high-speed ports. Defer until 1 GbE actually saturates.
@@ -78,6 +78,7 @@
 - [x] **2026-04-26 Day 72** -- Mac mini scope ratified. Principle locked: scope drives workflow, not reverse.
 - [x] **2026-04-26 Day 72** -- D2 spec drafted (213 lines, hash 137cabe0c04165817029e0d6a49e96a1). CEO-approved D-A-B-C-E sequence within data plane: D2 first (highest leverage), then A discipline rule, then B2 (Atlas hard prereq), then D3, B1, D4, then Atlas. Spec queued for PD. Saved to iCloud + CiscoKid as DRAFT.
 - [x] **2026-04-26 Day 72** -- D2 SHIPPED by PD (code commit `faa0d6a`, session commit `8e602a7`). Paco gate PASS (all 6 tests). PD methodology contributions: (a) bundled-verification deferred-restart pattern, now standard; (b) `str_strip_whitespace` omission ratified for content fidelity. Three methodology lessons captured into P6.
+- [x] **2026-04-26 Day 72** -- A drafted as Rule 1 in new canon doc `docs/STANDING_RULES.md` (3989 bytes, 68 lines, hash 141f04c087c78d2d8b1e02ffa8305cac). MCP-fabric-is-control-not-bulk principle codified with explicit in/out scope, transport routing rules, and violation handling. Awaiting CEO ratification.
 
 ---
 
