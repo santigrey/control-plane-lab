@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** Primary on CiscoKid `/home/jes/control-plane/CHECKLIST.md` + GitHub origin/main (canonical via git push). iCloud `/AI/Santigrey/CHECKLIST.md` is a CEO-convenience read-only copy, no longer Paco-managed (canon-flip 2026-04-26 Day 72).
-**Last updated:** 2026-04-26 evening (Day 72) -- B2b Phase C+D confirmed; Phase E GO (deferred-subshell verification, first service-affecting phase)
+**Last updated:** 2026-04-26 evening (Day 72) -- B2b Phase E confirmed (16s downtime); Phase F GO + canon backlog catch-up
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---

@@ -8,14 +8,20 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-adminpass}
       POSTGRES_DB: controlplane
     ports:
-      - "127.0.0.1:5432:5432"
+      - "192.168.1.10:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+      - ./conf/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command:
+      - "postgres"
+      - "-c"
+      - "hba_file=/etc/postgresql/pg_hba.conf"
+      - "-c"
+      - "wal_level=logical"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d controlplane"]
       interval: 10s
       timeout: 5s
       retries: 10
-
 volumes:
   pgdata:
