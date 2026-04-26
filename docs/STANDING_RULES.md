@@ -4,7 +4,7 @@
 **Source of truth:** This file. Rules accrete here as they emerge. Each rule has an origin (which task or incident surfaced it).
 **Status:** RATIFIED 2026-04-26 (Day 72) by CEO. Effective immediately.
 **Last updated:** 2026-04-26 (Day 72) -- Rule 1 ratified
-**Mirror:** iCloud `/AI/Santigrey/STANDING_RULES.md`
+**Mirror:** GitHub origin/main (canonical via git push from CiscoKid). iCloud `/AI/Santigrey/STANDING_RULES.md` is a CEO-convenience read-only copy, no longer Paco-managed (canon-flip 2026-04-26 Day 72).
 
 ---
 

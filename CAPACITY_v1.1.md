@@ -1,6 +1,6 @@
 # Santigrey Enterprises -- Hardware Org Chart
 
-**Version:** 1.1 (DRAFT -- pending CEO ratification)
+**Version:** 1.1 (RATIFIED 2026-04-26 by CEO)
 **Drafted:** 2026-04-26 AM, by Paco (COO)
 **Supersedes:** CAPACITY_v1.0.md (2026-04-25 PM, retained as `CAPACITY_v1.0.md.superseded.<timestamp>`)
 **Companion to:** CHARTERS_v0.1.md, CHECKLIST.md

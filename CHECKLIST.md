@@ -2,8 +2,8 @@
 
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
-**Location:** iCloud `/AI/Santigrey/CHECKLIST.md` (primary), mirrored to CiscoKid `/home/jes/control-plane/CHECKLIST.md`
-**Last updated:** 2026-04-26 evening (Day 72) -- B2a SHIPPED + Paco gate PASS + closed
+**Location:** Primary on CiscoKid `/home/jes/control-plane/CHECKLIST.md` + GitHub origin/main (canonical via git push). iCloud `/AI/Santigrey/CHECKLIST.md` is a CEO-convenience read-only copy, no longer Paco-managed (canon-flip 2026-04-26 Day 72).
+**Last updated:** 2026-04-26 evening (Day 72) -- B2a closed; CAPACITY_v1.1 + iCloud canon-flip ratified
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -15,7 +15,7 @@
 ## P1 -- ACTIVE WORK (this session)
 
 - [x] D1 -- Lift four Pydantic input limits in `mcp_server.py` (PD shipped; Paco gate PASS). Code commit `3cb303c`, session commits `b43966e` + `1d9cbe8`.
-- [x] **CAPACITY_v1.1** -- DRAFT shipped 2026-04-26 AM. Three v1.0 errors corrected (phantom MCP migration removed, fictional iMessage/HomeKit bridges reclassified as future-conditional, Mac mini scope tightened). 133 lines, hash 1de8a2cc0f01cd7b32e3170bf2ab4e82. Awaiting CEO ratification.
+- [x] **CAPACITY_v1.1** -- DRAFT shipped 2026-04-26 AM, RATIFIED 2026-04-26 PM (Day 72) by CEO. Three v1.0 errors corrected (phantom MCP migration removed, fictional iMessage/HomeKit bridges reclassified as future-conditional, Mac mini scope tightened). 133 lines.
 - [x] **Mac mini scope lock** -- RATIFIED by CEO 2026-04-26. Principle locked: scope drives workflow, not reverse. Mac mini = Apple-bound infrastructure only + remains CEO daily-driver workstation (separate concern outside org chart). Footprint verified: Claude Desktop / Cowork host, AgentOS Refresh, Tailscale, OpenSSH. No iMessage/HomeKit bridges, no MCP termination.
 
 ## P2 -- DATA PLANE SEQUENCE (post-D1)
@@ -30,7 +30,7 @@
 - [-] **C** -- cable up idle high-speed ports. Defer until 1 GbE actually saturates.
 - [-] **E** -- replace MCP-over-SSH with MCP-over-HTTP-API. Defer one quarter.
 
-## P3 -- HARDWARE ORG REDISTRIBUTION (after CAPACITY_v1.1 ratifies)
+## P3 -- HARDWARE ORG REDISTRIBUTION (CAPACITY_v1.1 ratified; redistribution unblocked)
 
 - [ ] **SlimJim** -- add Prometheus + Grafana, deploy node_exporter on every node. **Owner: Paco spec, PD execute.**
 - [ ] **Beast** -- becomes Atlas's home (charter revision from CAPACITY_v1.0). Build deferred until B1+B2 land. **Owner: Paco spec, PD execute.**
@@ -84,6 +84,8 @@
 - [x] **2026-04-26 Day 72** -- B2 shallow probe complete (commit `a23caf1`, 113-line investigation report). Q3 resolved -> split into B2a + B2b. Q4-Q7 ratified by CEO with Paco picks: Q4=C (public+agent_os, exclude mercury), Q5=A (Docker pgvector/pgvector:pg16), Q6=A (LAN rebind + layered ACLs), Q7=C (bundle WAL change into B2b). B2a spec drafted (6186 bytes, greenfield Postgres on Beast, no CiscoKid dependency at install time). Awaiting CEO ratification.
 - [x] **2026-04-26 Day 72** -- B2a spec RATIFIED by CEO as-is (no rework). Cowork prompt provided; queued for PD execution. Awaiting ship report at `/home/jes/postgres-beast/B2a_ship_report.md` on Beast.
 - [x] **2026-04-26 Day 72** -- B2a SHIPPED by PD (ship report md5 `b9d862fcebbe78317a0081d052121294`, 220 lines, on Beast at `/home/jes/postgres-beast/B2a_ship_report.md`). All 7 acceptance gates PASS. Paco independent verification gate from fresh shell: 7/7 PASS, file integrity preserved (compose.yaml `a9a7404d...`, init SQL `899c6932...`), container ID `61acfaf455d8...` running image SHA `8ed3192326bb...`. Two Paco-authorized deviations documented in ship report: (1) Compose v5.1.3 plugin bootstrap (Beast docker.io lacks v2 plugin; sha256 verified against Docker upstream); (2) Spec Step 6 `sleep 15` replaced with health-poll loop (P6 lesson: container-up steps should poll until healthy with explicit timeout cap, not sleep for guessed duration). PG 16.13 + pgvector 0.8.2 running on Beast at 127.0.0.1:5432, controlplane DB owned by admin (Superuser+Replication=t), pgdata 48.21MB. Three P6 methodology lessons captured. B2a CLOSED. B2b (logical replication CiscoKid->Beast) drafting unblocks; Atlas-on-Beast (P3) hard prereq satisfied. Task pipeline `6d5102a5-93e8-4972-846f-9acbabe2b795` ready for CEO mark-done. Doc chain: 10 B2a docs total (2 paco_request, 4 paco_review, 4 paco_response in `/docs/`; ship report on Beast).
+- [x] **2026-04-26 Day 72** -- CAPACITY_v1.1 RATIFIED by CEO as-is. Hardware org chart canon-locked. P3 hardware redistribution unblocks (SlimJim Prometheus+Grafana, Beast=Atlas home, Pi3/JesAir/Cortez role evaluations).
+- [x] **2026-04-26 Day 72** -- iCloud canon-flip RATIFIED by CEO. Standing convention now: CiscoKid + GitHub origin/main are canonical for all Paco-managed artifacts (CHECKLIST, STANDING_RULES, CAPACITY, CHARTERS, /tasks specs, /docs correspondence). iCloud `/AI/Santigrey/` becomes a CEO-convenience read-only copy not maintained by Paco. Macmini SSH pipe is no longer treated as data-sync infrastructure (Rule 1 corollary). Stale iCloud copies will be allowed to drift; CEO can manually pull from GitHub when desired. CHECKLIST + STANDING_RULES Location/Mirror lines updated. Memory edit pending.
 
 ---
 
