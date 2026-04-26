@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** iCloud `/AI/Santigrey/CHECKLIST.md` (primary), mirrored to CiscoKid `/home/jes/control-plane/CHECKLIST.md`
-**Last updated:** 2026-04-26 late-morning (Day 72)
+**Last updated:** 2026-04-26 late-morning (Day 72) -- D2 spec drafted
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -20,7 +20,7 @@
 
 ## P2 -- DATA PLANE SEQUENCE (post-D1)
 
-- [ ] **D2** -- add `homelab_file_write` MCP tool. Eliminates chunked-cat workaround. Spec not yet drafted. **Owner: Paco spec, PD execute.**
+- [~] **D2** -- add `homelab_file_write` MCP tool. Spec DRAFTED 2026-04-26, CEO-approved, queued for PD. 213 lines, hash 137cabe0c04165817029e0d6a49e96a1. Saved to iCloud /AI/Santigrey/tasks/ + CiscoKid /home/jes/control-plane/tasks/. **Owner: Paco spec, PD execute.**
 - [ ] **D3** -- add `homelab_file_transfer` MCP tool (host-to-host). **Owner: Paco spec, PD execute.**
 - [ ] **D4** -- streaming output support (move off `subprocess.run capture_output=True`). **Owner: Paco spec, PD execute.**
 - [ ] **A** -- discipline shift: rsync/HTTP/native replication for bulk; MCP for control only. No code change, just standing rule. **Owner: Paco enforce, PD honor.**
@@ -75,6 +75,7 @@
 - [x] **2026-04-26 Day 72 AM** -- Mac mini footprint verified. MCP migration confirmed phantom (already on CiscoKid). Three v1.0 errors identified for v1.1 correction.
 - [x] **2026-04-26 Day 72** -- CAPACITY_v1.1.md drafted (133 lines, hash 1de8a2cc0f01cd7b32e3170bf2ab4e82). Three v1.0 errors corrected. Saved to iCloud + mirrored to CiscoKid. v1.0 retained as superseded backup.
 - [x] **2026-04-26 Day 72** -- Mac mini scope ratified. Principle locked: scope drives workflow, not reverse.
+- [x] **2026-04-26 Day 72** -- D2 spec drafted (213 lines, hash 137cabe0c04165817029e0d6a49e96a1). CEO-approved D-A-B-C-E sequence within data plane: D2 first (highest leverage), then A discipline rule, then B2 (Atlas hard prereq), then D3, B1, D4, then Atlas. Spec queued for PD. Saved to iCloud + CiscoKid as DRAFT.
 
 ---
 
