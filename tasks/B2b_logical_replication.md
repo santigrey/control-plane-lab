@@ -119,8 +119,8 @@ local   replication     all                                     trust
 host    replication     all             127.0.0.1/32            trust
 host    replication     all             ::1/128                 trust
 # B2b: Beast subscriber for logical replication (added 2026-04-26 Day 72)
-host    controlplane    admin           192.168.1.152/32        md5
-host    replication     admin           192.168.1.152/32        md5
+host    controlplane    admin           192.168.1.152/32        scram-sha-256
+host    replication     admin           192.168.1.152/32        scram-sha-256
 ```
 
 ### Phase C -- Update compose.yaml
