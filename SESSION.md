@@ -797,7 +797,7 @@ For task specs that bundle restart + verification, recommend writing the verific
 - **Deferred-subshell + bundled-verification pattern**: standardized for any spec that bundles MCP/service restart with post-restart verification. Validates inside the same `nohup bash -c '...'` to insulate the verifier from the response-channel disruption.
 - **Secret-redaction discipline**: `<REDACTED-IN-REVIEW-OUTPUT>` in chat-transcript-bound docs; values to chmod 600 on disk only; CEO records to 1Password via `cat`. Garage native UX redacts `Secret key` as `(redacted)` in `key info` output.
 
-## P6 lessons banked (running total: 10)
+## P6 lessons banked (running total: 11)
 1. PG 16 char(1) `||` strictness — concat needs `::text` cast (B2b Phase H verifier bug)
 2. `psql -tA` does NOT suppress command tags — use `-tAq` to avoid INSERT-tag pollution in shell variable capture (B2b Phase H)
 3. PG 16+ `pg_hba.conf` requires `scram-sha-256`; `md5` rejects connections silently (B2b Phase B)
@@ -808,6 +808,7 @@ For task specs that bundle restart + verification, recommend writing the verific
 8. **B1 #8** — Pivot mid-spec is the right call when foundation is wrong. (Cost ~40-60 min net vs hours of post-ship unwind.)
 9. **B1 #9** — Healthcheck binary must exist in target image. (Scratch-based `dxflrs/garage` requires `[CMD, /garage, status]`; wget/curl-based healthchecks would have failed.)
 10. **B1 #10** — Docker `--network host -v <host>:<container>` writes new files as the container's UID, not host user. (aws-cli root-owned roundtrip file in Phase E required `sudo shred -u` recovery.)
+11. **#11** -- Pre-push secret-grep must target value-shaped patterns on ADDED lines only. Bare keyword regex on full unified diff produces false positives on env-var names in context lines (AWS_SECRET_ACCESS_KEY as descriptive reference) and product-name substrings (1Password). Correct shape: `git diff --cached | grep '^+' | grep -v '^+++'` piped through value-shaped regexes (AKIA[A-Z0-9]{16}, GK[a-f0-9]{24}, 64-hex, base64-shaped). Surfaced 2026-04-27 during B1 close-out commit; banked formally per Paco ruling.
 
 ## Spec template / directive bug banked
 - "RestartCount > pre-value" framing is wrong; should be "StartedAt timestamp differs from pre-restart". Surfaced in both B2b Gate 12 and B1 Phase F. Apply correction to Atlas v0.1 spec from authorship.
@@ -817,7 +818,7 @@ For task specs that bundle restart + verification, recommend writing the verific
 - **Close-out commit SHA:** `1fce00e` on origin/main (parent: `b5c921a`).
 - **Services running:** `control-postgres-beast` (Beast 192.168.1.152, port 5432 localhost-only); `control-postgres-ciscokid` (CiscoKid 192.168.1.10, port 5432 LAN); `control-garage-beast` (Beast 192.168.1.152, port 3900 LAN + 3903 lo); `homelab-mcp.service` (CiscoKid PID 2663164 active since D2).
 - **B2b nanosecond anchor preserved:** `2026-04-27T00:13:57.800746541Z` across all of B1's 7 phases.
-- **P6 lessons banked count:** 10.
+- **P6 lessons banked count:** 11.
 - **Standing Rules:** Rule 1 ratified.
 - **Correspondence triad:** in regular use; ~25 review docs + responses generated this session in `docs/`.
 

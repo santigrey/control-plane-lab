@@ -132,7 +132,7 @@ Secret-grep CLEAN (refined pattern from Step 2 reused). Commit `19d08e5` landed:
 
 ---
 
-## 7. P6 lessons banked (running total: 10)
+## 7. P6 lessons banked (running total: 11)
 
 1. PG 16 char(1) `||` strictness — concat needs `::text` cast
 2. `psql -tA` does NOT suppress command tags — use `-tAq`
@@ -144,8 +144,7 @@ Secret-grep CLEAN (refined pattern from Step 2 reused). Commit `19d08e5` landed:
 8. **B1 #8** — Pivot mid-spec is the right call when foundation is wrong
 9. **B1 #9** — Healthcheck binary must exist in target image (scratch images)
 10. **B1 #10** — Docker `--network host -v` writes as container UID, cleanup needs sudo
-
-**Candidate #11** (from this close-out, informational): secret-grep on commit pre-push should target value-shaped patterns + ADDED lines only, not bare keyword matches across full diff. Bare keyword regex on full diff matches benign env-var-name references in existing audit-log context lines and product-name substrings (e.g., `1Password`).
+11. **#11** -- Pre-push secret-grep must target value-shaped patterns on ADDED lines only. Bare keyword regex on full unified diff produces false positives on env-var names in context lines (AWS_SECRET_ACCESS_KEY as descriptive reference) and product-name substrings (1Password). Correct shape: `git diff --cached | grep '^+' | grep -v '^+++'` piped through value-shaped regexes (AKIA[A-Z0-9]{16}, GK[a-f0-9]{24}, 64-hex, base64-shaped). Surfaced 2026-04-27 during B1 close-out commit; banked formally per Paco ruling.
 
 ---
 
