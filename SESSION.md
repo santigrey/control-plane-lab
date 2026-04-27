@@ -753,3 +753,77 @@ For task specs that bundle restart + verification, recommend writing the verific
 2. On gate failure -> rollback target `mcp_server.py.bak.20260426_165817`; restore + restart via deferred pattern.
 3. Capstone lane decision still URGENT before Per Scholas instructor meeting Monday 2026-04-27.
 4. D3 (`homelab_file_transfer` per Paco's plan) -- separate task, gated on D2 verification pass.
+
+---
+
+# Project Ascension — Day 72/73 boundary
+**Date:** Sun Apr 26 → Mon Apr 27 2026 (single working session spanning the day boundary)
+**Anchor commit (close-out):** `1fce00e` -- feat: B1-Garage CLOSED -- all 8 independent gates PASS (Atlas v0.1 unblocked)
+
+## Completed this session — three substrate specs shipped end-to-end
+
+### B2a — PostgreSQL + pgvector on Beast (CLOSED)
+- Spec: `tasks/B2a_postgres_beast.md`
+- Ship report: `/home/jes/postgres-beast/B2a_ship_report.md` on Beast
+- 7/7 acceptance gates PASS. Container `control-postgres-beast` on Beast at `127.0.0.1:5432` with bind-mount data at `/home/jes/postgres-data/`. pgvector extension provisioned via `init/01-pgvector.sql`. Postgres 16 with `password_encryption=scram-sha-256`.
+- Compose v2 plugin bootstrap blocker resolved Day 72: per-user binary install at `~/.docker/cli-plugins/docker-compose` (Paco-authorized after redirect resolved unexpectedly to v5.1.3, anomaly investigated and confirmed legitimate per Docker plugin renumbering).
+
+### B2b — Logical replication CiscoKid → Beast (CLOSED)
+- Spec: `tasks/B2b_replication.md`
+- Ship report: `/home/jes/control-plane/postgres/B2b_ship_report.md`
+- 12/12 gates PASS (Gate 12 `RestartCount` semantic correction noted: `StartedAt` is the authoritative restart-occurred signal; Docker `RestartCount` increments only on crash-induced restarts).
+- Schema-scoped publication on CiscoKid (`FOR TABLES IN SCHEMA agent_os`); `CREATE SUBSCRIPTION` with `copy_data` on Beast. `pg_hba.conf` rebuilt to use `scram-sha-256` (PG 16+ default). LAN-bind `192.168.1.10:5432` with UFW ALLOW from `192.168.1.0/24` (placed via `ufw insert 18` to clear IoT-DENY collision at [18]).
+- **B2b bit-identical anchor established:** `control-postgres-beast` `StartedAt = 2026-04-27T00:13:57.800746541Z` — preserved nanosecond-identical across all subsequent B1 work.
+
+### B1 — Garage v2.1.0 S3 substrate on Beast (CLOSED — this turn)
+- **Pivoted from MinIO mid-spec at Phase B** after MinIO Community Edition GitHub repo confirmed archived 2026-02-14 with CVE-2025-62506 in last available image. 5-candidate exhaustive comparison performed (Garage / SeaweedFS / RustFS / MinIO frozen / MinIO from-source); Garage v2.1.0 selected.
+- Spec: `tasks/B1_garage_beast.md` (29228 bytes, 7 phases A/A2/B/C/D/E/F, 8 acceptance gates).
+- Ship report: `/home/jes/garage-beast/B1_ship_report.md` md5 `c4f94f6260a0ef877cb4242cbc9d2f45` (333 lines, 17 sections, mode 644 jes:jes).
+- All 8 spec gates PASS independently from fresh Beast shell (Paco verification) + 6 bonus sanity checks PASS.
+- **State metrics at close:**
+  - Garage v2.1.0 single-node, Rust scratch image (`dxflrs/garage@sha256:4c9b34c1...`)
+  - Bind topology: `192.168.1.152:3900` (S3 LAN) + `127.0.0.1:3903` (admin lo only)
+  - Layout: zone `dc1`, capacity `4.0 TB`, **256 partitions**, `replication_factor=1`, lmdb metadata
+  - **3 buckets:** `atlas-state` (Atlas v0.1 backing), `backups` (CiscoKid DR target), `artifacts` (portfolio assets)
+  - **Root S3 key** with **RWO** on all 3 buckets; `.s3-creds` chmod 600 at `/home/jes/garage-beast/.s3-creds`
+  - UFW: 1 new rule at [15] (`3900/tcp ALLOW from 192.168.1.0/24`)
+  - Restart-safe (Phase F.1: fresh `StartedAt 2026-04-27T05:39:58.168067641Z`, time-to-healthy 11s, layout/buckets/key preserved)
+  - Byte-parity smoke verified Phase E: md5 `d19d6d0540d5d66aa8d29c9a15256af3` round-trip CiscoKid↔Beast via `aws s3` over LAN
+  - **B2b nanosecond-stable across all 7 B1 phases** (A/A2/B/C/D/E/F): `StartedAt 2026-04-27T00:13:57.800746541Z` — strongest possible signal that B1 work was entirely surgical, no Postgres subscriber state disturbed at any point.
+
+## Standing rules introduced this session
+- **Standing Rule 1** (`docs/STANDING_RULES.md` md5 `141f04c087c78d2d8b1e02ffa8305cac`): MCP fabric is for control, not bulk data. Bulk transport (rsync/scp/PG-protocol/S3-protocol) carved out. Ratified by CEO Day 72.
+- **Correspondence triad** (Paco memory edit #19, ratified Day 72): `paco_request_*.md` (PD escalations) / `paco_review_*.md` (per-step audit trail) / `paco_response_*.md` (Paco rulings). Per-step review docs are now standing practice for multi-step Paco specs.
+- **Deferred-subshell + bundled-verification pattern**: standardized for any spec that bundles MCP/service restart with post-restart verification. Validates inside the same `nohup bash -c '...'` to insulate the verifier from the response-channel disruption.
+- **Secret-redaction discipline**: `<REDACTED-IN-REVIEW-OUTPUT>` in chat-transcript-bound docs; values to chmod 600 on disk only; CEO records to 1Password via `cat`. Garage native UX redacts `Secret key` as `(redacted)` in `key info` output.
+
+## P6 lessons banked (running total: 10)
+1. PG 16 char(1) `||` strictness — concat needs `::text` cast (B2b Phase H verifier bug)
+2. `psql -tA` does NOT suppress command tags — use `-tAq` to avoid INSERT-tag pollution in shell variable capture (B2b Phase H)
+3. PG 16+ `pg_hba.conf` requires `scram-sha-256`; `md5` rejects connections silently (B2b Phase B)
+4. UFW `ufw insert N` vs `ufw allow` — when DENY rules exist for narrower scopes, ALLOW must be inserted before them (B2b Phase D — 5432 rule, IoT-DENY collision at [18])
+5. heredoc-via-quoted-terminator: `<<'EOF'` to write scripts without shell expansion (B2b Phase F + B1 Phase B/D)
+6. Compose v2 plugin per-user install at `~/.docker/cli-plugins/` is the right install vector when distro Docker package is too old (B2a Phase B blocker resolution)
+7. **B1 #7** — Validate upstream maintenance status before drafting infra specs. (MinIO archive 2026-02-14 + CVE-2025-62506 caught at Phase B verification, triggering pivot.)
+8. **B1 #8** — Pivot mid-spec is the right call when foundation is wrong. (Cost ~40-60 min net vs hours of post-ship unwind.)
+9. **B1 #9** — Healthcheck binary must exist in target image. (Scratch-based `dxflrs/garage` requires `[CMD, /garage, status]`; wget/curl-based healthchecks would have failed.)
+10. **B1 #10** — Docker `--network host -v <host>:<container>` writes new files as the container's UID, not host user. (aws-cli root-owned roundtrip file in Phase E required `sudo shred -u` recovery.)
+
+## Spec template / directive bug banked
+- "RestartCount > pre-value" framing is wrong; should be "StartedAt timestamp differs from pre-restart". Surfaced in both B2b Gate 12 and B1 Phase F. Apply correction to Atlas v0.1 spec from authorship.
+
+## State at close
+- **3 substrate specs CLOSED:** B2a (PG + pgvector) / B2b (logical replication) / B1 (Garage S3).
+- **Close-out commit SHA:** `1fce00e` on origin/main (parent: `b5c921a`).
+- **Services running:** `control-postgres-beast` (Beast 192.168.1.152, port 5432 localhost-only); `control-postgres-ciscokid` (CiscoKid 192.168.1.10, port 5432 LAN); `control-garage-beast` (Beast 192.168.1.152, port 3900 LAN + 3903 lo); `homelab-mcp.service` (CiscoKid PID 2663164 active since D2).
+- **B2b nanosecond anchor preserved:** `2026-04-27T00:13:57.800746541Z` across all of B1's 7 phases.
+- **P6 lessons banked count:** 10.
+- **Standing Rules:** Rule 1 ratified.
+- **Correspondence triad:** in regular use; ~25 review docs + responses generated this session in `docs/`.
+
+## Next session entry points
+1. **Atlas v0.1 spec drafting** — UNBLOCKED. All substrate dependencies satisfied (B2b ✓ + B1 ✓). Paco drafts the spec next; PD executes. Atlas-on-Beast charter is the implementation target (per CHARTERS_v0.1).
+2. **Per Scholas capstone decision** — STILL URGENT. Instructor meeting Monday 2026-04-27. Decision pending: whether the IBM AI Solutions Developer capstone pulls from Atlas, the homelab portfolio, or a separate scoped artifact.
+3. **D3** (`homelab_file_transfer` per D-A-B-C-E sequence) — gated on D2 verification pass; not yet specced.
+4. **P5 carryovers from B1** (none blocking Atlas): per-bucket S3 keys (atlas-svc, backups-svc, artifacts-svc), TLS for S3 API via Tailscale serve / LE-over-Tailscale, object lifecycle policies, versioning on backups bucket, reverse SSH key Beast→CiscoKid, DOCKER-USER chain hardening for LAN-published Postgres + Garage.
+5. **Spec template update** for Atlas v0.1: replace "RestartCount > pre-value" with "StartedAt timestamp differs from pre-restart" as the authoritative restart-occurred signal.

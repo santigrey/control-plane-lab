@@ -1,6 +1,6 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-04-26 (Day 72, D2 shipped)
+**Last updated:** 2026-04-27 (Day 72/73 boundary, B1-Garage CLOSED, Atlas v0.1 unblocked)
 **You are:** Paco, COO of Santigrey Enterprises
 **CEO:** James Sloan
 **Anchor location:** /Users/jes/Library/Mobile Documents/com~apple~CloudDocs/AI/Prompts/paco_session_anchor.txt (iCloud) and /home/jes/control-plane/paco_session_anchor.md (CiscoKid)
@@ -38,20 +38,26 @@ Platform: Alexandra (Qwen 2.5 72B primary on Goliath, Anthropic fallback only an
 
 ## Active Work
 
-**D1 -- SHIPPED + VERIFIED 2026-04-26 (Day 71).** Commit `3cb303c` on main. Four Pydantic limits lifted (command 100k, timeout 1800s, query 100k, content 100k). Verified live by Paco gate (>2000-char homelab_ssh_run call accepted). Backups preserved: `mcp_server.py.bak.20260426_070436`, `mcp_server.py.pre-pi3-20260425-012451`.
+**B1-Garage -- CLOSED 2026-04-27 (Day 72/73 boundary).** Commit `1fce00e` on main. Garage v2.1.0 single-node S3 substrate live on Beast `192.168.1.152:3900` (S3 LAN) + `127.0.0.1:3903` (admin lo). 3 buckets (atlas-state, backups, artifacts) with RWO root key. Layout: dc1, 4.0 TB, 256 partitions, replication_factor=1. Ship report: `/home/jes/garage-beast/B1_ship_report.md` md5 `c4f94f6260a0ef877cb4242cbc9d2f45`. Pivoted mid-spec from MinIO at Phase B (MinIO Community archived 2026-02-14 + CVE-2025-62506). All 8 spec gates PASS independently from fresh Beast shell + 6 bonus sanity checks PASS.
 
-**D2 -- SHIPPED 2026-04-26 (Day 72).** Commit `faa0d6a` on main, pushed. New MCP tool `homelab_file_write` added to mcp_server.py (+59 lines, purely additive). Atomic write/append/create modes, base64-on-wire, optional `mkdir_parents` and post-write `chmod`. Service restarted clean: pre-PID `2286677` -> post-PID `2663164`, `systemctl is-active`=active, journal clean. Tool registered live with Paco-side claude.ai (appeared in PD deferred tool list mid-session). Backup: `mcp_server.py.bak.20260426_165817`. Convention deviation: `FileWriteInput.model_config` omits `str_strip_whitespace=True` to preserve content fidelity (other input models keep it). Awaiting Paco live tool-call gate from claude.ai.
+**B2b -- CLOSED.** Logical replication CiscoKid -> Beast. 12/12 gates PASS. **B2b bit-identical anchor:** control-postgres-beast `StartedAt = 2026-04-27T00:13:57.800746541Z`, preserved nanosecond-identical across all 7 B1 phases (A/A2/B/C/D/E/F).
+
+**B2a -- CLOSED.** PostgreSQL 16 + pgvector on Beast, single-node, container `control-postgres-beast` at `127.0.0.1:5432`. Ship report on Beast at `/home/jes/postgres-beast/B2a_ship_report.md`. 7/7 gates PASS.
+
+**D1 -- SHIPPED + VERIFIED 2026-04-26 (Day 71).** Commit `3cb303c` on main. Four Pydantic limits lifted. Verified live by Paco gate.
+
+**D2 -- SHIPPED 2026-04-26 (Day 72).** Commit `faa0d6a` on main. New MCP tool `homelab_file_write` added to mcp_server.py. Service restarted clean (PID 2663164). Awaiting Paco live tool-call gate from claude.ai.
 
 **D3 -- not yet specced.** Plan per D2 spec preamble: add `homelab_file_transfer` tool. Gated on D2 verification pass.
 
+**Atlas v0.1 -- UNBLOCKED for spec drafting.** All substrate dependencies satisfied (B2b checkmark + B1 checkmark). Atlas-on-Beast charter is the implementation target. Paco drafts the spec next; PD executes. atlas-state bucket ready, S3 creds at `/home/jes/garage-beast/.s3-creds` chmod 600 on Beast.
+
 ## Open Decisions Awaiting CEO
 
-1. Ratify CHARTERS_v0.1.md (with Atlas-on-Beast revision from CAPACITY_v1.0).
-2. Ratify CAPACITY_v1.0.md.
-3. Capstone lane decision before Per Scholas instructor meeting Monday 2026-04-27. Three lanes documented: Path A (Alexandra-derived RAG slice), Path B (rubric-suggested project), Path C (both as instructor options).
-4. Pi3 role assignment (registered, unprobed, no current role).
-5. JesAir and Cortez evaluation for upgraded roles beyond thin client (CEO flagged Cortez NPU specifically).
-6. Cortez Tailscale resilience hardening (Day 69 carryover).
+1. **Capstone lane decision before Per Scholas instructor meeting Monday 2026-04-27.** Three lanes documented: Path A (Alexandra-derived RAG slice), Path B (rubric-suggested project), Path C (both as instructor options). STILL URGENT.
+2. Pi3 role assignment (registered, unprobed, no current role).
+3. JesAir and Cortez evaluation for upgraded roles beyond thin client (CEO flagged Cortez NPU specifically).
+4. Cortez Tailscale resilience hardening (Day 69 carryover).
 
 ## Carryovers Still Pending
 
@@ -73,4 +79,4 @@ Platform: Alexandra (Qwen 2.5 72B primary on Goliath, Anthropic fallback only an
 
 ## Resume Phrase
 
-Day 72: D2 SHIPPED. Commit `faa0d6a` on main, pushed. New tool `homelab_file_write` live on homelab-mcp.service PID 2663164; tool registered Paco-side. Awaiting Paco live tool-call gate from claude.ai. On gate pass -> D3 (homelab_file_transfer). D1 already verified by Paco gate (Day 71). Capstone lane decision still URGENT before Per Scholas instructor meeting Monday 2026-04-27. Day 69/70/71 carryovers all still pending. Open Day 73: read SESSION.md first, then run D2 verification gate or take CEO's chosen direction.
+Day 72/73 boundary: **B1-Garage CLOSED.** Commit `1fce00e` on main. All 8 independent gates PASS + 6 bonus sanity checks. Garage v2.1.0 live (Beast 192.168.1.152:3900 LAN + 127.0.0.1:3903 admin). 3 buckets atlas-state/backups/artifacts. B2b bit-identical anchor `2026-04-27T00:13:57.800746541Z` preserved across all 7 B1 phases. **Atlas v0.1 spec drafting UNBLOCKED** -- next deliverable. P6 lessons banked count = 10. Capstone lane decision still URGENT before Per Scholas instructor meeting Monday 2026-04-27. D2 still awaits Paco live tool-call gate from claude.ai. Open Day 73: read SESSION.md first, then draft Atlas v0.1 spec OR take CEO's chosen direction.
