@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** Primary on CiscoKid `/home/jes/control-plane/CHECKLIST.md` + GitHub origin/main (canonical via git push). iCloud `/AI/Santigrey/CHECKLIST.md` is a CEO-convenience read-only copy, no longer Paco-managed (canon-flip 2026-04-26 Day 72).
-**Last updated:** 2026-04-26 night (Day 72) -- **B1 PIVOT MinIO->Garage** (MinIO Community Edition archived 2026-02; Garage v2.1.0 ratified after 5-candidate exhaustive scan); new spec drafted; PD restart from Phase A delta
+**Last updated:** 2026-04-26 night (Day 72) -- B1-Garage Phase B confirmed; Phase C GO (1 UFW rule for 3900 LAN); B2b bit-identical across all B1 phases
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
