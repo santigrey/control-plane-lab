@@ -858,3 +858,97 @@ For task specs that bundle restart + verification, recommend writing the verific
 **Network event mid-session**: CEO performed amplifier wiring change + router reboot. Network briefly down. After recovery, JesAir Claude Desktop mcp-remote needed restart to reconnect to MCP server (CK was fine throughout). Substrate untouched. Banked as a deployment quirk, not an outage.
 
 **Switch UI bug**: Intellinet 560917 firmware has a session-timeout HTTP-server hang. Login Timeout=0 fix applied + Config Save persisted. Should not recur.
+
+
+---
+
+## Day 73 evening -- H1 Phase C Gate 5 (resolved via F.1)
+
+**Major work:** H1 Phase C Gate 5 went 7-escalations deep on a concurrency edge case. Final root cause + resolution captured below. Phase C is now one negative-control test away from 5/5 PASS close-out.
+
+### Phase C Gate 5 escalation chain (chronological)
+
+- ESC #4 (mosquitto reload) -> response approved (commit `8c4c8c7`)
+- ESC #5 (gate5 concurrency, novel rejection pattern) -> response approved (commit `1603016`, paths a+b parallel)
+- ESC #6 (gate5 followup, CONNECT-stage rejection + agent_bus polluter premise) -> response approved (commit `93164d5`)
+- ESC #6 followup correction (agent_bus polluter premise INVERTED -- actually working Alexandra infra) -> response approved (commit `465f5d1`)
+- ESC #6 matrix collision (Beast PASS + version-parity invalidates pre-auth path) -> Path B approved (commit `4c5623c`, P6 #14 banked)
+- ESC #7 (Hypothesis F surface, CK-host-specific environmental state) -> F.1 authorized + fallback pre-auth (commit `c9e1192`)
+- F.1 PASS confirmed -- root cause identified
+
+### Root cause (Hypothesis F.1 confirmed)
+
+**Accumulated broker-side state for CK source IP (`192.168.1.10`) from prior failed CONNECT attempts during ESC #5 / Path (a) / Path (b) testing entered a regime that refused concurrent CONNECTs from that source.** Single connections (pub-alone, sub-alone, local-pub) still worked; concurrent ones did not. `systemctl restart mosquitto` cleared in-memory state. CK Gate 5 in concurrent pattern now PASSES with same creds, same clientids, same pattern that was failing for hours.
+
+Beast's PASS earlier in the diagnostic was the discriminating evidence -- Beast was a fresh source IP never tainted by accumulated failed-CONNECT state.
+
+### Diagnostic evidence ruling out the dead hypotheses
+
+- A (per-user broker limit): RULED OUT -- Beast PASSED with `alexandra` user during CK-fail window
+- B (MQTT v5 default): RULED OUT -- forced v3.1.1 still failed; original ck-test-sub success was already v3.1.1 (`p2`)
+- C (clientid collision): RULED OUT -- Beast used unique clientids and PASSED
+- D (broker concurrent-CONNECT race): RULED OUT -- Beast PASSED against same broker
+- E (client-version mismatch): RULED OUT -- bilateral version parity (`2.0.11-1ubuntu1.2`)
+- F.1 (accumulated broker state for source IP): CONFIRMED -- restart + retry PASSES
+
+### State at session pause
+
+- mosquitto.service on SlimJim: active+enabled, MainPID `50604`, ActiveEnter `2026-04-28 17:41:13 MDT`, listeners 1883+1884 bound
+- agent-bus.service: active, auto-reconnected to broker post-restart, all 10 Alexandra topics resubscribed
+- Gate 5 from CK (concurrent pattern): PASS post-F.1 (test/F1 topic, sub received `hello-from-ck-post-F1`)
+- Beast anchors: bit-identical pre/post entire diagnostic. B2b: `2026-04-27T00:13:57.800746541Z`, Garage: `2026-04-27T05:39:58.168067641Z`. **15+ phases of operational work, zero substrate disturbance.**
+- CK package state: unchanged (no upgrade per Path B ruling, version-parity confirmed no upgrade available anyway)
+
+### P6 lessons (running total: 13 banked, #14 + #15 candidates)
+
+- **#12** (banked Day 73 evening, commit `2f839c7`): `set +e` in diagnostic shells when capturing intentional non-zero rcs without aborting the script
+- **#13** (banked Day 73 evening, commit `f43a23d`): mosquitto 2.x major-version preflight before package install (snap broken from 1.x, apt is the supported install vector)
+- **#14** (banked Day 73 evening via Paco ruling, commit `4c5623c`): preflight client-tooling version capture catches matrix-collision bugs before triggering no-op actions. Spec-text decision matrices must validate against preflight data.
+- **#15 candidate** (forming, banks at Phase C close-out): concurrent-CONNECT diagnostics in mosquitto 2.0.x require broker-state hygiene. Repeated failed CONNECTs from a single source IP can cause subsequent concurrent attempts from that source to be rejected at CONNECT-validation, even after the original cause is fixed. Always include `systemctl restart mosquitto` in the diagnostic kit before declaring a concurrent-pattern bug.
+
+### Standing rules updates (this session)
+
+- **5-guardrail carve-out** for diagnostic territory: validated. ESC #5-#7 all correctly routed because they fell outside the rule's 4 mechanical-substitution domains. Rule is for mechanical fix, NOT diagnosis. Working as designed.
+- **Spec-text decision matrices** must include preflight-precondition checks per P6 #14.
+- **Per-step review docs** continue under `/home/jes/control-plane/docs/` (correspondence triad).
+
+### Untracked PD-authored paco_request docs (await Phase C close-out commit per established pattern)
+
+- `paco_request_h1_phase_c_gate5_concurrency.md` (ESC #5)
+- `paco_request_h1_phase_c_gate5_followup.md` (ESC #6)
+- `paco_request_h1_phase_c_gate5_hypothesis_f.md` (ESC #7)
+- `paco_request_h1_phase_c_mosquitto_reload.md` (ESC #4)
+- `paco_request_h1_phase_c_per_listener_settings.md`
+- `paco_request_h1_side_task_ufw_delete_syntax.md`
+
+(Plus 1 untracked `paco_response_h1_phase_c_hypothesis_f_test.md` that PD did not author -- flagged for Paco/CEO review at close-out.)
+
+### Spec deviations + corrections (folded per ESC #6 followup correction ruling)
+
+**ESC #6 §4 was wrong.** PD claimed `agent_bus.py` on SlimJim was a polluter rejecting on listener 1883. Reality: log entries were historical (pre-today's per_listener_settings reload). Currently `agent_bus.service` is functional Alexandra infrastructure, connecting cleanly to loopback :1883 anon listener. Routes 10 Alexandra topics -> Telegram + CK orchestrator /chat. Auto-reconnected post-broker-restart this evening. Inversion ratified by Paco (commit `465f5d1`). Lesson: log-evidence interpretation must be timestamp-correlated against config-state-history.
+
+**ESC #6 §2.4 decision matrix was wrong.** Bound Beast-PASS -> CK-upgrade auto-trigger. Implicitly assumed Beast had different (newer) client version. Reality: bilateral version parity. Path B (escalate first, no upgrade) was correct. P6 #14 banks the lesson: matrices need preflight-precondition checks. Ruling: commit `4c5623c`.
+
+### P5 carryovers (defer to Phase C close-out or beyond)
+
+- **mqtt_subscriber.py on CK**: BROKER=192.168.1.40 PORT=1883 mismatch with loopback-only listener. Script needs reauthor.
+- **agent_bus.py credential rotation**: hardcoded plaintext password at mode 664 in `/home/jes/agent_bus.py` on SlimJim. Move to env-loaded via dotenv.
+- **`paco_response_h1_phase_c_hypothesis_f_test.md`**: untracked file in docs/ that PD did not author. Possibly orphan or alternate name. Surface to Paco at close-out.
+
+### On resume
+
+1. **CEO returns with Paco's ruling on negative-control test fire authorization.**
+2. PD runs negative-control from CK: wrong password against listener 1884 -> expected CONNACK 5 (auth surface verification).
+3. P6 #15 candidate banks.
+4. Phase C close-out workflow:
+   - `paco_review_h1_phase_c_mosquitto.md` drafted (REDACT password, full per-step audit)
+   - Bulk commit of all 6 PD-authored paco_request docs + new spec amendments + memory file updates + SESSION close-out + paco_session_anchor.md final
+   - Phase C scorecard 5/5 PASS
+   - Spec amendments in `tasks/H1_observability.md` for P6 #14 + #15
+5. Move to H1 Phase D (node_exporter fan-out).
+
+### Anchor commit at this pause
+
+`c9e1192` -- feat: H1 Phase C ESC #7 ruled (F.1 test authorized + fallback pre-auth)
+
+This SESSION.md update + paco_session_anchor.md update commits as the session-pause anchor for thin-client transition (Mac mini -> Cortez or JesAir). PD will report back when Sloan returns with Paco's negative-control + close-out ruling.
