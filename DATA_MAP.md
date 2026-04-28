@@ -159,3 +159,29 @@ All homelab nodes are members of tailnet `tail1216a3.ts.net`. Tailscale provides
 - Direct LAN routing when on same subnet (no relay overhead)
 
 **MCP control fabric** (CiscoKid `homelab-mcp.service` PID 3631249) uses Tailscale IPs for hosts when LAN unreliable (Cortez post-audit) or LAN IPs when reliable (Beast/CK/SlimJim/KaliPi/Pi3).
+
+---
+
+## Day 73 update (2026-04-28)
+
+### Switch added
+Intellinet 560917 at `192.168.1.250` -- **24-port managed gigabit + 2 SFP**. All fleet wired through it. Port map authoritative in CHECKLIST.md Day 73 audit entry. VLAN segmentation **deferred** (MR60 satellite cannot route VLANs).
+
+### Cortez network reachability change
+LAN `192.168.1.240` is dead -- Cortez wakes onto Tailscale only. MCP allowed_hosts now uses Tailscale `100.70.77.115`. Substrate-data does not flow through Cortez (Engineering workstation, not data-plane).
+
+### SlimJim baseline post-cleanup
+Only :22 (SSH) + :19999 (Netdata) listening. Reserved for H1 deployment: :9090 (Prometheus), :3000 (Grafana), :1883 + :1884 (Mosquitto), :9100 (node_exporter). UFW = 5 rules.
+
+### MQTT broker status
+Day 67 YELLOW #5 (snap.mosquitto listener config) -- snap version REMOVED Day 73. Apt mosquitto 2.x install gated to H1 Phase C with **dual-listener config** (1883 loopback-anon for legacy `mqtt-subscriber.service` on CK + 1884 LAN-authed per Day 67 IoT security spec). Closure status: **gated, no longer blocked**.
+
+### IoT command path (informational)
+Future data flow once H1 + IoT integration ship:
+```
+IoT device  ->  Mosquitto :1884 LAN authed (SlimJim)
+             ->  mqtt-subscriber.service on CK
+             ->  Postgres audit (B2b replicated to Beast)
+             ->  Tier 2/3 approval gate (Telegram)
+             ->  Schlage / camera / sensor command engine
+```

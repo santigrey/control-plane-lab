@@ -1,9 +1,9 @@
 # CEO Quick Checklist
 
-**Updated:** 2026-04-27 (Day 72/73)
-**Anchor commit:** `7ca7563` on `origin/main`
+**Updated:** 2026-04-28 (Day 73)
+**Anchor commit:** TBD
 **Canonical:** `/home/jes/control-plane/CEO_CHECKLIST.md` on CiscoKid
-**iCloud copy:** `~/iCloud/AI/Santigrey/CEO_CHECKLIST.md` (read-only convenience)
+**iCloud copy:** `~/iCloud/AI/Santigrey/CEO_CHECKLIST.md`
 
 ---
 
@@ -11,84 +11,71 @@
 
 | Layer | State |
 |---|---|
-| **Substrate (dataplane)** | ✅ COMPLETE v1 |
-| **Hardware foundation** | 🔧 IN PROGRESS |
-| **Atlas (Operations agent)** | ⏸ GATED on hardware |
-| **May 2026 placement target** | 🎯 ~4-6 weeks runway |
+| **Substrate (dataplane v1)** | ✅ COMPLETE |
+| **Hardware foundation** | 🔧 IN PROGRESS (switch deployed, H1 next) |
+| **Atlas (Operations agent)** | ⏸ GATED on hardware completion |
+| **B2b nanosecond anchor** | ✅ holding 8+ phases |
 
 ---
 
-## ✅ DONE — substrate phase
+## DONE this session (Day 72-73)
 
-- [x] **B2a** — Postgres 16 + pgvector on Beast (7/7 gates)
-- [x] **B2b** — Logical replication CiscoKid → Beast (12/12 gates, 5,795 rows byte-perfect)
-- [x] **B1**  — Garage v2.1.0 S3 substrate on Beast (8/8 gates + 6/6 bonus)
-- [x] **D1**  — MCP Pydantic limits lifted (verified)
-- [x] **D2**  — `homelab_file_write` tool (verified live this session)
-- [x] Charters v0.1 ratified, Capacity v1.1 ratified
-- [x] 11 P6 lessons banked
-
----
-
-## 🔧 NOW — hardware completion
-
-### Pending CEO action (today)
-- [ ] **Order managed switch** — 24-port, my ruling: UniFi USW-Pro-24-PoE ($799) or USW-Pro-24 non-PoE ($379)
-- [ ] **Ratify Security department** — adding 4th dept under COO; KaliPi + Pi3 + (future) SlimJim IDS
-- [ ] **Confirm Pi3 role** — DNS Gateway (Pi-hole + Unbound + DoT)
-
-### Specs to draft (Paco, parallel-while-you-shop)
-- [ ] **H1** — SlimJim observability (Prometheus + Grafana + node_exporter fleet-wide)
-- [ ] **Charter 7** — Security department formal
-- [ ] **Side-commit** — D2 verification close + CHECKLIST stamp catchup (cosmetic)
-
-### Specs to execute (PD, gated on H1 baseline)
-- [ ] **H1.A→D** — Observability deploy + dashboards
-- [ ] **H2** — Cortez integration (OpenSSH, MCP allowed_hosts, Tailscale resilience, NPU eval)
-- [ ] **H3** — Pi3 → DNS Gateway (Pi-hole + Unbound + Tailscale subnet router)
-- [ ] **H4** — VLAN segmentation (post-switch-arrival)
+- B1 Garage S3 substrate -- CLOSED (8/8 gates + 6/6 bonus)
+- B2b logical replication -- CLOSED earlier (12/12 gates byte-perfect)
+- D2 MCP file_write tool -- VERIFIED EMPIRICALLY (~30+ live calls)
+- Cortez audit -- HP OmniBook X Flip, 115 TOPS NPU+GPU. Role: Engineering Edge AI workstation
+- Pi3 fleet-confirmed -- Pi 3B 1GB Debian 13. Role TBD: Security DNS Gateway
+- Switch acquired + deployed -- Intellinet 560917 at .250, port map established
+- SlimJim cleanup -- removed sabnzbd, mosquitto-snap, wire-pod (29k crash loop), cockpit
+- H1 observability spec -- DRAFTED at tasks/H1_observability.md
+- Org chart -- Security department added (4th)
+- P6 lessons -- 11 banked
 
 ---
 
-## ▶ NEXT — Atlas v0.1
+## Pending CEO action
 
-Unblocks when hardware completes. Architecture already planned (Option 3 ratified):
-- 9 phases A-I
-- Multi-step agent with task queue, MCP fan-out, vector memory, scheduling, 3-tier approval gates
-- ~15-gate scorecard
-- Capstone alignment handled separately by CEO
+- [ ] Ratify H1 spec -> green-light PD Phase A start
+- [ ] (later) Pi3 role confirm: DNS Gateway w/ Pi-hole + Unbound + Tailscale subnet router
+- [ ] (Wednesday) MoCA splitter + filter arrive -- separate physical wiring task
+- [ ] (future) Router replacement evaluation if VLAN segmentation desired
 
 ---
 
-## ⏸ DEFERRED to v0.2
+## NOW (waiting on PD)
 
-- JesAir role evaluation (thin-client → secondary?)
-- SlimJim Wazuh/Suricata IDS/IPS (per Capacity_v1.1)
+- H1 SlimJim observability
+  - Phase A: baseline + dependency check (Docker Compose v2 plugin install, jes->docker group)
+  - Phase B: docker-compose plugin
+  - Phase C: mosquitto 2.x apt install + dual-listener config (closes Day 67 YELLOW #5)
+  - Phase D: node_exporter on CK/Beast/Goliath/KaliPi
+  - Phase E: observability dir tree + compose.yaml + prometheus.yml + Grafana provisioning
+  - Phase F: UFW (Prometheus 9090, Grafana 3000, Mosquitto 1884)
+  - Phase G: docker compose up + healthcheck poll
+  - Phase H: Grafana datasource + dashboards + LAN smoke from CK
+  - Phase I: restart safety + ship report (15-gate scorecard)
+
+## NEXT (after H1 ships)
+
+- H2 Cortez integration spec drafting (OpenSSH already ✓, MCP allowed_hosts already ✓ on Tailscale, Tailscale resilience hardening, NPU eval)
+- H3 Pi3 DNS Gateway spec drafting (Pi-hole + Unbound + Tailscale subnet router)
+- (parallel after H1.B baseline lands)
+
+## DEFERRED to v0.2
+
+- Atlas v0.1 (full agent platform, gated on hardware org complete)
+- VLAN segmentation (MR60 router can't route between VLANs)
+- JesAir role evaluation (currently mobile thin client)
+- SlimJim Wazuh/Suricata IDS (Security dept tooling)
 - Per-bucket S3 keys, TLS for S3, lifecycle/versioning, DOCKER-USER hardening
-- Sub-agent definitions (Mr Robot for Security, etc.)
 - Family Office charter
-- Brand & Market quarterly plan
+- Router replacement (UDM-SE / OPNsense)
+- Sub-agent definitions (Mr Robot for Security, etc.)
 
 ---
 
-## How to use this file
+## How to use
 
-- This is the **executive view**. Updated by Paco at session boundaries.
-- Detailed audit trail lives at `CHECKLIST.md` (long-form, every step).
-- This is the deliverable to glance at before each working session.
-- Decisions awaiting CEO are in the **Pending CEO action** block above.
-
-**Two questions to ask Paco any time:** (1) what's done, (2) what's next.
-This file answers both in 30 seconds.
-
----
-
-## Recent: 2026-04-27 hardware audit
-
-**Cortez** (online, audited): HP OmniBook X Flip Laptop, Intel Core Ultra 7 258V (Lunar Lake), **AI Boost NPU + Arc 140V GPU = 115 TOPS combined**, 32GB RAM, 1.7TB free, OpenSSH ✓ + Tailscale ✓. **Role ratified: Engineering — Edge AI workstation.** MCP allowed_hosts updated to Tailscale `100.70.77.115` (LAN .240 was dead).
-
-**Pi3** (online, fleet-confirmed): Raspberry Pi 3 Model B Rev 1.2, Debian 13 trixie aarch64, 1GB RAM, 50GB free SD. **Sufficient for: Pi-hole + Unbound + Tailscale subnet router (DNS Gateway role).** Not viable for VPN exit node (100Mbps NIC). MCP via LAN `192.168.1.139` confirmed; Tailscale `100.71.159.102` available as backup path.
-
-**D2** (`homelab_file_write` MCP tool): empirically verified — ~30 successful live calls this session. D2 line 23 PASS, status now fully closed.
-
-**Atlas org chart amendment:** Cortez is Engineering, NOT Security. Security dept owns KaliPi (pentest) + Pi3 (DNS Gateway) + future SlimJim IDS. Engineering owns Cortez + JesAir + Mac mini + dev access to Beast/Goliath.
+- Executive view, updated by Paco at session boundaries.
+- Detailed audit lives in CHECKLIST.md.
+- Glance before each session.

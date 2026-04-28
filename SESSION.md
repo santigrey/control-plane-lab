@@ -828,3 +828,33 @@ For task specs that bundle restart + verification, recommend writing the verific
 3. **D3** (`homelab_file_transfer` per D-A-B-C-E sequence) — gated on D2 verification pass; not yet specced.
 4. **P5 carryovers from B1** (none blocking Atlas): per-bucket S3 keys (atlas-svc, backups-svc, artifacts-svc), TLS for S3 API via Tailscale serve / LE-over-Tailscale, object lifecycle policies, versioning on backups bucket, reverse SSH key Beast→CiscoKid, DOCKER-USER chain hardening for LAN-published Postgres + Garage.
 5. **Spec template update** for Atlas v0.1: replace "RestartCount > pre-value" with "StartedAt timestamp differs from pre-restart" as the authoritative restart-occurred signal.
+
+---
+
+## Day 73 -- 2026-04-28 (hardware track + H1 prep)
+
+**Major work:**
+
+- **Switch deployment**: Intellinet 560917 IES-24GM02 24-port managed gigabit (+ 2x SFP). At `192.168.1.250/24`. Login timeout disabled (firmware bug workaround), NTP + MT zone configured, port labels saved, Config Save persisted. Port map established as ground truth: 1=MR60 uplink / 2=CK-OS / 3=SlimJim-iDRAC / 4=CK-iDRAC / 5=SlimJim-OS / 6=Beast-iDRAC / 7=KaliPi / 8=Beast-OS / 9=Pi3 / 10=Macmini / 23=Goliath. 11 active, 13 free + 2 SFP. CEO-confirmed: MR60 satellite cannot route VLANs -> VLAN segmentation deferred to router-replacement window (P5).
+
+- **SlimJim cleanup before H1 drafting**: discovered 4 environmental issues that would have blocked Phase A: (a) sabnzbd snap (5-month-old unexplained Usenet downloader, loopback-only on :8080) -- removed; (b) mosquitto snap (broken from Day 67 listener-config bug) -- removed (clears apt-install path for H1 Phase C); (c) wire-pod.service (29,320-crash-loop dormant Anki Vector project, burning CPU + filling journals) -- stopped + disabled; (d) cockpit.socket (port 9090 collision with Prometheus default via systemd socket-activation) -- disabled. UFW rules pruned 7->5 (8080 + 8084 orphans deleted). SlimJim now clean baseline: only :22 + :19999 listening.
+
+- **Cortez audit**: HP OmniBook X Flip Laptop 16-as0xxx, Win11 24H2, Core Ultra 7 258V Lunar Lake (8C/8T 4.8GHz), Arc 140V GPU + AI Boost NPU = 115 TOPS combined, 32GB RAM, 1.7TB free, sshd + Tailscale running auto. Two stale memory entries corrected (sshd was actually present; MCP IP needs Tailscale not LAN). MCP allowed_hosts updated for Cortez (line 35) -> service restart -> Cortez + Pi3 both verified through MCP. Cortez role ratified: **Engineering Edge AI workstation** (CEO downstairs Windows multi-use). Net-new fleet capability distinct from Beast/Goliath.
+
+- **Pi3 fleet-confirmed**: Pi 3B Rev 1.2, Debian 13 trixie aarch64, 1GB RAM, 50GB SD free, Tailscale 100.71.159.102. Sufficient for Pi-hole + Unbound + TS subnet router. Insufficient for VPN exit node.
+
+- **D2 verification close**: `homelab_file_write` empirically exercised ~30+ live calls. Status flipped to closed.
+
+- **Org chart**: Security department added under COO (4th dept). Owns KaliPi + Pi3 + future SlimJim IDS. No agent head yet (Mr Robot placeholder, not built).
+
+- **H1 spec drafted**: `tasks/H1_observability.md` (20,253 bytes, 9 phases A-I, 15-gate scorecard, 10 ratified Picks). Netdata stays as primary deep-dive on SlimJim; Prometheus + Grafana via Docker Compose; node_exporter native systemd on 4 remote nodes; mosquitto 2.x dual-listener (1883 lo + 1884 LAN authed) closes Day 67 YELLOW #5; Grafana provisioning auto-imports dashboards 1860 + 3662; LAN-bind everywhere. 4 open questions answered in-thread.
+
+**B2b nanosecond invariant**: `2026-04-27T00:13:57.800746541Z` continues holding through router reboot, switch install, SlimJim cleanup, MCP service restart. 8+ phases of operational work, zero substrate disturbance.
+
+**P6 lessons banked: 11** (no new lessons banked this session; architectural decisions only).
+
+**Atlas v0.1**: still gated on hardware org completion. Path = H1 -> H2 || H3 -> Atlas spec drafting.
+
+**Network event mid-session**: CEO performed amplifier wiring change + router reboot. Network briefly down. After recovery, JesAir Claude Desktop mcp-remote needed restart to reconnect to MCP server (CK was fine throughout). Substrate untouched. Banked as a deployment quirk, not an outage.
+
+**Switch UI bug**: Intellinet 560917 firmware has a session-timeout HTTP-server hang. Login Timeout=0 fix applied + Config Save persisted. Should not recur.
