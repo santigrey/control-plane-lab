@@ -1317,3 +1317,70 @@ B2b nanosecond invariant + Garage anchor held bit-identical through:
 Phase H scope: Grafana smoke + LAN smoke from CK + CEO browser validation of Gate 3 (Grafana web HTTP 200 + login page) + Gate 4 (dashboards visible).
 
 Resume phrase for next session anchor: "Day 74 close: H1 Phase G structural 5/5 PASS (Gates 3+4 deferred to Phase H CEO browser), 3-ESC arc resolved + 2 standing rule updates, P6=19, ready for Phase H."
+
+
+---
+
+## Day 74 evening -- H1 Phase H (Grafana smoke + CEO browser tests) CLOSED 4/4 literal PASS
+
+**Major work:** Phase H structural acceptance via CEO browser test of provisioned Grafana dashboards. 4/4 literal PASS scorecard with one known limitation at ship documented + P5 carryover banked + new standing closure pattern banked as 4th memory file.
+
+### CEO browser test results
+
+- **Node Exporter Full (dashboard 1860): PASS** -- full panel render with live Prometheus data (CPU 1.7% / RAM 4.8% / disk 25.3% / network kb/s / 6.3 day uptime for SlimJim instance 192.168.1.40:9100). Datasource provisioning works; UID resolution works; Grafana 11 compatibility confirmed.
+- **Prometheus 2.0 Overview (dashboard 3662): FAIL** -- all panels N/A, variable dropdowns failing to resolve, one panel showing literal text "Panel plugin has no panel component" (deprecated singlestat panel removed in Grafana 11.x). Failure isolated to dashboard 3662 (Grafana 4-5 era ~2018), not the datasource or provisioning.
+
+### Phase H 4-gate scorecard (literal)
+
+- Gate 1 (Grafana web HTTP 200 + login renders): PASS
+- Gate 2 (CEO login succeeds with admin + grafana-admin.pw): PASS
+- Gate 3 (Both provisioned dashboards visible in menu): PASS (1860 + 3662 both visible)
+- Gate 4 (Dashboards render with live data from at least one node_exporter target): PASS (Node Exporter Full satisfies the at-least-one criterion)
+- Standing gate (B2b + Garage anchors bit-identical pre/post): PASS (read-only Phase H)
+
+### ESC #1 of Phase H -- ruled Path A under new standing closure pattern
+
+Literal 4/4 PASS but spirit-of-test partial (one of two provisioned dashboards broken). Spec was silent on this case. PD escalated for ruling.
+
+Paco ruled Path A (close 4/4 + P5 carryover) AND banked the architectural decision as the 4th standing rule memory file: `docs/feedback_phase_closure_literal_vs_spirit.md` (5,596 bytes, md5 `915fb68fec8b53a94fdafc9429d6534d`). Sets standing pattern: literal-PASS + spirit-partial -> close + P5 when ALL 5 conditions hold (literal gates met as authored / failure contained + visible / no substrate impact / inline-fix carries non-trivial risk / P5 scope appropriate). All 5 conditions verified satisfied for the 3662 case.
+
+Required documentation elements per the new pattern (all present in `paco_review_h1_phase_h_grafana_smoke.md` this commit):
+1. "Known limitations at ship" section
+2. P5 carryover citation by reference (3 candidate replacements: 15489, 3681, hand-rolled minimal)
+3. Inline-fix rejection rationale (5 conditions verified; Path B carried real risk)
+4. Spec amendment cross-reference (Phase E.6 one-line note this commit)
+
+### Standing rules total: 4
+
+Four memory files in the standing-rules registry:
+1. `feedback_directive_command_syntax_correction_pd_authority.md` (5-guardrail rule + 2A carve-out)
+2. `feedback_paco_review_doc_per_step.md` (per-step review)
+3. `feedback_paco_pd_handoff_protocol.md` (handoff protocol + bidirectional one-liner format spec)
+4. `feedback_phase_closure_literal_vs_spirit.md` (NEW this phase -- closure pattern for literal-PASS + spirit-partial)
+
+### v0.2 hardening pass grouping (5 items collected)
+
+- Goliath UFW enable (Phase D P5)
+- KaliPi UFW install + enable (Phase D P5)
+- grafana-data subdirs ownership cleanup (Phase G P5)
+- Grafana admin password rotation helper script (Phase G P5)
+- **Dashboard 3662 replacement** (Phase H P5)
+
+One grouped pass at v0.2 hardening time addresses all 5.
+
+### State at session pause
+
+- obs-prometheus + obs-grafana running healthy on SlimJim, Restarts=0
+- 7/7 Prometheus targets up
+- compose.yaml unchanged (md5 `db89319cad27c091ab1675f7035d7aa3`)
+- grafana-admin.pw unchanged (600 472:472)
+- UFW unchanged (9 rules)
+- B2b + Garage anchors bit-identical (B2b: `2026-04-27T00:13:57.800746541Z`, Garage: `2026-04-27T05:39:58.168067641Z`) -- holding through 19+ phases / ~52 hours
+- P6 lessons banked: 19 (no new this phase; standing rule banked instead)
+- Standing rules: 4 memory files
+
+### Phase I next
+
+Phase I scope: restart safety + ship report (per spec section 13). `docker compose restart` + healthcheck poll + 17-section H1 ship report at `/home/jes/observability/H1_ship_report.md`.
+
+Resume phrase for next session anchor: "Day 74 close: H1 Phase H 4/4 literal PASS + dashboard 3662 P5 + 4th standing rule banked, P6=19, ready for Phase I (restart safety + ship report)."

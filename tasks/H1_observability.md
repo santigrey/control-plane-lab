@@ -477,6 +477,8 @@ providers:
 
 Download dashboard 1860 (Node Exporter Full) and 3662 (Prometheus Stats) JSON exports into `grafana/dashboards/`.
 
+**Note (banked Day 74 Phase H close-out):** Dashboard 3662 (Prometheus 2.0 Overview) renders all panels N/A under Grafana 11.x as of H1 ship. Root cause: deprecated `singlestat` panel + old variable query syntax; Grafana 11 auto-migration insufficient. P5 carryover for v0.2 replacement (3 candidates evaluated: 15489, 3681, hand-rolled minimal). See `docs/paco_review_h1_phase_h_grafana_smoke.md` + `docs/feedback_phase_closure_literal_vs_spirit.md`.
+
 ### E.7 -- Acceptance gates (4)
 
 1. All directories created with correct ownership/perms
