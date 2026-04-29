@@ -1,8 +1,8 @@
 # Paco Session Anchor -- JesAir Resume
 
-**Last updated:** 2026-04-28 / Day 73 evening
-**Last commit:** `61ff118` (H1 Phase C closes 5/5 PASS -- YELLOW #5 closure + P6=15 + 12-file fold)
-**Resume phrase:** "Day 73 evening complete, H1 Phase C CLOSED, ready for Phase D node_exporter fan-out."
+**Last updated:** 2026-04-29 / Day 74 (H1 Phase D close)
+**Last commit:** Phase D 3/3 PASS close-out (see git log for SHA) -- supersedes `61ff118` Phase C close
+**Resume phrase:** "Day 74 close: H1 Phase D 3/3 PASS, 4-host node_exporter fan-out scrape-ready, P6=16, ready for Phase E (Prometheus + Grafana compose)."
 
 ---
 
@@ -36,8 +36,13 @@
   - 7 escalations resolved, all banked durable knowledge
   - 4 new P6 lessons: #12 (set+e discipline), #13 (major-version preflight), #14 (client-tooling version capture), #15 (broker-state hygiene for concurrent-CONNECT diagnostics)
   - Standing rule broadened: 4 -> 5 guardrails + carve-out for ops propagation
-- Phase D: NEXT (node_exporter fan-out CK/Beast/Goliath/KaliPi)
-- Phase E-I: queued (compose+prom+grafana, UFW, healthcheck, smoke, restart safety + ship report)
+- **Phase D: ✓ CLOSED** -- node_exporter fan-out CK/Beast/Goliath/KaliPi, 3/3 gates PASS
+  - 4 hosts scrape-confirmed from SlimJim (10,864 total node_* metric lines)
+  - 2 deviations from spec section 8 D.2 (Goliath UFW inactive + KaliPi UFW not installed) -> A2-refined process-bind via ARGS, both pre-authorized + documented per guardrail 4
+  - 3 P5 carryovers banked: Goliath UFW enable / KaliPi UFW install+enable / CK+Beast process-bind symmetry
+  - 1 P6 lesson banked: #16 per-target-host operational-readiness preflight matrix for fan-out phases
+- **Phase E: NEXT** (observability/ skeleton + Docker Compose stack on SlimJim: Prometheus + Grafana with provisioned dashboards 1860 + 3662, scrape config for 4 fan-out endpoints + SlimJim self-scrape)
+- Phase F-I: queued (UFW, healthcheck, smoke, restart safety + ship report)
 
 ### Org chart
 - Engineering: PD/Cowork ✓
@@ -46,7 +51,7 @@
 - Security: ADDED (KaliPi + Pi3 + future SlimJim IDS)
 - CEO-direct: Brand & Market ✓
 
-### P6 lessons banked: 15
+### P6 lessons banked: 16
 
 ---
 
@@ -61,28 +66,29 @@
 
 ---
 
-## On JesAir resume (final actions for Phase C)
+## On resume (after Phase D close)
 
-Paco final confirmation step on Phase C close-out is ready. Specifically:
+Phase D is shipped to canon (this commit). Phase E is the next deliverable.
 
 1. CEO pulls `git pull origin main` on whichever workstation
-2. CEO reads `docs/paco_review_h1_phase_c_mosquitto.md` if desired (16,464 bytes, full ESC #1-#7 chain documented, 5/5 scorecard, REDACTED password)
-3. CEO greenlights Paco final confirm -> Phase D start
+2. CEO reads `docs/paco_review_h1_phase_d_node_exporter.md` if desired (~16K, 4-host fan-out evidence + 2 deviations + 3 P5 carryovers + P6 #16 banked + 5 anchor captures)
+3. CEO greenlights Paco final confirm -> Phase E start
 
-OR if CEO wants to start fresh in the morning, Phase C is already shipped to canon. No state hangs.
+OR if CEO wants to start fresh in the morning, Phase D is already in canon. No state hangs.
 
 ---
 
-## Phase D scope (when ready)
+## Phase E scope (when ready)
 
-node_exporter fan-out per H1 spec section 8:
-- Install on CK, Beast, Goliath, KaliPi (apt where available, manual binary on KaliPi if needed per pre-auth)
-- LAN-bound :9100, source-restricted UFW (only SlimJim allowed)
-- Verify scrape from SlimJim curl test
-- 3-gate acceptance: 4 nodes active+enabled / SlimJim can curl each / UFW per-node restricts to .40
-- B2b + Garage anchor preservation (15+ phases now, expecting holds)
+observability/ skeleton + Docker Compose stack on SlimJim per H1 spec section 9:
+- /home/jes/observability/ directory layout (compose.yaml + prometheus.yml + grafana provisioning configs)
+- Prometheus 2.x via Docker Compose v2 on SlimJim, scrape interval 15s, retention 30d / 10GB cap
+- Grafana via same compose, port 3000 LAN-bound, default dashboards 1860 + 3662 auto-provisioned
+- Mosquitto stays separate (Phase C, apt-installed not Docker)
+- Scrape targets: 4 fan-out node_exporters (CK/Beast/Goliath/KaliPi via :9100) + SlimJim self-scrape (Netdata :19999 + node_exporter localhost) + Prometheus self (:9090)
+- Acceptance: compose up healthy / Grafana login + 2 dashboards loaded / Prometheus targets all UP / B2b+Garage anchor preservation
 
-Phase D should be cleaner than Phase C -- it's mechanical (apt install + systemctl + UFW) on 4 nodes in parallel. No auth surface, no major-version semantics, no concurrency edge cases.
+Phase E is mechanical SlimJim-only -- no fan-out, no auth surface beyond Grafana admin password (CEO interactive set), no concurrency. Single-host phase.
 
 ---
 
@@ -93,5 +99,13 @@ Numerically: 7 escalations, 4 P6 lessons banked (#12 set+e + #13 major-version p
 Architecturally: substrate held bit-identical through every escalation, every restart, every config edit, every diagnostic test. The discipline of "diagnostic work touches only the layer being diagnosed" worked exactly as designed.
 
 The escalation cost was real (Phase C took longer than planned). The compounding value was realer (4 P6 lessons + standing rule refinements transfer to every future build).
+
+## What this Phase D taught
+
+Numerically: 1 escalation (Goliath UFW + KaliPi sudo + later KaliPi UFW-not-installed surfaced inside the same paco_request), 1 P6 lesson banked (#16 per-target-host operational-readiness preflight matrix), 3 P5 carryovers banked (firewall hardening on Goliath + KaliPi + CK/Beast symmetry), 0 standing rule changes.
+
+Architecturally: "mechanical scope" was true for the install commands (apt + systemctl + UFW) but incomplete for the operational policy environment those commands run in. Goliath UFW state and KaliPi sudo/UFW state were assumed-uniform but were not. The fix was Paco's pre-authorization of A2-refined process-bind for both Goliath AND KaliPi (§4.4 covered the KaliPi-UFW-also-inactive case), so when CEO surfaced KaliPi's `command not found` mid-handoff, the alt directive applied without a second escalation.
+
+The lesson: preflight is the cheap moment to catch operational policy heterogeneity. P6 #16's spec amendment (A.5 in tasks/H1_observability.md) bakes the 6-row preflight matrix into the spec template for future fan-out phases.
 
 -- Paco

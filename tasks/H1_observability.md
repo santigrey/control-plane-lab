@@ -132,6 +132,25 @@ sudo ufw status numbered > /tmp/H1_phase_a_captures/ufw_post.txt
 5. UFW orphan 8084 removed; 8080 decision documented
 6. CK + Beast mosquitto-clients version captured at preflight (P6 #14 -- catches matrix-collision before triggering no-op upgrades; banked from Phase C ESC #6 -> #7)
 
+### A.5 -- Per-target-host preflight matrix (P6 #16, banked Phase D close-out 2026-04-29)
+
+For phases that fan out across multiple hosts (e.g., D = node_exporter on 4 nodes), preflight enumeration on every target host is required, not just the primary. Required captures per target host:
+
+| Capture | Why |
+|---|---|
+| **Firewall state** (active/inactive/missing) + rule count | Reveals UFW posture before phase relies on it (Goliath had UFW inactive; KaliPi has UFW not-installed -- both surfaced as Phase D deviations) |
+| **Sudo policy** for working user (NOPASSWD vs interactive password) | Reveals whether PD can run sudo non-interactively or needs CEO handoff (KaliPi has interactive sudo by design as pentest host) |
+| **Package-manager candidate version** of target package(s) | Reveals architecture/version skew + repo path differences (jammy/noble/kali-rolling all served prometheus-node-exporter at different versions in Phase D) |
+| **Listener-port collision check** for any port the phase binds | Reveals existing services that would conflict |
+| **Architecture compatibility** (x86_64 / aarch64 / etc.) | Reveals binary/build incompatibilities for compiled packages |
+| **OS family + version** | Reveals systemd unit name conventions, apt repo path conventions, config layout differences |
+
+**When a phase fans out across multiple hosts**, preflight enumeration on every host reveals operational policy heterogeneity BEFORE the phase tries to act on assumptions. Mid-phase escalation for state mismatches that preflight would have caught is process tax that compounds across builds.
+
+**Banked from H1 Phase D Day 74**: directive's "mechanical scope" claim was correct for CK + Beast (NOPASSWD + UFW active) but incomplete for Goliath (UFW inactive) and KaliPi (sudo password required + UFW not installed), forcing mid-phase escalation (`paco_request_h1_phase_d_goliath_kalipi.md`) that preflight would have surfaced at Phase A. Resolution: Goliath A2-refined process-bind via ARGS + KaliPi same pattern via CEO handoff. Both pre-authorized in `paco_response_h1_phase_d_goliath_kalipi_paths.md` (commit `6266ba1`).
+
+**Single-host phases** (H2 Cortez integration, H3 Pi3 DNS Gateway) capture single-host preflight only; the matrix template applies whenever a future spec phase touches multiple hosts.
+
 ## 6. Phase B -- docker compose v2 plugin + docker group
 
 **Goal:** enable `docker compose` (v2) and let `jes` use Docker without sudo.

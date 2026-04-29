@@ -1019,3 +1019,76 @@ Plus 1 inline correction (ESC #6 §4 agent_bus polluter premise self-corrected p
 ### Anchor commit at close
 
 (pending) -- single git commit fold of: `paco_review_h1_phase_c_mosquitto.md` + `feedback_directive_command_syntax_correction_pd_authority.md` + this SESSION.md update + paco_session_anchor.md update + CHECKLIST.md audit entry + `tasks/H1_observability.md` spec amendment for P6 #14 + #15 preflight checks.
+
+---
+
+# Project Ascension — Day 74 (H1 Phase D close)
+**Date:** 2026-04-29 (Day 74)
+**Anchor commit (close-out):** (pending — single git commit fold for Phase D)
+
+## Phase D ship summary
+
+### 4-host fan-out execution
+
+- **CK (192.168.1.10):** prometheus-node-exporter 1.3.1 (jammy/universe), listener `*:9100`, UFW rule [25] H1 source-filter, scrape PASS (2749 node_* metric lines).
+- **Beast (192.168.1.152):** prometheus-node-exporter 1.3.1 (jammy/universe), listener `*:9100`, UFW rule [16] H1 source-filter, scrape PASS (2525 node_* metric lines).
+- **Goliath (192.168.1.20):** prometheus-node-exporter 1.7.0 (noble/universe, arm64), listener `192.168.1.20:9100` (process-bind via ARGS), UFW inactive on Goliath (P5 carryover), scrape PASS (2831 node_* metric lines). **Deviation 1 from spec section 8 D.2** -- A2-refined process-level bind authorized in `paco_response_h1_phase_d_goliath_kalipi_paths.md` section 3.
+- **KaliPi (192.168.1.254):** prometheus-node-exporter 1.11.1 (kali-rolling, arm64), listener `192.168.1.254:9100` (process-bind via ARGS), UFW NOT installed on KaliPi (Kali rolling does not ship UFW; P5 carryover), scrape PASS (1759 node_* metric lines). **Deviation 2 from spec section 8 D.2** -- A2-refined alt directive (Paco §4.4 pre-auth) applied via CEO B1 handoff (interactive sudo on KaliPi pentest host; no NOPASSWD policy drift).
+
+### Phase D 3-gate scorecard
+
+- Gate 1 (node_exporter active+enabled on all 4): **4/4 PASS**
+- Gate 2 (SlimJim curl returns metrics from each): **4/4 PASS** (10,864 total node_* metric lines aggregated)
+- Gate 3 (UFW per-node restricts source to .40 only): **2/4 spec-literal + 2/4 deviation-substitute = 4/4 functional**
+- Standing gate (B2b + Garage anchors bit-identical pre/post): **PASS** -- 5 captures across Phase D all bit-identical (postgres `2026-04-27T00:13:57.800746541Z` + garage `2026-04-27T05:39:58.168067641Z`, both healthy 0 restarts)
+
+### Deviations documented per guardrail 4 of 5-guardrail standing rule
+
+- **Deviation 1 (Goliath):** spec UFW source-IP filter substituted with process-level listener bind via `/etc/default/prometheus-node-exporter` ARGS line `--web.listen-address=192.168.1.20:9100`. Backup `/etc/default/prometheus-node-exporter.bak.20260429_095821`. UFW inactive on Goliath made spec rule dormant; process-bind provides defense at listener layer instead. Authorized: `paco_response_h1_phase_d_goliath_kalipi_paths.md` section 3 (commit `6266ba1`).
+- **Deviation 2 (KaliPi):** spec UFW directive returned `sudo: ufw: command not found` (Kali rolling does not ship UFW). A2-refined alt applied: `--web.listen-address=192.168.1.254:9100`. Backup `/etc/default/prometheus-node-exporter.bak.20260429_101123`. CEO executed via B1 handoff pattern (no PD sudo on KaliPi). Authorized: same paco_response section 4.4 ("If KaliPi UFW is also inactive" -- pre-auth for A2-refined alt).
+
+### P5 carryovers banked (3 this phase)
+
+1. **Goliath UFW enable** -- enable existing UFW on Goliath in future security-hardening pass (likely H6 or v0.2 cleanup); preserve SSH 22/tcp first to avoid lockout; then add spec's source-IP rule per original intent.
+2. **KaliPi UFW install + enable** -- new this phase. `apt install ufw` + `ufw enable` + 22/tcp + 9100/tcp source-IP rule. Larger lift than Goliath because Kali doesn't ship UFW by default (security-tooling host posture).
+3. **CK + Beast process-bind symmetry** -- CK + Beast currently `*:9100` with UFW source-filter. Goliath + KaliPi `<lan-ip>:9100` (process-bind). For fleet symmetry in future hardening pass, consider adding `--web.listen-address` to CK + Beast as defense-in-depth.
+
+### P6 #16 banked
+
+> **Phase preflight should include per-target-host operational-readiness checks for every host the phase will touch, not just the primary host.**
+>
+> Required captures per target host: firewall state / sudo policy / package-manager availability + candidate version / listener-port collision check / architecture compatibility / OS family + version.
+>
+> When a phase fans out across multiple hosts, preflight enumeration on every host reveals operational policy heterogeneity BEFORE the phase tries to act on assumptions. Mid-phase escalation for state mismatches that preflight would have caught is process tax that compounds across builds.
+>
+> Banked from H1 Phase D Day 74: directive's "mechanical scope" claim was correct for CK + Beast (NOPASSWD + UFW active) but incomplete for Goliath (UFW inactive) and KaliPi (sudo password required + UFW not installed), forcing mid-phase escalation that preflight would have surfaced at Phase A.
+
+**P6 lessons banked count: 16** (was 15 at Phase D entry; +1 this phase). Spec amendment to `tasks/H1_observability.md` Phase A landed this commit (new A.5 subsection: per-target-host preflight matrix template).
+
+### Standing rules unchanged this phase
+
+No new guardrails added; 5-guardrail rule + carve-out (banked Phase C) applied cleanly. Both Phase D deviations documented per guardrail 4 documentation requirement.
+
+### Beast anchor preservation
+
+B2b nanosecond anchor `control-postgres-beast 2026-04-27T00:13:57.800746541Z` and Garage anchor `control-garage-beast 2026-04-27T05:39:58.168067641Z` bit-identical pre and post Phase D. **17+ phases of H1 work + ~46 hours of operational time, both anchors held.** No Beast Docker stack touched this phase (apt install on Beast was for prometheus-node-exporter on the host OS, not in any container; Beast Docker daemon untouched).
+
+### State at close
+
+- **Phase D 3-gate PASS** + 4/4 hosts scrape-ready from SlimJim
+- **17+ phase B2b + Garage anchor preservation** holding through Day 74
+- **3 P5 carryovers banked**, all firewall hardening (Goliath / KaliPi / CK+Beast symmetry)
+- **1 P6 lesson banked** (#16 -- per-target-host preflight matrix)
+- **0 standing rule changes** (5-guardrail + carve-out unchanged)
+- **2 deviations from spec section 8 D.2**, both pre-authorized + documented per guardrail 4
+- **Phase E (Prometheus + Grafana compose on SlimJim) is NEXT** -- mechanical SlimJim-only phase per spec section 9; can scrape all 4 fan-out targets + SlimJim Netdata
+
+### On resume
+
+1. **Phase E (compose + prometheus.yml + Grafana provisioning)** per `tasks/H1_observability.md` section 9. Scrape config will list 4 fan-out endpoints + SlimJim self-scrape + Netdata bridge.
+2. P5 carryovers from Phase D: 3 firewall hardening items (Goliath UFW enable; KaliPi UFW install+enable; CK+Beast process-bind symmetry).
+3. Per Scholas Module 933 coursework, Prologis follow-up, Playwright LinkedIn service on Mac mini, ASUS Ascent GX10 integration -- all pending.
+
+### Anchor commit at close
+
+(pending) -- single git commit fold of: `paco_review_h1_phase_d_node_exporter.md` + this SESSION.md update + `paco_session_anchor.md` update + `CHECKLIST.md` audit entry + `tasks/H1_observability.md` spec amendment for P6 #16 preflight matrix template.
