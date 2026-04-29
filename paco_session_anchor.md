@@ -1,133 +1,97 @@
-# Paco Session Anchor
+# Paco Session Anchor -- JesAir Resume
 
-**Last updated:** 2026-04-28 night (Day 73 close-out)
-**Anchor commit:** (pending, this close-out fold) -- supersedes `c9e1192` (ESC #7 response). F.1 PASS + negative-control PASS confirmed; Phase C 5/5 closes YELLOW #5.
-**Resume Phrase:** "Day 73 close-out: Phase C YELLOW #5 closure (5/5 PASS). 7 ESC arc resolved. P6 = 15 banked. Awaiting Phase D GO."
+**Last updated:** 2026-04-28 / Day 73 evening
+**Last commit:** `61ff118` (H1 Phase C closes 5/5 PASS -- YELLOW #5 closure + P6=15 + 12-file fold)
+**Resume phrase:** "Day 73 evening complete, H1 Phase C CLOSED, ready for Phase D node_exporter fan-out."
 
 ---
 
-## Current state (as of session pause)
+## Where we are
 
-### Substrate (dataplane v1) -- ALL HOLDING
+### Substrate (dataplane v1) -- COMPLETE
+- B2a Postgres+pgvector on Beast: 7/7 gates PASS
+- B2b logical replication CK->Beast: 12/12 gates byte-perfect, 5,795 rows
+- B1 Garage S3 on Beast: 8/8 gates + 6/6 bonus PASS
+- D1 + D2 MCP tools: VERIFIED
 
-- **B2a** Postgres+pgvector on Beast -- CLOSED (7/7 gates)
-- **B2b** logical replication CK->Beast -- CLOSED (12/12 gates, 5,795 rows byte-perfect)
-- **B1**  Garage S3 on Beast -- CLOSED (8/8 gates + 6/6 bonus)
-- **D1** MCP Pydantic limits -- VERIFIED
-- **D2** homelab_file_write tool -- VERIFIED EMPIRICALLY (~30+ live calls)
-- **B2b nanosecond anchor**: `2026-04-27T00:13:57.800746541Z` -- holding through 16+ phases (bit-identical pre/post Phase C F.1 sequence)
-- **Garage anchor**: `2026-04-27T05:39:58.168067641Z` -- holding through 16+ phases (bit-identical pre/post Phase C F.1 sequence)
+### B2b nanosecond invariant: HOLDING
+- `control-postgres-beast StartedAt=2026-04-27T00:13:57.800746541Z healthy/0`
+- `control-garage-beast StartedAt=2026-04-27T05:39:58.168067641Z healthy/0`
+- ~38+ hours undisturbed across 14+ phases of operational work
 
-### H1 Phase progress
+### Hardware track
+- Switch: Intellinet 560917 at 192.168.1.250 deployed, port-mapped, labeled, configured
+- VLAN: deferred (MR60 router can't route VLANs, P5)
+- SlimJim: cleaned baseline (sabnzbd/mosquitto-snap/wire-pod/cockpit removed)
+- Cortez: Engineering Edge AI workstation, MCP via Tailscale 100.70.77.115
+- Pi3: Security DNS Gateway (TBD) on Pi 3B Debian 13 aarch64
+- Macmini: hardwired tonight, IP changed `.13` -> `.194` LAN; Tailscale `100.102.87.70` unchanged; MCP allowed_hosts already uses Tailscale, no fix needed
 
-- **Phase A**: PASS (3/3) -- commit `f0abbdf`
-- **Phase B**: PASS (4/4) -- commit `c4ca14e`
-- **Phase C side-task** (UFW delete syntax): PASS (3/3) -- commit `2f839c7`
-- **Phase C** main:
-  - Gates 1-5: **5/5 PASS**
-  - Gate 5 unblocked via F.1 (broker-state hygiene); negative-control PASS verifies auth surface intact
-  - Phase C YELLOW #5 closure (cataloged Day 67 / 2026-04-23 in post-move 7-phase audit)
-  - Close-out commit fold in flight (this anchor + review + memory file + SESSION + CHECKLIST + spec amendment)
-
-### Hardware track (unchanged from morning of Day 73)
-
-- Switch (Intellinet 560917 at 192.168.1.250) deployed
-- SlimJim cleaned baseline
-- Cortez audited (HP OmniBook X Flip, NPU+Arc=115 TOPS)
-- Pi3 fleet-confirmed (Debian 13 trixie aarch64)
-- Org chart: Security dept added under COO
-
-### Phase C Gate 5 root cause (final)
-
-**Hypothesis F.1 confirmed: Accumulated broker-side state for CK source IP from prior failed CONNECT attempts during ESC #5 / Path (a) / Path (b) testing.**
-
-- Single connections (pub-alone, sub-alone, local-pub) worked
-- Concurrent connections rejected at CONNECT-validation stage with CONNACK 5
-- Beast PASSED (fresh source IP, no accumulated state) -- discriminating evidence
-- `systemctl restart mosquitto` cleared in-memory state -> CK Gate 5 PASSES post-restart with same creds, same clientids, same pattern (`hello-from-ck-post-F1` round-trip received by sub)
-- Negative-control: wrong-password test from CK returned `Connection Refused: not authorised` -- auth layer intact, no false-positive
-- All other hypotheses (A, B, C, D, E) ruled out
-
-### P6 lessons banked
-
-- **Banked: 15** (#1-#11 from prior sessions; #12 + #13 from earlier Day 73; #14 + #15 banked this close-out)
-- **#14**: preflight client-tooling version capture catches matrix-collision bugs before triggering no-op actions (source: `matrix_collision.md` commit `4c5623c`)
-- **#15**: broker-state hygiene for concurrent-CONNECT diagnostics -- restart broker before deeper investigation when single-host vs concurrent patterns diverge (source: `hypothesis_f_test.md`, confirmed by F.1 PASS this close-out)
-
-### Standing rules updates this session
-
-- **5th guardrail** banked (ESC #1, commit `f43a23d`): auth/credential/security-boundary corrections always escalate, regardless of conditions 1-4
-- **Guardrail 5 carve-out** banked (ESC #4, commit `8c4c8c7`): operational propagation of CEO-authorized state changes is at PD authority under 3 sub-conditions (state already complete + canonical/documented mechanism + bounded failure mode)
-- Both rules consolidated in PD memory file: `feedback_directive_command_syntax_correction_pd_authority.md` at repo root (supersedes referenced-but-uninstantiated `feedback_pkg_name_substitution_pd_authority.md`)
-- 5-guardrail carve-out validated for diagnostic territory (ESCs #5-#7 all correctly routed)
-- Spec-text decision matrices must include preflight-precondition checks (Paco process note, commit `4c5623c`)
-- Correspondence triad continues (paco_request / paco_review / paco_response in `docs/`)
-
-### Phase C escalation chain (chronological, all resolved)
-
-- ESC #1 (per_listener_settings, mosquitto 2.0 auth-scoping) -> commit `f43a23d` (banked 5th guardrail + P6 #13)
-- ESC #2 (inline -- Approach 2 credential handoff selection within ESC #1 thread)
-- ESC #3 (inline -- mosquitto_passwd ownership deprecation, P5 carryover)
-- ESC #4 (mosquitto reload, stale auth cache) -> commit `8c4c8c7` (banked guardrail 5 carve-out)
-- ESC #5 (gate5 concurrency) -> commit `1603016`
-- ESC #6 (gate5 followup) -> commit `93164d5`
-- ESC #6 followup correction (agent_bus inversion) -> commit `465f5d1`
-- ESC #6 matrix collision (Path B + P6 #14) -> commit `4c5623c`
-- ESC #7 (Hypothesis F + F.1 test auth + F.4/F.2 fallback pre-auth) -> commit `c9e1192`
-- F.1 PASS + negative-control PASS confirmed -- **Phase C 5/5 PASS, YELLOW #5 closure**
+### H1 Observability
+- Phase A: ✓ baseline + dependency check
+- Phase B: ✓ docker-compose-v2 plugin + jes->docker group
+- Side-task: ✓ mariadb disable + UFW 80/443 cleanup (UFW 5->3)
+- **Phase C: ✓ CLOSED** -- mosquitto 2.x dual-listener (1883 lo anon + 1884 LAN authed), 5/5 PASS
+  - Closes Day 67-cataloged YELLOW #5 (snap.mosquitto listener-config bug)
+  - 7 escalations resolved, all banked durable knowledge
+  - 4 new P6 lessons: #12 (set+e discipline), #13 (major-version preflight), #14 (client-tooling version capture), #15 (broker-state hygiene for concurrent-CONNECT diagnostics)
+  - Standing rule broadened: 4 -> 5 guardrails + carve-out for ops propagation
+- Phase D: NEXT (node_exporter fan-out CK/Beast/Goliath/KaliPi)
+- Phase E-I: queued (compose+prom+grafana, UFW, healthcheck, smoke, restart safety + ship report)
 
 ### Org chart
-
-- COO: Paco ✓
-- Engineering: PD/Cowork ✓ + Cortez/JesAir/Macmini
+- Engineering: PD/Cowork ✓
 - L&D: Axiom ✓
-- Operations: Atlas v0.1 (TBD, gated on H1 ship)
-- Security: KaliPi + Pi3 + future SlimJim IDS (no agent head)
+- Operations: Atlas v0.1 (gated on H1 ship)
+- Security: ADDED (KaliPi + Pi3 + future SlimJim IDS)
 - CEO-direct: Brand & Market ✓
-- Family Office: deferred
 
-### Open specs
-
-- **H1 observability** -- Phases A, B, C side-task, C main 5/5 PASS; awaiting Paco final confirm + Phase D GO (node_exporter fan-out)
-- **H2 Cortez integration** -- not drafted (gated post-H1)
-- **H3 Pi3 DNS Gateway** -- not drafted (gated post-H1)
-- **H4 VLAN** -- DEFERRED (router-replacement-gated)
-- **Atlas v0.1** -- not drafted (gated post-hardware-org-complete)
-
-### Untracked PD-authored docs (resolving in this close-out commit)
-
-- `docs/paco_request_h1_phase_c_gate5_concurrency.md` (ESC #5)
-- `docs/paco_request_h1_phase_c_gate5_followup.md` (ESC #6)
-- `docs/paco_request_h1_phase_c_gate5_hypothesis_f.md` (ESC #7)
-- `docs/paco_request_h1_phase_c_mosquitto_reload.md` (ESC #4)
-- `docs/paco_request_h1_phase_c_per_listener_settings.md` (ESC #1)
-- `docs/paco_request_h1_side_task_ufw_delete_syntax.md`
-- `docs/paco_review_h1_phase_c_mosquitto.md` (this close-out review)
-- `feedback_directive_command_syntax_correction_pd_authority.md` (PD memory file, repo root)
-
-### P5 carryovers
-
-- mqtt_subscriber.py on CK (BROKER=192.168.1.40 PORT=1883 mismatch with loopback-only listener)
-- agent_bus.py credential rotation (plaintext pw at mode 664 on SlimJim, move to dotenv)
-- mosquitto passwd ownership migration (`mosquitto:mosquitto` → `root:mosquitto 640` deferred to mosquitto upgrade)
-- `docs/paco_response_h1_phase_c_hypothesis_f_test.md` -- untracked, PD did not author. Surface to Paco at close-out.
+### P6 lessons banked: 15
 
 ---
 
-## On resume
-
-1. **Phase D (node_exporter fan-out)** across CK / Beast / Goliath / KaliPi per `tasks/H1_observability.md` section 8 -- awaiting Paco final confirm on close-out commit + Phase D GO.
-2. P5 carryovers from Phase C above (3 items + orphan-doc flag).
-3. Pending backlog: Per Scholas Module 933, Prologis follow-up, Playwright LinkedIn service on Mac mini, ASUS Ascent GX10 integration, dashboard file/folder upload UI.
-
-P5 carryovers, capstone, Atlas drafting -- separate scopes.
+## Standing rules
+1. Per-step review docs in `/home/jes/control-plane/docs/`
+2. B2b + Garage nanosecond anchor preservation through every phase
+3. Directive command-syntax correction at PD authority (5 guardrails + carve-out + examples)
+4. PD escalates via paco_request when uncertain
+5. Spec or no action
+6. Secrets discipline: REDACTED in review docs, set interactively by CEO
+7. P6 #12 set+e for verifier scripts checking exit-coded systemctl outputs
 
 ---
 
-## Notes for Paco
+## On JesAir resume (final actions for Phase C)
 
-- Phase C 5/5 PASS achieved. YELLOW #5 closure cataloged Day 67 / 2026-04-23 in post-move 7-phase audit; Day 73 = closure execution.
-- 7 escalations + 1 inline correction + 1 matrix-collision summary across Phase C, every one durable knowledge banked.
-- Substrate B2b + Garage anchor invariants survived 16+ phases of operational work bit-identical -- the discipline scaled.
-- The `paco_response_h1_phase_c_hypothesis_f_test.md` untracked file in `docs/` is unfamiliar to PD. Surface for Paco's review at close-out -- possibly orphan, possibly alternate filename.
-- Resume Phrase short form: "Phase C YELLOW #5 closure" (Day 73 context establishes the rest).
+Paco final confirmation step on Phase C close-out is ready. Specifically:
+
+1. CEO pulls `git pull origin main` on whichever workstation
+2. CEO reads `docs/paco_review_h1_phase_c_mosquitto.md` if desired (16,464 bytes, full ESC #1-#7 chain documented, 5/5 scorecard, REDACTED password)
+3. CEO greenlights Paco final confirm -> Phase D start
+
+OR if CEO wants to start fresh in the morning, Phase C is already shipped to canon. No state hangs.
+
+---
+
+## Phase D scope (when ready)
+
+node_exporter fan-out per H1 spec section 8:
+- Install on CK, Beast, Goliath, KaliPi (apt where available, manual binary on KaliPi if needed per pre-auth)
+- LAN-bound :9100, source-restricted UFW (only SlimJim allowed)
+- Verify scrape from SlimJim curl test
+- 3-gate acceptance: 4 nodes active+enabled / SlimJim can curl each / UFW per-node restricts to .40
+- B2b + Garage anchor preservation (15+ phases now, expecting holds)
+
+Phase D should be cleaner than Phase C -- it's mechanical (apt install + systemctl + UFW) on 4 nodes in parallel. No auth surface, no major-version semantics, no concurrency edge cases.
+
+---
+
+## What this Phase C taught
+
+Numerically: 7 escalations, 4 P6 lessons banked (#12 set+e + #13 major-version preflight + #14 client-tooling preflight + #15 broker-state hygiene), standing rule broadened from 4 to 5 guardrails + carve-out for operational propagation, decision-matrix-validation discipline added.
+
+Architecturally: substrate held bit-identical through every escalation, every restart, every config edit, every diagnostic test. The discipline of "diagnostic work touches only the layer being diagnosed" worked exactly as designed.
+
+The escalation cost was real (Phase C took longer than planned). The compounding value was realer (4 P6 lessons + standing rule refinements transfer to every future build).
+
+-- Paco
