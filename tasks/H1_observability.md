@@ -94,6 +94,11 @@ sudo ufw status numbered > ufw_pre.txt
 dpkg -l | grep -E 'netdata|prometheus|grafana|node-exporter|mosquitto' > packages.txt
 systemctl list-units --type=service --all | grep -iE 'netdata|mosquitto|prom|grafana' > services.txt
 ls /home/jes > home_pre.txt
+
+# P6 #14 preflight: capture client-side mosquitto-clients version on each consuming host
+# (banked Phase C close-out 2026-04-28; matrix-collision discriminator on Day 73 ESC #6 -> #7)
+ssh jes@192.168.1.10 'dpkg -l mosquitto-clients libmosquitto1 2>/dev/null | grep ^ii' > /tmp/H1_phase_a_captures/ck_mqtt_client_version.txt 2>&1 || true
+ssh jes@192.168.1.152 'dpkg -l mosquitto-clients libmosquitto1 2>/dev/null | grep ^ii' > /tmp/H1_phase_a_captures/beast_mqtt_client_version.txt 2>&1 || true
 ```
 
 Report: `paco_review_h1_phase_a_baseline.md` with each capture summarized (md5s, key values).
@@ -118,13 +123,14 @@ sudo ufw delete allow 8084/tcp from 192.168.1.0/24
 sudo ufw status numbered > /tmp/H1_phase_a_captures/ufw_post.txt
 ```
 
-### A.4 -- Acceptance gates (5)
+### A.4 -- Acceptance gates (6)
 
 1. All 6 captures written to /tmp/H1_phase_a_captures/, md5s recorded
 2. Docker version >= 24.0 confirmed
 3. SlimJim disk has >= 50 GB free (we have 204 GB)
 4. SlimJim RAM available >= 4 GB (we have 22 GB)
 5. UFW orphan 8084 removed; 8080 decision documented
+6. CK + Beast mosquitto-clients version captured at preflight (P6 #14 -- catches matrix-collision before triggering no-op upgrades; banked from Phase C ESC #6 -> #7)
 
 ## 6. Phase B -- docker compose v2 plugin + docker group
 
@@ -164,7 +170,13 @@ Write `/etc/mosquitto/mosquitto.conf`:
 
 ```
 # /etc/mosquitto/mosquitto.conf -- Santigrey Homelab MQTT broker
-# H1 Phase C, 2026-04-27
+# H1 Phase C, 2026-04-27 (per_listener_settings line added 2026-04-28 ESC #1 close)
+
+# CRITICAL: mosquitto 2.0+ default auth-scoping changed (security directives apply
+# globally with last-wins by default). per_listener_settings true restores v1.x-style
+# per-listener auth semantics required by this dual-listener config.
+# (Source: Phase C ESC #1, P6 #13 banked.)
+per_listener_settings true
 
 persistence true
 persistence_location /var/lib/mosquitto/
@@ -215,6 +227,17 @@ ssh jes@192.168.1.10 'mosquitto_pub -h 192.168.1.40 -p 1884 -u alexandra -P <pw>
 3. Port 1884 listening on 192.168.1.40 only
 4. Loopback anonymous pub/sub round-trip works
 5. LAN authed pub/sub from CK round-trip works
+
+### C.6 -- Diagnostic preflight: broker-state hygiene (P6 #15, banked Phase C close-out)
+
+If concurrent-CONNECT smoke tests fail from one source (e.g., CK) while passing from a
+different source (e.g., Beast) AND single-connection tests pass from both -- BEFORE
+deeper investigation, run `sudo systemctl restart mosquitto` on SlimJim and re-run the
+failing smoke. Mosquitto 2.0.18 (and likely other MQTT brokers) accumulates per-source-IP
+state from rapid failed CONNECT sequences that affects subsequent connection attempts
+even after the failures stop. Restart clears in-memory state and discriminates "broker
+remembers this client badly" from "actual concurrent-connection bug." Banked from Phase C
+ESC #7 F.1 PASS (Day 73 / 2026-04-28).
 
 ## 8. Phase D -- node_exporter fan-out
 

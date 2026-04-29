@@ -952,3 +952,70 @@ Beast's PASS earlier in the diagnostic was the discriminating evidence -- Beast 
 `c9e1192` -- feat: H1 Phase C ESC #7 ruled (F.1 test authorized + fallback pre-auth)
 
 This SESSION.md update + paco_session_anchor.md update commits as the session-pause anchor for thin-client transition (Mac mini -> Cortez or JesAir). PD will report back when Sloan returns with Paco's negative-control + close-out ruling.
+
+---
+
+## Day 73 close-out -- H1 Phase C closes YELLOW #5 (5/5 PASS)
+
+**Closure event:** H1 Phase C closes YELLOW #5 (cataloged Day 67 / 2026-04-23 in post-move 7-phase audit). Day 67 = catalog origin; Day 73 = closure date. The YELLOW was originally cataloged for SlimJim `snap.mosquitto` listener-config bug. Day 68 removed the broken snap (interim closure). Day 73 H1 Phase C completes the YELLOW by establishing the working apt-installed mosquitto 2.x replacement with dual-listener auth topology.
+
+### Phase C 5-gate scorecard (5/5 PASS)
+
+1. mosquitto 2.0.18-1build3 active + enabled, both listeners (`127.0.0.1:1883` + `192.168.1.40:1884`) bound -- PASS
+2. UFW rules `[3] 1883 LAN` + `[4] 1884 LAN` (idempotency grep-guard authorized in Phase A→B handoff) -- PASS
+3. Per-listener auth scoping (1883 anon, 1884 password) -- resolved via ESC #1 `per_listener_settings true` -- PASS
+4. Loopback anon smoke from SlimJim:1883 -- PASS
+5. LAN authed pub/sub from CK→SlimJim:1884 -- PASS post-ESC #7 F.1 (mosquitto restart cleared accumulated per-source-IP state) + negative-control test verified auth still enforced
+
+### F.1 + negative-control evidence
+
+F.1 PASS: `systemctl restart mosquitto` on SlimJim cleared accumulated per-source-IP state from extensive Phase C debug-session failed CONNECTs. Post-restart Gate 5 retry from CK PASSED with full round-trip (`hello-from-ck-post-F1` payload, 21 bytes received by `ck-test-sub`). Sub `rc: 27` (clean `-W 5` timeout after publish received), pub `rc: 0`.
+
+Negative-control: wrong-password test from CK returned `Connection Refused: not authorised` -- auth layer intact. No CONNACK 0 false-positive.
+
+Beast `control-postgres-beast` + `control-garage-beast` anchors **bit-identical** pre/post entire F.1 sequence: `2026-04-27T00:13:57.800746541Z` + `2026-04-27T05:39:58.168067641Z`. Holding through 14+ phases / ~38 hours.
+
+### 7-escalation chain summary (Phase C cumulative)
+
+1. ESC #1 (`per_listener_approved`, commit `f43a23d`) -- mosquitto 2.0 default auth-scoping change; banked 5th guardrail + P6 #13
+2. ESC #2 (inline) -- Approach 2 credential handoff selection within ESC #1 response thread
+3. ESC #3 (inline) -- `mosquitto_passwd` ownership deprecation, P5 carryover (defer to mosquitto upgrade)
+4. ESC #4 (`reload_approved`, commit `8c4c8c7`) -- stale auth cache after CEO password update; banked guardrail 5 carve-out (operational propagation of CEO-authorized state changes)
+5. ESC #5 (`gate5_diagnostic`, commit `1603016`) -- novel concurrency pattern (concurrent sub+pub from CK fails, single-connection from CK works); diagnostic paths (a) v3.1.1 force + (b) full mosquitto.log read approved
+6. ESC #6 (`gate5_followup` + `followup_correction` + `matrix_collision`, commits `93164d5` + `4c5623c`) -- Hyp B ruled out; Beast third-host PASS; agent_bus polluter premise self-corrected (working Alexandra infra, not polluter); CK/Beast version-parity finding triggered Path B (escalate, no upgrade); banked P6 #14
+7. ESC #7 (`hypothesis_f_test` + `gate5_hypothesis_f`) -- Hyps A/B/C/D/E ruled out; F (CK-host-specific environmental state) survives; F.1 test authorized; F.4 sysctl + F.2 cooldown fallback pre-auth under read-only carve-out; F.3 conntrack would require ESC #8; banked P6 #15 candidate
+
+Plus 1 inline correction (ESC #6 §4 agent_bus polluter premise self-corrected per `followup_correction.md` commit `465f5d1`) and 1 matrix-collision summary (`matrix_collision.md` commit `4c5623c`, P6 #14 origin).
+
+### Banked rules added to standing rules
+
+- **5th guardrail** added to "Directive command-syntax corrections at PD authority" rule: auth/credential/security-boundary corrections always escalate, regardless of conditions 1-4. Source: ESC #1 `per_listener_approved` §2.
+- **Guardrail 5 carve-out**: operational propagation of CEO-authorized state changes is at PD authority under 3 sub-conditions: (a) on-disk state already complete + CEO-authorized, (b) canonical/documented propagation mechanism, (c) bounded failure mode. Source: ESC #4 `reload_approved` §2.
+- Both rules consolidated in PD memory file: `/home/jes/control-plane/feedback_directive_command_syntax_correction_pd_authority.md` (supersedes referenced-but-uninstantiated `feedback_pkg_name_substitution_pd_authority.md`).
+
+### P6 lessons banked this phase
+
+- **P6 #14** -- Spec preflight must capture client-side tooling version on each consuming host. Banked at ESC #6 → #7 transition. Source: `matrix_collision.md` commit `4c5623c`.
+- **P6 #15** -- Broker-state hygiene for concurrent-CONNECT diagnostics. When single-connection tests pass but concurrent-pattern tests fail from one source AND the same pattern works from a different source, broker restart should be first-line diagnostic before deeper investigation. Banked candidate at ESC #7, confirmed by F.1 PASS this close-out. Source: `hypothesis_f_test.md`.
+
+**P6 lessons banked count: 15** (was 13 at Phase C entry; +2 this phase).
+
+### State at close
+
+- **Phase C 5/5 PASS**, awaiting Paco final confirm + Phase D GO
+- **YELLOW #5 closed** (cataloged Day 67 / 2026-04-23 in post-move 7-phase audit)
+- **7 escalations + 1 correction + 1 matrix-collision summary** all resolved
+- **2 P6 lessons banked** (#14 + #15)
+- **2 banked rules** added to standing rules (5th guardrail + carve-out)
+- **B2b + Garage nanosecond anchor** bit-identical, 14+ phases / ~38 hours
+- **SlimJim mosquitto state**: MainPID 50604, ActiveEnterTimestamp `2026-04-28 17:41:13 MDT`, both listeners bound, agent_bus reconnected on 120s cycle
+
+### On resume
+
+1. **Phase D (node_exporter fan-out)** across CK / Beast / Goliath / KaliPi per `tasks/H1_observability.md` section 8. Awaiting Paco final confirm on close-out commit + Phase D GO.
+2. P5 carryovers from Phase C: mqtt_subscriber.py reauthor (CK loopback BROKER mismatch); agent_bus.py credential rotation (hardcoded password → dotenv); `paco_response_h1_phase_c_hypothesis_f_test.md` orphan flag (PD did not author -- surface to Paco at close-out).
+3. Pending: Per Scholas Module 933 coursework, Prologis follow-up, Playwright LinkedIn service on Mac mini, ASUS Ascent GX10 integration.
+
+### Anchor commit at close
+
+(pending) -- single git commit fold of: `paco_review_h1_phase_c_mosquitto.md` + `feedback_directive_command_syntax_correction_pd_authority.md` + this SESSION.md update + paco_session_anchor.md update + CHECKLIST.md audit entry + `tasks/H1_observability.md` spec amendment for P6 #14 + #15 preflight checks.
