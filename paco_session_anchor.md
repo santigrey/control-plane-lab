@@ -1,8 +1,8 @@
 # Paco Session Anchor -- JesAir Resume
 
-**Last updated:** 2026-04-29 / Day 74 (H1 Phase D close)
-**Last commit:** Phase D 3/3 PASS close-out (see git log for SHA) -- supersedes `61ff118` Phase C close
-**Resume phrase:** "Day 74 close: H1 Phase D 3/3 PASS, 4-host node_exporter fan-out scrape-ready, P6=16, ready for Phase E (Prometheus + Grafana compose)."
+**Last updated:** 2026-04-29 / Day 74 (H1 Phase E close)
+**Last commit:** Phase E 4/4 PASS close-out (see git log for SHA) -- supersedes Phase D close-out
+**Resume phrase:** "Day 74 close: H1 Phase E 4/4 PASS structural, observability/ skeleton landed (config-only, containers DOWN until Phase G), 1 spec discrepancy flagged for Paco ruling (Grafana env var single-vs-double underscore), P6=16, ready for Phase F (UFW for SlimJim)."
 
 ---
 
@@ -41,8 +41,14 @@
   - 2 deviations from spec section 8 D.2 (Goliath UFW inactive + KaliPi UFW not installed) -> A2-refined process-bind via ARGS, both pre-authorized + documented per guardrail 4
   - 3 P5 carryovers banked: Goliath UFW enable / KaliPi UFW install+enable / CK+Beast process-bind symmetry
   - 1 P6 lesson banked: #16 per-target-host operational-readiness preflight matrix for fan-out phases
-- **Phase E: NEXT** (observability/ skeleton + Docker Compose stack on SlimJim: Prometheus + Grafana with provisioned dashboards 1860 + 3662, scrape config for 4 fan-out endpoints + SlimJim self-scrape)
-- Phase F-I: queued (UFW, healthcheck, smoke, restart safety + ship report)
+- **Phase E: ✓ CLOSED** -- observability/ skeleton + compose.yaml + prometheus.yml + grafana provisioning, 4/4 gates PASS structural
+  - 6 config files written + 1 placeholder grafana-admin.pw chmod 600 (CEO writes content pre-Phase-G)
+  - Both Docker images pulled + digest-pinned in compose.yaml: prom/prometheus@sha256:2659f4c2... + grafana/grafana@sha256:a0f88123...
+  - 5th node_exporter installed on SlimJim itself, UFW rule [5] for 9100 from 127.0.0.1 (spec literal)
+  - 1 spec discrepancy flagged: Grafana env var `GF_SECURITY_ADMIN_PASSWORD_FILE` (single _) vs canonical Grafana 11.x `__FILE` (double _); PD self-caught under guardrail 5 + reverted to spec literal; awaiting Paco ruling at review
+  - 1 Phase G concern carry-forward: Prom container bridge-NAT source IP vs UFW [5] from 127.0.0.1 may not match at runtime; will surface at Phase G smoke if real
+- **Phase F: NEXT** (UFW for SlimJim per spec section 10 -- 9090/tcp + 3000/tcp LAN-allow for human access)
+- Phase G-I: queued (compose up + healthcheck, Grafana smoke + LAN smoke, restart safety + ship report)
 
 ### Org chart
 - Engineering: PD/Cowork ✓
@@ -78,17 +84,15 @@ OR if CEO wants to start fresh in the morning, Phase D is already in canon. No s
 
 ---
 
-## Phase E scope (when ready)
+## Phase F scope (when ready)
 
-observability/ skeleton + Docker Compose stack on SlimJim per H1 spec section 9:
-- /home/jes/observability/ directory layout (compose.yaml + prometheus.yml + grafana provisioning configs)
-- Prometheus 2.x via Docker Compose v2 on SlimJim, scrape interval 15s, retention 30d / 10GB cap
-- Grafana via same compose, port 3000 LAN-bound, default dashboards 1860 + 3662 auto-provisioned
-- Mosquitto stays separate (Phase C, apt-installed not Docker)
-- Scrape targets: 4 fan-out node_exporters (CK/Beast/Goliath/KaliPi via :9100) + SlimJim self-scrape (Netdata :19999 + node_exporter localhost) + Prometheus self (:9090)
-- Acceptance: compose up healthy / Grafana login + 2 dashboards loaded / Prometheus targets all UP / B2b+Garage anchor preservation
+UFW for SlimJim per H1 spec section 10:
+- ufw allow 9090/tcp from 192.168.1.0/24 (Prometheus web UI human access)
+- ufw allow 3000/tcp from 192.168.1.0/24 (Grafana web UI human access)
+- May or may not need extra rules for Prom-container scrape paths -- TBD when reading spec section 10 + addressing Phase G concern (Prom container bridge-NAT vs node_exporter on SlimJim itself)
+- Acceptance: UFW count goes 5 -> 7 (or higher if Phase G concern needs resolving here); B2b + Garage anchor preservation
 
-Phase E is mechanical SlimJim-only -- no fan-out, no auth surface beyond Grafana admin password (CEO interactive set), no concurrency. Single-host phase.
+Phase F is mechanical SlimJim-only -- straight UFW rule additions. No auth surface change beyond LAN-allow scope. No concurrency.
 
 ---
 
@@ -107,5 +111,15 @@ Numerically: 1 escalation (Goliath UFW + KaliPi sudo + later KaliPi UFW-not-inst
 Architecturally: "mechanical scope" was true for the install commands (apt + systemctl + UFW) but incomplete for the operational policy environment those commands run in. Goliath UFW state and KaliPi sudo/UFW state were assumed-uniform but were not. The fix was Paco's pre-authorization of A2-refined process-bind for both Goliath AND KaliPi (§4.4 covered the KaliPi-UFW-also-inactive case), so when CEO surfaced KaliPi's `command not found` mid-handoff, the alt directive applied without a second escalation.
 
 The lesson: preflight is the cheap moment to catch operational policy heterogeneity. P6 #16's spec amendment (A.5 in tasks/H1_observability.md) bakes the 6-row preflight matrix into the spec template for future fan-out phases.
+
+## What this Phase E taught
+
+Numerically: 0 escalations, 0 new P6 lessons, 0 new P5 carryovers, 0 standing rule changes -- but 1 spec discrepancy surfaced + 1 Phase G concern banked (both for Paco review-time ruling).
+
+Architecturally: the 5-guardrail rule (with carve-out) worked at minimum-friction scale this phase. PD reflexively typed the canonical Grafana 11.x `__FILE` env var convention on first compose.yaml write -- caught it within seconds as an auth-surface correction (Grafana admin password mechanism), reverted to spec literal `_FILE` (single underscore) before any other operation, and flagged for Paco ruling in the review. No paco_request roundtrip needed; the discipline showed up in the typo-correction caught and reverted in real time. This is what guardrail 5 looks like in steady-state operation: not just for big config changes (Phase C per_listener_settings), but for every auth-related line PD types.
+
+Second observation: the spec section 9 prometheus.yml + UFW config implies Prom-container-on-SlimJim scrapes node-exporter-on-SlimJim via 192.168.1.40:9100 with UFW filter from 127.0.0.1. Linux local routing optimizes same-host LAN-IP scrapes via lo, so host-process curl works. But container scrapes go through Docker bridge NAT, source IP becomes bridge gateway (172.17.0.1), UFW filter from 127.0.0.1 won't match. This is a Phase G concern banked at Phase E time -- the architectural detail surfaces during config writes, before runtime, where it's cheap to address.
+
+The lesson: config-only phases ARE worth doing carefully; they surface runtime concerns at write-time when fixing is cheap.
 
 -- Paco

@@ -1092,3 +1092,83 @@ B2b nanosecond anchor `control-postgres-beast 2026-04-27T00:13:57.800746541Z` an
 ### Anchor commit at close
 
 (pending) -- single git commit fold of: `paco_review_h1_phase_d_node_exporter.md` + this SESSION.md update + `paco_session_anchor.md` update + `CHECKLIST.md` audit entry + `tasks/H1_observability.md` spec amendment for P6 #16 preflight matrix template.
+
+---
+
+# Project Ascension — Day 74 (H1 Phase E close)
+**Date:** 2026-04-29 (Day 74)
+**Anchor commit (close-out):** (pending — single git commit fold for Phase E)
+
+## Phase E ship summary
+
+### observability/ skeleton landed (config-only; containers DOWN until Phase G)
+
+- `/home/jes/observability/` tree created on SlimJim with 7 dirs + 7 files (6 configs + 1 placeholder grafana-admin.pw)
+- 5th node_exporter installed on SlimJim (`prometheus-node-exporter 1.7.0-1ubuntu0.3`); UFW rule [5] `9100/tcp ALLOW IN 127.0.0.1` (spec literal)
+- Both Docker images pulled with resolved digests substituted into compose.yaml per B1 precedent:
+  - `prom/prometheus@sha256:2659f4c2ebb718e7695cb9b25ffa7d6be64db013daba13e05c875451cf51b0d3` (290 MB)
+  - `grafana/grafana@sha256:a0f881232a6fb71a0554a47d0fe2203b6888fe77f4cefb7ea62bed7eb54e13c3` (485 MB)
+- 2 Grafana dashboards downloaded from grafana.com:
+  - 1860 "Node Exporter Full" (uid `rYdddlPWk`, 31 panels, 468 KB)
+  - 3662 "Prometheus 2.0 Overview" (85 KB; older row-nested format, Grafana 11.x auto-migrates at load)
+
+### Phase E 4-gate scorecard (structural)
+
+- Gate 1 (observability/ tree exists with correct ownership): **PASS**
+- Gate 2 (compose.yaml syntactically valid via `docker compose config`): **PASS**
+- Gate 3 (prometheus.yml syntactically valid via `promtool check config`): **PASS** (`SUCCESS: ... is valid prometheus config file syntax`)
+- Gate 4 (grafana-admin.pw exists chmod 600): **PASS** (placeholder created; CEO writes content pre-Phase-G)
+- Standing gate (B2b + Garage anchors bit-identical pre/post): **PASS**
+
+### Spec discrepancy flagged for Paco ruling (Phase G blocker if not amended)
+
+Spec section 9 E.2 uses `GF_SECURITY_ADMIN_PASSWORD_FILE` (single underscore + `_FILE`). Grafana 11.x canonical env-var-from-file convention is **double underscore** `GF_SECURITY_ADMIN_PASSWORD__FILE`. Single-underscore form sets a non-existent config key; Grafana silently falls back to default `admin/admin` at runtime. Phase G smoke test would fail Grafana login with grafana-admin.pw content.
+
+**PD discipline this turn**: on first compose.yaml write, PD reflexively used the canonical `__FILE` form (double underscore). Within the same minute, PD self-caught: this is an auth-surface correction (changes which credential mechanism Grafana uses), guardrail 5 of the broadened standing rule says PD ESCALATES regardless of conditions 1-4, NOT self-corrects. Reverted to spec literal `_FILE` (single underscore) immediately, before any other operation. compose.yaml as committed in this turn matches spec verbatim. The discipline of "diagnostic work touches only the layer being diagnosed; auth-surface changes always escalate" worked at the smallest scale (1-character config change) without requiring a paco_request roundtrip.
+
+**Asking Paco to rule** in Phase E review: Option A (amend `_FILE` -> `__FILE` at Phase E review time, single follow-up commit before Phase G) / Option B (defer to Phase G smoke discovery + amendment) / Option C (other). PD bias: Option A.
+
+### File md5 manifest
+
+```
+b40dd1edd5adb8754b411caaef090f45  compose.yaml                                   (1711 bytes)
+9ea5c7c2941cdb8146b5f5ecf6f2fcdc  prometheus/prometheus.yml                      (878 bytes)
+dfdfb1f5aeebd6bcc277cf1e788fa1a1  grafana/provisioning/datasources/datasource.yml (290 bytes)
+277169b1ef2fc4a2c4b4a82fb885e104  grafana/provisioning/dashboards/dashboard.yml  (299 bytes)
+d4ab85585381580f5f89e7e9cb76ef7d  grafana/dashboards/node-exporter-full.json     (468600 bytes, 1860)
+4442e66b732b672a85d2886f3479a236  grafana/dashboards/prometheus-stats.json       (85625 bytes, 3662)
+```
+
+### Phase G concern (carry-forward, not blocking)
+
+Prom container will be on Docker bridge network (default). Outbound scrape from Prom container to `192.168.1.40:9100` (SlimJim's own node_exporter) will go through bridge NAT. Source IP from container's perspective will be the Docker bridge gateway (typically 172.17.0.1 or 172.18.0.1), NOT 127.0.0.1. UFW rule [5] from 127.0.0.1 may not match the container's NAT'd source. May need amendment at Phase G to also allow bridge gateway IP, OR change Prom container to use host networking, OR change prometheus.yml SlimJim target to `127.0.0.1:9100`. Will surface at Phase G smoke if real.
+
+### Standing rules unchanged this phase
+
+No new guardrails added; 5-guardrail rule + carve-out (banked Phase C) applied cleanly. PD's guardrail 5 self-catch + revert on Grafana env var demonstrates the discipline at minimum-friction scale.
+
+### Beast anchor preservation
+
+B2b nanosecond anchor `control-postgres-beast 2026-04-27T00:13:57.800746541Z` and Garage anchor `control-garage-beast 2026-04-27T05:39:58.168067641Z` bit-identical pre and post Phase E. **18+ phases of H1 work + ~48 hours of operational time, both anchors held.** Phase E touched only SlimJim host (apt + UFW + 6 file writes + 2 image pulls + chmod); Beast Docker stack untouched.
+
+### State at close
+
+- **Phase E 4-gate PASS** structurally; containers DOWN until Phase G
+- **18+ phase B2b + Garage anchor preservation** holding through Day 74
+- **0 P5 carryovers banked this phase** (Phase D's 3 P5s still pending in security-hardening pass)
+- **0 P6 lessons banked this phase** (P6 #16 from Phase D applied retroactively to spec section 5 via A.5 amendment)
+- **0 standing rule changes**
+- **1 spec discrepancy flagged** (Grafana env var single-vs-double underscore) -- PD self-caught + reverted; Paco rules at review
+- **1 Phase G concern carry-forward** (Prom container bridge-NAT source for SlimJim self-scrape)
+- **Phase F (UFW for SlimJim) is NEXT** per spec section 10
+
+### On resume
+
+1. **Phase F (UFW for SlimJim)** per `tasks/H1_observability.md` section 10. Will read spec at Phase F time; expect 9090/tcp + 3000/tcp LAN-allow rules for human access to Prometheus/Grafana web UIs.
+2. **Grafana env var ruling** (Option A/B/C) from Paco -- if Option A, single follow-up commit amends compose.yaml; if Option B, defers to Phase G.
+3. **Phase G concern** (Prom-container bridge-NAT vs UFW from 127.0.0.1) carries forward; will surface at Phase G smoke if it's real.
+4. P5 carryovers from Phase D: 3 firewall hardening items (Goliath UFW enable; KaliPi UFW install+enable; CK+Beast process-bind symmetry) -- still pending.
+
+### Anchor commit at close
+
+(pending) -- single git commit fold of: `paco_review_h1_phase_e_observability_skeleton.md` (new) + this SESSION.md update + `paco_session_anchor.md` update + `CHECKLIST.md` audit entry. observability/ files live on SlimJim's filesystem (operational config), NOT in control-plane.git.
