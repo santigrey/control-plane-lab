@@ -61,6 +61,40 @@ The carve-out preserves the principle (PD doesn't make auth decisions) while rem
 
 ---
 
+## 2A. Carve-out -- compose-down during active ESC
+
+When an ESC is in flight and a Docker Compose stack is in an active failure mode (crash loop, exit-on-create, or similar observable + ongoing failure state), PD has self-authority to issue `docker compose down` to halt the failure cycle while waiting for Paco's path ruling.
+
+This carve-out applies when ALL four conditions hold:
+
+1. **Failure is observable + ongoing.** Container is in `restarting` state with RestartCount climbing, OR container repeatedly exits with non-zero status, OR similar verifiable active failure pattern. The compose-down is stop-the-bleeding, not pre-emptive.
+
+2. **Canonical mechanism only.** `docker compose down` -- not `docker kill`, not custom stop scripts, not signal manipulation. The canonical compose API for graceful stop + cleanup of containers + network.
+
+3. **Bounded retry.** ONE compose-down per ESC. PD does not iteratively cycle compose-down/up while waiting for Paco. State holds at "stopped" until ruling lands.
+
+4. **No config or state mutation.** compose.yaml unchanged, all bind-mount data dirs unchanged, all secret files unchanged, all configs unchanged. Only the running containers + the compose-managed network are removed. The on-disk state for restart-from-rule is preserved.
+
+If any of (1)-(4) is uncertain, escalate before composing down.
+
+### 2A.1 Why this is principled
+
+Compose down is genuinely reversible -- the next compose up restores the running state from on-disk config. Holding a crash loop during a multi-turn ESC round-trip burns log space, runs the restart counter into the thousands, and adds noise to the diagnostic without producing useful signal after the first ~2-3 restart cycles already established the failure pattern.
+
+Stopping the bleed is operational hygiene, not architectural decision-making. CEO has authorized this pattern inline three times across H1 Phase G ESC #1, #2, #3 (Day 74); banking as standing rule eliminates the per-ESC inline auth round-trip.
+
+### 2A.2 Application history
+
+| Date | Phase / Step | ESC | Compose-down trigger |
+|---|---|---|---|
+| 2026-04-29 (Day 74) | H1 Phase G ESC #1 | data-dir UID mismatch | obs-prometheus crash loop, RestartCount climbing past 10 |
+| 2026-04-29 (Day 74) | H1 Phase G ESC #2 | secret-file UID mismatch | obs-grafana crash loop on Permission denied |
+| 2026-04-29 (Day 74) | H1 Phase G ESC #3 | Path Y runtime-ignored | obs-grafana crash loop, identical Permission denied; Path Y revoked next turn |
+
+Banked at commit `e85b256` (Path X-only response) per ruling 4. Going forward: PD self-issues `docker compose down` under (1)-(4) without inline auth ask.
+
+---
+
 ## 3. Examples that FIT the rule (PD self-corrects under guardrails 1-4)
 
 - Package name substitution within an apt repo (`docker-compose-plugin` → `docker-compose-v2`): same binary, same path, same outcome.

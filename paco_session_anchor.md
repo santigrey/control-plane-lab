@@ -1,143 +1,101 @@
-# Paco Session Anchor -- JesAir Resume
+# Paco Session Anchor
 
-**Last updated:** 2026-04-29 / Day 74 (H1 Phase E corrections + Phase F close)
-**Last commit:** Phase E corrections + Phase F 3/3 PASS close-out (see git log for SHA) -- supersedes Phase E close-out
-**Resume phrase:** "Day 74 close: H1 Phase E corrections applied (Correction 1 spec + Correction 2 on-disk compose) + Phase F 3/3 PASS (UFW 5->7 with 9090 + 3000 LAN), P6=17, ready for Phase G (compose up + healthcheck). CEO writes grafana-admin.pw content pre-Phase-G."
+**Last updated:** 2026-04-29 evening (Day 74 evening)
+**Anchor commit:** TBD (this Phase G close-out commit)
+**Resume Phrase:** "Day 74 close: H1 Phase G structural 5/5 PASS, 3-ESC arc + 2 standing rules, P6=19, ready for Phase H."
 
 ---
 
-## Where we are
+## Current state (as of Phase G close)
 
-### Substrate (dataplane v1) -- COMPLETE
-- B2a Postgres+pgvector on Beast: 7/7 gates PASS
-- B2b logical replication CK->Beast: 12/12 gates byte-perfect, 5,795 rows
-- B1 Garage S3 on Beast: 8/8 gates + 6/6 bonus PASS
-- D1 + D2 MCP tools: VERIFIED
+### Substrate (dataplane v1) -- ALL HOLDING
+- **B2a** Postgres+pgvector on Beast -- CLOSED (7/7 gates)
+- **B2b** logical replication CK->Beast -- CLOSED (12/12 gates)
+- **B1**  Garage S3 on Beast -- CLOSED (8/8 gates + 6/6 bonus)
+- **D1** MCP Pydantic limits -- VERIFIED
+- **D2** homelab_file_write tool -- VERIFIED
+- **B2b nanosecond anchor**: `2026-04-27T00:13:57.800746541Z` -- holding through 18+ phases (~52 hours)
+- **Garage anchor**: `2026-04-27T05:39:58.168067641Z` -- holding through 18+ phases
 
-### B2b nanosecond invariant: HOLDING
-- `control-postgres-beast StartedAt=2026-04-27T00:13:57.800746541Z healthy/0`
-- `control-garage-beast StartedAt=2026-04-27T05:39:58.168067641Z healthy/0`
-- ~38+ hours undisturbed across 14+ phases of operational work
+### H1 progression
+- **Phase A** (baseline + UFW orphans) -- CLOSED (3/3)
+- **Phase B** (compose v2 + docker group) -- CLOSED (4/4)
+- **Phase C side-task** (UFW delete syntax) -- CLOSED (3/3)
+- **Phase C** (mosquitto 2.x dual-listener) -- CLOSED (5/5, 7-ESC arc)
+- **Phase D** (node_exporter fan-out CK/Beast/Goliath/KaliPi) -- CLOSED (3/3)
+- **Phase E** (observability/ skeleton + compose + provisioning) -- CLOSED (4/4)
+- **Phase F** (UFW for SlimJim 9090+3000) -- CLOSED (3/3)
+- **Phase G** (compose up + healthcheck) -- **STRUCTURAL CLOSED 5/5** (Gates 3+4 by design land at Phase H CEO browser tests)
+  - 3 ESCs resolved: Path A (data-dir UID), Path X-only (secret-file UID, Path Y revoked), Path 1 + extension (Bridge NAT for 9100 + 19999)
+  - obs-prometheus + obs-grafana: running healthy, Restarts=0
+  - Prometheus targets: 7/7 UP
+  - UFW: 9 rules (was 7 pre-Phase-G)
 
-### Hardware track
-- Switch: Intellinet 560917 at 192.168.1.250 deployed, port-mapped, labeled, configured
-- VLAN: deferred (MR60 router can't route VLANs, P5)
-- SlimJim: cleaned baseline (sabnzbd/mosquitto-snap/wire-pod/cockpit removed)
-- Cortez: Engineering Edge AI workstation, MCP via Tailscale 100.70.77.115
-- Pi3: Security DNS Gateway (TBD) on Pi 3B Debian 13 aarch64
-- Macmini: hardwired tonight, IP changed `.13` -> `.194` LAN; Tailscale `100.102.87.70` unchanged; MCP allowed_hosts already uses Tailscale, no fix needed
+### Phase G observability stack final state on SlimJim
 
-### H1 Observability
-- Phase A: ✓ baseline + dependency check
-- Phase B: ✓ docker-compose-v2 plugin + jes->docker group
-- Side-task: ✓ mariadb disable + UFW 80/443 cleanup (UFW 5->3)
-- **Phase C: ✓ CLOSED** -- mosquitto 2.x dual-listener (1883 lo anon + 1884 LAN authed), 5/5 PASS
-  - Closes Day 67-cataloged YELLOW #5 (snap.mosquitto listener-config bug)
-  - 7 escalations resolved, all banked durable knowledge
-  - 4 new P6 lessons: #12 (set+e discipline), #13 (major-version preflight), #14 (client-tooling version capture), #15 (broker-state hygiene for concurrent-CONNECT diagnostics)
-  - Standing rule broadened: 4 -> 5 guardrails + carve-out for ops propagation
-- **Phase D: ✓ CLOSED** -- node_exporter fan-out CK/Beast/Goliath/KaliPi, 3/3 gates PASS
-  - 4 hosts scrape-confirmed from SlimJim (10,864 total node_* metric lines)
-  - 2 deviations from spec section 8 D.2 (Goliath UFW inactive + KaliPi UFW not installed) -> A2-refined process-bind via ARGS, both pre-authorized + documented per guardrail 4
-  - 3 P5 carryovers banked: Goliath UFW enable / KaliPi UFW install+enable / CK+Beast process-bind symmetry
-  - 1 P6 lesson banked: #16 per-target-host operational-readiness preflight matrix for fan-out phases
-- **Phase E: ✓ CLOSED** -- observability/ skeleton + compose.yaml + prometheus.yml + grafana provisioning, 4/4 gates PASS structural
-  - 6 config files written + 1 placeholder grafana-admin.pw chmod 600 (CEO writes content pre-Phase-G)
-  - Both Docker images pulled + digest-pinned in compose.yaml: prom/prometheus@sha256:2659f4c2... + grafana/grafana@sha256:a0f88123...
-  - 5th node_exporter installed on SlimJim itself, UFW rule [5] for 9100 from 127.0.0.1 (spec literal)
-  - 1 spec discrepancy flagged: Grafana env var `GF_SECURITY_ADMIN_PASSWORD_FILE` (single _) vs canonical Grafana 11.x `__FILE` (double _); PD self-caught under guardrail 5 + reverted to spec literal; awaiting Paco ruling at review
-  - 1 Phase G concern carry-forward: Prom container bridge-NAT source IP vs UFW [5] from 127.0.0.1 may not match at runtime; will surface at Phase G smoke if real
-- **Phase F: ✓ CLOSED** -- UFW for SlimJim per spec section 10, 3/3 gates PASS
-  - UFW count 5 -> 7 (rule [6] 9090/tcp + rule [7] 3000/tcp, both `H1 Phase F:` comments)
-  - Rules [1]-[5] unchanged byte-for-byte
-  - Phase E Corrections 1 + 2 folded into this commit:
-    - Correction 1: spec amendment `tasks/H1_observability.md` line 374 `_FILE` -> `__FILE` + new A.6 subsection banking P6 #17
-    - Correction 2: on-disk `/home/jes/observability/compose.yaml` sed (md5 b40dd1ed... -> db89319c...)
-  - 1 Phase G concern carry-forward: Prom container bridge-NAT source IP vs UFW [5] from 127.0.0.1; Paco rules at Phase G review on path
-- **Phase G: NEXT** (compose up + healthcheck per spec section 11; CEO writes grafana-admin.pw content pre-compose-up)
-- Phase H-I: queued (Grafana smoke + LAN smoke, restart safety + ship report)
+- compose.yaml: md5 `db89319cad27c091ab1675f7035d7aa3` (Phase F state, short-syntax secrets per Path X-only ruling)
+- grafana-admin.pw: 600 472:472 11 bytes
+- prom-data: 700 65534:65534
+- grafana-data: 700 472:472
+- obs-prometheus: prom/prometheus:v2.55.1 (sha256:2659f4c2...) StartedAt `2026-04-29T21:27:50.229362232Z` health=healthy
+- obs-grafana: grafana/grafana:11.3.0 (sha256:a0f88123...) StartedAt `2026-04-29T21:27:56.139191606Z`
+
+### P6 lessons banked: 19
+- #1-#11 prior sessions
+- #12 Day 73 evening: `set +e` discipline for verifier scripts on exit-coded systemctl outputs
+- #13 Day 73 evening: mosquitto 2.x major-version preflight (snap broken from 1.x, apt is supported install vector)
+- #14 Phase C close-out: preflight client-tooling version capture catches matrix-collision bugs
+- #15 Phase C close-out: broker-state hygiene for concurrent-CONNECT diagnostics (mosquitto restart as first-line discriminator)
+- #16 Phase D close-out: per-target-host operational-readiness preflight matrix for fan-out phases
+- #17 Phase E corrections: spec text referencing upstream-product env var conventions must be cross-checked at directive-author time (single vs double underscore class)
+- **#18** Phase G ESC #1+#3: first-boot of stateful containers with bind-mount data + secret resources requires UID alignment between host owner and container default UID
+- **#19** Phase G ESC #3: compose v2 secrets long-syntax `uid`/`gid`/`mode` are swarm-mode-only; standalone compose discards values with warning
+
+### Standing rules updates (Phase G)
+
+- **compose-down during active ESC pre-authorized** (banked at commit `e85b256`, section 2A of `feedback_directive_command_syntax_correction_pd_authority.md` this commit)
+- **Path 1 generalization** (banked at commit `3aac8b9`, documented in spec section 11 Phase G this commit)
+- **Bidirectional one-liner format spec** for both handoff files (banked at commit `e85b256`, `docs/feedback_paco_pd_handoff_protocol.md` updated)
+
+### Open specs / phases
+- **H1 Phase H** (Grafana smoke + LAN smoke from CK + CEO browser Gate 3+4) -- ready, gated on Paco confirm + GO
+- **H1 Phase I** (restart safety + ship report) -- gated post-H
+- **H2 Cortez integration** -- not drafted (gated post-H1)
+- **H3 Pi3 DNS Gateway** -- not drafted (gated post-H1)
+- **H4 VLAN** -- DEFERRED (router-replacement-gated)
+- **Atlas v0.1** -- not drafted (gated post-hardware-org-complete)
+
+### P5 carryovers
+- Phase D's 3 P5s (Goliath UFW enable, KaliPi UFW install + enable, CK + Beast process-bind symmetry)
+- Phase G new P5: Grafana admin password rotation helper script (defer to v0.2)
+- Phase G new P5: mixed-ownership grafana-data subdirs from ESC #2/#3 cycle (`dashboards` root:root, `plugins` 472:root) -- benign, post-Phase-H stable-state cleanup
+- `docs/paco_response_h1_phase_c_hypothesis_f_test.md` -- still untracked (not PD-authored, surfaced previously, low-priority)
 
 ### Org chart
-- Engineering: PD/Cowork ✓
+- COO: Paco ✓
+- Engineering: PD/Cowork ✓ + Cortez/JesAir/Macmini
 - L&D: Axiom ✓
-- Operations: Atlas v0.1 (gated on H1 ship)
-- Security: ADDED (KaliPi + Pi3 + future SlimJim IDS)
+- Operations: Atlas v0.1 (TBD, gated on H1 ship)
+- Security: KaliPi + Pi3 + future SlimJim IDS (no agent head)
 - CEO-direct: Brand & Market ✓
 
-### P6 lessons banked: 17
+---
+
+## On resume
+
+1. **Paco confirms Phase G** (independent verification of structural 5-gate from fresh shell against `paco_review_h1_phase_g_compose_up.md`).
+2. **Phase H GO authorization** (Grafana web smoke + LAN smoke from CK + CEO browser Gate 3 + Gate 4).
+3. PD executes Phase H per spec section 12.
+4. Phase H close-out commit (single fold pattern).
+5. Phase I (restart safety + ship report).
 
 ---
 
-## Standing rules
-1. Per-step review docs in `/home/jes/control-plane/docs/`
-2. B2b + Garage nanosecond anchor preservation through every phase
-3. Directive command-syntax correction at PD authority (5 guardrails + carve-out + examples)
-4. PD escalates via paco_request when uncertain
-5. Spec or no action
-6. Secrets discipline: REDACTED in review docs, set interactively by CEO
-7. P6 #12 set+e for verifier scripts checking exit-coded systemctl outputs
+## Notes for Paco
 
----
-
-## On resume (after Phase D close)
-
-Phase D is shipped to canon (this commit). Phase E is the next deliverable.
-
-1. CEO pulls `git pull origin main` on whichever workstation
-2. CEO reads `docs/paco_review_h1_phase_d_node_exporter.md` if desired (~16K, 4-host fan-out evidence + 2 deviations + 3 P5 carryovers + P6 #16 banked + 5 anchor captures)
-3. CEO greenlights Paco final confirm -> Phase E start
-
-OR if CEO wants to start fresh in the morning, Phase D is already in canon. No state hangs.
-
----
-
-## Phase G scope (when ready)
-
-compose up + healthcheck per H1 spec section 11:
-- CEO writes grafana-admin.pw content first (chmod 600 placeholder is in place at /home/jes/observability/grafana-admin.pw)
-- `cd /home/jes/observability && docker compose up -d` brings up obs-prometheus + obs-grafana containers
-- Healthcheck poll cap (Prometheus has 30s start_period + 30s interval + 5s timeout x 3 retries; Grafana depends_on prometheus health)
-- Bridge-NAT concern test: Prom logs for SlimJim self-scrape target (192.168.1.40:9100); if `connection refused`, the carry-forward concern is real and Paco rules on path (UFW from bridge subnet / network_mode host / prometheus.yml target change)
-- Acceptance: both containers healthy / Prometheus targets all reachable / Grafana login works with admin + CEO password (validates Correction 1 + 2)
-
-Phase G is mechanical SlimJim-only on the surface (compose up). The bridge-NAT concern + Grafana admin password are the two runtime validation points.
-
----
-
-## What this Phase C taught
-
-Numerically: 7 escalations, 4 P6 lessons banked (#12 set+e + #13 major-version preflight + #14 client-tooling preflight + #15 broker-state hygiene), standing rule broadened from 4 to 5 guardrails + carve-out for operational propagation, decision-matrix-validation discipline added.
-
-Architecturally: substrate held bit-identical through every escalation, every restart, every config edit, every diagnostic test. The discipline of "diagnostic work touches only the layer being diagnosed" worked exactly as designed.
-
-The escalation cost was real (Phase C took longer than planned). The compounding value was realer (4 P6 lessons + standing rule refinements transfer to every future build).
-
-## What this Phase D taught
-
-Numerically: 1 escalation (Goliath UFW + KaliPi sudo + later KaliPi UFW-not-installed surfaced inside the same paco_request), 1 P6 lesson banked (#16 per-target-host operational-readiness preflight matrix), 3 P5 carryovers banked (firewall hardening on Goliath + KaliPi + CK/Beast symmetry), 0 standing rule changes.
-
-Architecturally: "mechanical scope" was true for the install commands (apt + systemctl + UFW) but incomplete for the operational policy environment those commands run in. Goliath UFW state and KaliPi sudo/UFW state were assumed-uniform but were not. The fix was Paco's pre-authorization of A2-refined process-bind for both Goliath AND KaliPi (§4.4 covered the KaliPi-UFW-also-inactive case), so when CEO surfaced KaliPi's `command not found` mid-handoff, the alt directive applied without a second escalation.
-
-The lesson: preflight is the cheap moment to catch operational policy heterogeneity. P6 #16's spec amendment (A.5 in tasks/H1_observability.md) bakes the 6-row preflight matrix into the spec template for future fan-out phases.
-
-## What this Phase E taught
-
-Numerically: 0 escalations, 0 new P6 lessons, 0 new P5 carryovers, 0 standing rule changes -- but 1 spec discrepancy surfaced + 1 Phase G concern banked (both for Paco review-time ruling).
-
-Architecturally: the 5-guardrail rule (with carve-out) worked at minimum-friction scale this phase. PD reflexively typed the canonical Grafana 11.x `__FILE` env var convention on first compose.yaml write -- caught it within seconds as an auth-surface correction (Grafana admin password mechanism), reverted to spec literal `_FILE` (single underscore) before any other operation, and flagged for Paco ruling in the review. No paco_request roundtrip needed; the discipline showed up in the typo-correction caught and reverted in real time. This is what guardrail 5 looks like in steady-state operation: not just for big config changes (Phase C per_listener_settings), but for every auth-related line PD types.
-
-Second observation: the spec section 9 prometheus.yml + UFW config implies Prom-container-on-SlimJim scrapes node-exporter-on-SlimJim via 192.168.1.40:9100 with UFW filter from 127.0.0.1. Linux local routing optimizes same-host LAN-IP scrapes via lo, so host-process curl works. But container scrapes go through Docker bridge NAT, source IP becomes bridge gateway (172.17.0.1), UFW filter from 127.0.0.1 won't match. This is a Phase G concern banked at Phase E time -- the architectural detail surfaces during config writes, before runtime, where it's cheap to address.
-
-The lesson: config-only phases ARE worth doing carefully; they surface runtime concerns at write-time when fixing is cheap.
-
-## What this Phase F + Corrections taught
-
-Numerically: 0 escalations new this phase, 1 P6 lesson banked (#17 upstream-product env var convention preflight), 0 P5 carryovers, 0 standing rule changes -- but 1 spec amendment landed (Correction 1) + 1 on-disk operational fix landed (Correction 2) per Paco's Option A authorization at Phase E review time.
-
-Architecturally: the discipline lifecycle from Phase E demonstrated end-to-end. PD's guardrail 5 reflex caught a 1-character spec discrepancy at Phase E config-write time (silent-fail risk); PD reverted to spec literal pre-deploy and embedded a paco_review concern with 3 options; Paco ratified Option A at confirm time; Phase F + corrections fold applied both spec amendment + on-disk fix in one commit; runtime validates at Phase G when CEO writes the password and compose comes up.
-
-This is the broadened standing rule's full operating cycle: catch-revert-escalate-ratify-apply-validate. The `__FILE` typo would have shipped silent-fail to admin/admin in Grafana without the discipline. Banking P6 #17 + the spec A.6 amendment ensures this class of subtle convention silent-fail is preflight-caught at directive-write-time going forward.
-
-The lesson: 1-character mistakes can ship broken silently when downstream daemons accept-and-ignore unrecognized config keys. The fix at directive-write-time is one URL fetch; the fix at deploy-time costs at minimum one escalation roundtrip; the fix at runtime smoke costs deploy + retry. Preflight is always cheapest.
-
--- Paco
+- 3-ESC arc closed cleanly via spec-or-no-action discipline + bidirectional one-liner protocol effectiveness.
+- compose-down inline auth pattern from ESC #1/#2/#3 banked as standing rule (carve-out 2A).
+- Path Y authorization revocation (commit `e85b256`) was a healthy correction -- spec said long-syntax was the answer, runtime proved otherwise. Discipline held: PD didn't try Path X without ratification despite obvious mechanical pressure.
+- Path 1 generalization (commit `3aac8b9`) eliminated need for ESC #4 on netdata; PD self-auth applies for any future bridge-NAT scrape target.
+- B2b + Garage nanosecond invariants holding through 18+ phases / ~52 hours / 3 compose down-up cycles / compose.yaml edit + revert / 2 chowns / 2 UFW additions. Discipline scaled.
+- One untracked `paco_response_h1_phase_c_hypothesis_f_test.md` orphan persists; PD did not author. Surface for Paco review at convenience.

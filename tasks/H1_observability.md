@@ -336,6 +336,18 @@ Each target should return Prometheus-format metrics.
   grafana-data/     (volume, chmod 700)
 ```
 
+**Filesystem-prep (per P6 #18 broadened, banked Day 74 Phase G ESC #1 + #3):**
+
+After creating the bind-mount targets above, align ownership to each container's runtime UID:
+
+```bash
+sudo chown -R 65534:65534 /home/jes/observability/prom-data
+sudo chown -R 472:472 /home/jes/observability/grafana-data
+sudo chown 472:472 /home/jes/observability/grafana-admin.pw  # secret file (mode 600 stays)
+```
+
+Why: Docker bind-mounts inherit host file ownership inside the container. Containers running as non-root UIDs (Prometheus=65534, Grafana=472) cannot read/write paths owned by host UID 1000 mode 700/600. Without this chown, first compose-up enters crash loop on `permission denied`. Compose v2 secrets long-syntax `uid`/`gid`/`mode` fields are swarm-only (P6 #19) -- chown the host file directly.
+
 ### E.2 -- compose.yaml (digest-pinned per B1 precedent)
 
 ```yaml
@@ -506,6 +518,20 @@ for i in $(seq 1 24); do
 done
 docker ps --filter name=obs- --format '{{.Names}} {{.Status}}'
 ```
+
+**Bridge NAT for SlimJim self-scrapes (per Path 1 generalization, ratified Day 74 Phase G):**
+
+When Prometheus runs in a Docker container with default bridge network and Prometheus scrapes a target on the same host (e.g., SlimJim's own node_exporter on `:9100` or netdata on `:19999`), the scrape arrives at the host's UFW from the bridge subnet (e.g., `172.18.0.0/16`), NOT from `127.0.0.1` or the LAN. UFW must explicitly allow the bridge subnet to reach those host-published ports.
+
+Apply per-target on Phase G first-boot:
+
+```bash
+BRIDGE_SUBNET=$(docker network inspect observability_default --format '{{range .IPAM.Config}}{{.Subnet}}{{end}}')
+sudo ufw allow from $BRIDGE_SUBNET to any port 9100 proto tcp comment 'H1 Phase G: Prom container scrape via bridge NAT'
+sudo ufw allow from $BRIDGE_SUBNET to any port 19999 proto tcp comment 'H1 Phase G: Prom container scrape via bridge NAT (netdata)'
+```
+
+PD self-auth applies for any future scrape target failing with bridge-NAT context-deadline-exceeded. Document each rule in close-out review per guardrail 4.
 
 ### G.1 -- Acceptance gates (4)
 

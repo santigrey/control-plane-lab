@@ -1254,3 +1254,66 @@ Flagged at Phase E close, banked at Phase E response §3.2, no change this phase
 ### Anchor commit at close
 
 (pending) -- single git commit fold of: `tasks/H1_observability.md` spec amendment for Correction 1 + P6 #17 + new A.6 subsection + `docs/paco_review_h1_phase_f_ufw.md` (new) + this SESSION.md update + `paco_session_anchor.md` surgical edits + `CHECKLIST.md` audit entry. observability/ files live on SlimJim filesystem (operational config), NOT in control-plane.git.
+
+
+---
+
+## Day 74 evening -- H1 Phase G (compose up + healthcheck) CONFIRMED structural
+
+**Major work:** First container boot of observability stack on SlimJim. obs-prometheus + obs-grafana running healthy with all 7 Prometheus scrape targets reporting `up`. Phase G structural acceptance complete; Gates 3+4 (Grafana web HTTP 200 + dashboards rendering) by-design defer to Phase H CEO browser tests. Path landed clean after three ESCs and one Path 1 generalization.
+
+### Phase G ESC chain (chronological)
+
+- **ESC #1** (data-dir UID mismatch) -> Path A approved (commit `9aef8d1`): `chown -R 65534:65534 prom-data` + `chown -R 472:472 grafana-data`. obs-prometheus reached healthy first compose-up retry.
+- **ESC #2** (secret-file UID mismatch) -> Path Y approved (commit `9d59cc4`): compose.yaml long-syntax secret with `uid`/`gid`/`mode`. Validated `docker compose config` exit=0.
+- **ESC #3** (Path Y runtime-ignored) -> Path X-only approved (commit `e85b256`, Path Y revoked): compose.yaml reverted to short-syntax + `chown 472:472 grafana-admin.pw`. compose v2 standalone mode discards long-syntax `uid/gid/mode` (swarm-only). P6 #19 banked.
+- **Path 1 application** (port 9100 SlimJim self-scrape via bridge NAT): UFW [8] `9100/tcp ALLOW IN 172.18.0.0/16`. SlimJim 9100 self-scrape recovered to up.
+- **Path 1 extension** (port 19999 netdata; commit `3aac8b9`): UFW [9] `19999/tcp ALLOW IN 172.18.0.0/16`. Path 1 generalized to any Prometheus scrape target failing with bridge-NAT context-deadline-exceeded; PD self-auth applies target-by-target.
+
+### Final state (post-close-out)
+
+- obs-prometheus: Status=running, Health=healthy, Restarts=0, StartedAt `2026-04-29T21:27:50.229362232Z`
+- obs-grafana: Status=running, Restarts=0, StartedAt `2026-04-29T21:27:56.139191606Z`, listening :3000, dashboard provisioning completed
+- Prometheus targets: 7/7 UP (5 node_exporter / 1 self / 1 netdata)
+- compose.yaml: md5 `db89319cad27c091ab1675f7035d7aa3` (Phase F state, short-syntax)
+- grafana-admin.pw: 600 472:472 11 bytes (CEO content unchanged, ownership only)
+- prom-data: 700 65534:65534 (Path A applied)
+- grafana-data: 700 472:472 (Path A applied)
+- UFW: 9 rules (was 7 pre-Phase-G; +2 from Path 1 + Path 1 extension)
+- Beast anchors: bit-identical pre/post entire Phase G (B2b: `2026-04-27T00:13:57.800746541Z`, Garage: `2026-04-27T05:39:58.168067641Z`)
+
+### P6 lessons (running total: 19)
+
+- **#18** (broadened, originated ESC #1, broadened by ESC #3): First-boot of stateful containers with bind-mount data + secret resources requires UID alignment between host owner and container default UID. Phase E spec must include explicit chown directives for both data dirs and secret files. Apply preemptively in Phase E.1 to avoid Phase G first-boot failures.
+- **#19** (new, originated ESC #3): Compose v2 secrets long-syntax fields `uid`/`gid`/`mode` are swarm-mode-only. Standalone compose accepts the YAML syntactically but discards runtime values with a warning (not detected by `docker compose config` validation). For non-swarm deployments, secret-file UID alignment must be done at host filesystem level (chown of source file).
+
+### Standing rule updates (this session)
+
+- **compose-down during active ESC pre-authorized** (ratified at commit `e85b256`). 4-condition carve-out: failure observable+ongoing / canonical mechanism / bounded retry / no config-or-state mutation. PD self-issues `docker compose down` without inline auth ask when conditions hold. Banked into `feedback_directive_command_syntax_correction_pd_authority.md` section 2A this commit.
+- **Path 1 generalization** (ratified at commit `3aac8b9`). Path 1 authorization extends to any Prometheus scrape target failing with bridge-NAT-source connection error. Apply target-by-target; document each rule per guardrail 4.
+- **Bidirectional one-liner format spec on handoffs** (ratified at commit `e85b256`). Both `handoff_paco_to_pd.md` and `handoff_pd_to_paco.md` MUST end with `## For you: send <recipient> the one-line trigger` listing 3-7 expected steps. Updates already on disk in `docs/feedback_paco_pd_handoff_protocol.md`; staged this commit.
+
+### Spec amendments (folded this commit)
+
+- `tasks/H1_observability.md` Phase E.1 -- ADDED filesystem-prep step (chown for prom-data 65534:65534 + grafana-data 472:472 + grafana-admin.pw 472:472), cross-reference P6 #18 + #19
+- `tasks/H1_observability.md` Phase G -- ADDED Bridge NAT note before G.1 acceptance gates, documents Path 1 generalization
+- `feedback_directive_command_syntax_correction_pd_authority.md` -- ADDED section 2A (compose-down ESC carve-out)
+- `docs/feedback_paco_pd_handoff_protocol.md` -- updated for bidirectional one-liner format spec (already on disk pre-commit, staged this fold)
+
+### Beast anchor preservation through 18+ phases
+
+B2b nanosecond invariant + Garage anchor held bit-identical through:
+- 3 Phase G ESCs
+- 3 compose down/up cycles
+- compose.yaml edit + revert
+- 2x chown operations
+- 2x UFW rule additions
+- All Phase D + E + F operational work
+
+~52 hours of operational time, zero substrate disturbance.
+
+### Phase H next
+
+Phase H scope: Grafana smoke + LAN smoke from CK + CEO browser validation of Gate 3 (Grafana web HTTP 200 + login page) + Gate 4 (dashboards visible).
+
+Resume phrase for next session anchor: "Day 74 close: H1 Phase G structural 5/5 PASS (Gates 3+4 deferred to Phase H CEO browser), 3-ESC arc resolved + 2 standing rule updates, P6=19, ready for Phase H."
