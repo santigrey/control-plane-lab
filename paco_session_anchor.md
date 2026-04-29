@@ -1,8 +1,8 @@
 # Paco Session Anchor -- JesAir Resume
 
-**Last updated:** 2026-04-29 / Day 74 (H1 Phase E close)
-**Last commit:** Phase E 4/4 PASS close-out (see git log for SHA) -- supersedes Phase D close-out
-**Resume phrase:** "Day 74 close: H1 Phase E 4/4 PASS structural, observability/ skeleton landed (config-only, containers DOWN until Phase G), 1 spec discrepancy flagged for Paco ruling (Grafana env var single-vs-double underscore), P6=16, ready for Phase F (UFW for SlimJim)."
+**Last updated:** 2026-04-29 / Day 74 (H1 Phase E corrections + Phase F close)
+**Last commit:** Phase E corrections + Phase F 3/3 PASS close-out (see git log for SHA) -- supersedes Phase E close-out
+**Resume phrase:** "Day 74 close: H1 Phase E corrections applied (Correction 1 spec + Correction 2 on-disk compose) + Phase F 3/3 PASS (UFW 5->7 with 9090 + 3000 LAN), P6=17, ready for Phase G (compose up + healthcheck). CEO writes grafana-admin.pw content pre-Phase-G."
 
 ---
 
@@ -47,8 +47,15 @@
   - 5th node_exporter installed on SlimJim itself, UFW rule [5] for 9100 from 127.0.0.1 (spec literal)
   - 1 spec discrepancy flagged: Grafana env var `GF_SECURITY_ADMIN_PASSWORD_FILE` (single _) vs canonical Grafana 11.x `__FILE` (double _); PD self-caught under guardrail 5 + reverted to spec literal; awaiting Paco ruling at review
   - 1 Phase G concern carry-forward: Prom container bridge-NAT source IP vs UFW [5] from 127.0.0.1 may not match at runtime; will surface at Phase G smoke if real
-- **Phase F: NEXT** (UFW for SlimJim per spec section 10 -- 9090/tcp + 3000/tcp LAN-allow for human access)
-- Phase G-I: queued (compose up + healthcheck, Grafana smoke + LAN smoke, restart safety + ship report)
+- **Phase F: ✓ CLOSED** -- UFW for SlimJim per spec section 10, 3/3 gates PASS
+  - UFW count 5 -> 7 (rule [6] 9090/tcp + rule [7] 3000/tcp, both `H1 Phase F:` comments)
+  - Rules [1]-[5] unchanged byte-for-byte
+  - Phase E Corrections 1 + 2 folded into this commit:
+    - Correction 1: spec amendment `tasks/H1_observability.md` line 374 `_FILE` -> `__FILE` + new A.6 subsection banking P6 #17
+    - Correction 2: on-disk `/home/jes/observability/compose.yaml` sed (md5 b40dd1ed... -> db89319c...)
+  - 1 Phase G concern carry-forward: Prom container bridge-NAT source IP vs UFW [5] from 127.0.0.1; Paco rules at Phase G review on path
+- **Phase G: NEXT** (compose up + healthcheck per spec section 11; CEO writes grafana-admin.pw content pre-compose-up)
+- Phase H-I: queued (Grafana smoke + LAN smoke, restart safety + ship report)
 
 ### Org chart
 - Engineering: PD/Cowork ✓
@@ -57,7 +64,7 @@
 - Security: ADDED (KaliPi + Pi3 + future SlimJim IDS)
 - CEO-direct: Brand & Market ✓
 
-### P6 lessons banked: 16
+### P6 lessons banked: 17
 
 ---
 
@@ -84,15 +91,16 @@ OR if CEO wants to start fresh in the morning, Phase D is already in canon. No s
 
 ---
 
-## Phase F scope (when ready)
+## Phase G scope (when ready)
 
-UFW for SlimJim per H1 spec section 10:
-- ufw allow 9090/tcp from 192.168.1.0/24 (Prometheus web UI human access)
-- ufw allow 3000/tcp from 192.168.1.0/24 (Grafana web UI human access)
-- May or may not need extra rules for Prom-container scrape paths -- TBD when reading spec section 10 + addressing Phase G concern (Prom container bridge-NAT vs node_exporter on SlimJim itself)
-- Acceptance: UFW count goes 5 -> 7 (or higher if Phase G concern needs resolving here); B2b + Garage anchor preservation
+compose up + healthcheck per H1 spec section 11:
+- CEO writes grafana-admin.pw content first (chmod 600 placeholder is in place at /home/jes/observability/grafana-admin.pw)
+- `cd /home/jes/observability && docker compose up -d` brings up obs-prometheus + obs-grafana containers
+- Healthcheck poll cap (Prometheus has 30s start_period + 30s interval + 5s timeout x 3 retries; Grafana depends_on prometheus health)
+- Bridge-NAT concern test: Prom logs for SlimJim self-scrape target (192.168.1.40:9100); if `connection refused`, the carry-forward concern is real and Paco rules on path (UFW from bridge subnet / network_mode host / prometheus.yml target change)
+- Acceptance: both containers healthy / Prometheus targets all reachable / Grafana login works with admin + CEO password (validates Correction 1 + 2)
 
-Phase F is mechanical SlimJim-only -- straight UFW rule additions. No auth surface change beyond LAN-allow scope. No concurrency.
+Phase G is mechanical SlimJim-only on the surface (compose up). The bridge-NAT concern + Grafana admin password are the two runtime validation points.
 
 ---
 
@@ -121,5 +129,15 @@ Architecturally: the 5-guardrail rule (with carve-out) worked at minimum-frictio
 Second observation: the spec section 9 prometheus.yml + UFW config implies Prom-container-on-SlimJim scrapes node-exporter-on-SlimJim via 192.168.1.40:9100 with UFW filter from 127.0.0.1. Linux local routing optimizes same-host LAN-IP scrapes via lo, so host-process curl works. But container scrapes go through Docker bridge NAT, source IP becomes bridge gateway (172.17.0.1), UFW filter from 127.0.0.1 won't match. This is a Phase G concern banked at Phase E time -- the architectural detail surfaces during config writes, before runtime, where it's cheap to address.
 
 The lesson: config-only phases ARE worth doing carefully; they surface runtime concerns at write-time when fixing is cheap.
+
+## What this Phase F + Corrections taught
+
+Numerically: 0 escalations new this phase, 1 P6 lesson banked (#17 upstream-product env var convention preflight), 0 P5 carryovers, 0 standing rule changes -- but 1 spec amendment landed (Correction 1) + 1 on-disk operational fix landed (Correction 2) per Paco's Option A authorization at Phase E review time.
+
+Architecturally: the discipline lifecycle from Phase E demonstrated end-to-end. PD's guardrail 5 reflex caught a 1-character spec discrepancy at Phase E config-write time (silent-fail risk); PD reverted to spec literal pre-deploy and embedded a paco_review concern with 3 options; Paco ratified Option A at confirm time; Phase F + corrections fold applied both spec amendment + on-disk fix in one commit; runtime validates at Phase G when CEO writes the password and compose comes up.
+
+This is the broadened standing rule's full operating cycle: catch-revert-escalate-ratify-apply-validate. The `__FILE` typo would have shipped silent-fail to admin/admin in Grafana without the discipline. Banking P6 #17 + the spec A.6 amendment ensures this class of subtle convention silent-fail is preflight-caught at directive-write-time going forward.
+
+The lesson: 1-character mistakes can ship broken silently when downstream daemons accept-and-ignore unrecognized config keys. The fix at directive-write-time is one URL fetch; the fix at deploy-time costs at minimum one escalation roundtrip; the fix at runtime smoke costs deploy + retry. Preflight is always cheapest.
 
 -- Paco

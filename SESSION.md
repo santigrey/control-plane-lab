@@ -1172,3 +1172,85 @@ B2b nanosecond anchor `control-postgres-beast 2026-04-27T00:13:57.800746541Z` an
 ### Anchor commit at close
 
 (pending) -- single git commit fold of: `paco_review_h1_phase_e_observability_skeleton.md` (new) + this SESSION.md update + `paco_session_anchor.md` update + `CHECKLIST.md` audit entry. observability/ files live on SlimJim's filesystem (operational config), NOT in control-plane.git.
+
+---
+
+# Project Ascension — Day 74 (H1 Phase E corrections + Phase F close)
+**Date:** 2026-04-29 (Day 74)
+**Anchor commit (close-out):** (pending — single git commit fold for Phase E corrections + Phase F)
+
+## Phase E corrections + Phase F ship summary
+
+### Correction 1 -- spec amendment landed
+
+`tasks/H1_observability.md` section 9 E.2 line 374:
+- Before: `GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana_admin_pw` (single underscore + `_FILE`)
+- After: `GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_pw  # double underscore: Grafana 11.x file-provider convention (Correction 1, banked P6 #17 Phase E close 2026-04-29)`
+
+Plus new subsection A.6 banks P6 #17 forward as a preflight rule for any future spec phase that references upstream-product env var conventions (Grafana, Postgres, Mosquitto, etc.). Spec md5: `71aaf1ef4a182b1377d8a28b256c55d1` -> `a81e24c8ee3e66b2cb4a74dc9abac2cd` (600 -> 608 lines, +8).
+
+### Correction 2 -- on-disk compose.yaml fix
+
+```bash
+sed -i 's/GF_SECURITY_ADMIN_PASSWORD_FILE/GF_SECURITY_ADMIN_PASSWORD__FILE/' /home/jes/observability/compose.yaml
+```
+
+compose.yaml md5: `b40dd1edd5adb8754b411caaef090f45` -> `db89319cad27c091ab1675f7035d7aa3`. `docker compose config` re-pass OK with corrected env var. Phase G's smoke test "Grafana login works with admin + CEO password" will now read CEO's grafana-admin.pw content correctly.
+
+### Phase F UFW additions (3-gate scorecard)
+
+UFW pre-state: 5 rules. After Phase F additions:
+- Rule [6]: `9090/tcp ALLOW IN 192.168.1.0/24 # H1 Phase F: Prometheus LAN`
+- Rule [7]: `3000/tcp ALLOW IN 192.168.1.0/24 # H1 Phase F: Grafana LAN`
+
+Final UFW state: 7 rules. Rules [1]-[5] unchanged.
+
+Phase F 3-gate scorecard:
+- Gate 1 (UFW count 5 -> 7): **PASS**
+- Gate 2 (no existing rules modified): **PASS**
+- Gate 3 (both new rules carry H1 Phase F comments): **PASS**
+- Standing gate (B2b + Garage anchors bit-identical): **PASS**
+
+### P6 #17 banked
+
+> **Spec text referencing upstream-product env var conventions must be cross-checked against current upstream docs at directive-author time.**
+>
+> Subtle convention deviations (single vs double underscore in Grafana's file-provider; underscore vs hyphen in YAML; capitalization quirks; trailing colons) silent-fail at runtime instead of raising parse errors. The fix at directive-write-time is one URL fetch; the fix at deploy-time costs at minimum one escalation roundtrip and at worst ships broken silently.
+>
+> Banked from H1 Phase E Day 74: spec wrote `GF_SECURITY_ADMIN_PASSWORD_FILE` (single underscore); Grafana 11.x canonical is `GF_SECURITY_ADMIN_PASSWORD__FILE` (double underscore); single-underscore variant is silently ignored. PD's guardrail 5 reflex caught it pre-deploy via auth-surface awareness.
+
+**P6 lessons banked count: 17** (was 16 at Phase F entry; +1 this phase). Spec amendment to `tasks/H1_observability.md` Phase A landed in this commit (new A.6 subsection: upstream-product env var convention preflight).
+
+### Standing rules unchanged this phase
+
+No new guardrails added; 5-guardrail rule + carve-out (banked Phase C) applied cleanly. PD's guardrail 5 self-catch + revert + escalation-and-Paco-ratification flow demonstrates the rule's full lifecycle at minimum-friction scale (1-character config change escalated via embedded paco_review concern, Paco ruled Option A at Phase E confirm time, Corrections 1 + 2 applied this phase per Option A directive).
+
+### Beast anchor preservation
+
+B2b nanosecond anchor `control-postgres-beast 2026-04-27T00:13:57.800746541Z` and Garage anchor `control-garage-beast 2026-04-27T05:39:58.168067641Z` bit-identical pre and post Phase F + corrections. **19+ phases of H1 work + ~50 hours of operational time, both anchors held.** Phase F + corrections touched only SlimJim (UFW + compose.yaml on disk) + CiscoKid (spec amendment); Beast Docker stack untouched.
+
+### Phase G concern carry-forward (still open)
+
+Flagged at Phase E close, banked at Phase E response §3.2, no change this phase. Docker bridge NAT vs UFW [5] from 127.0.0.1 may not match container's NAT'd source IP at Phase G compose-up. Will surface at Phase G smoke if real; Paco rules at Phase G review on path (UFW amendment / network_mode host / prometheus.yml target change).
+
+### State at close
+
+- **Phase E corrections COMPLETE** (Correction 1 spec amendment + Correction 2 on-disk fix applied)
+- **Phase F 3/3 PASS** + standing PASS
+- **19+ phase B2b + Garage anchor preservation** holding through Day 74
+- **0 P5 carryovers added this phase** (Phase D 3 P5s still pending)
+- **1 P6 lesson banked (#17)** -- upstream-product env var convention preflight
+- **0 standing rule changes**
+- **1 Phase G concern carry-forward** (Prom container bridge-NAT vs UFW from 127.0.0.1)
+- **Phase G (compose up + healthcheck) is NEXT** per spec section 11
+
+### On resume
+
+1. **CEO writes grafana-admin.pw content** at `/home/jes/observability/grafana-admin.pw` (chmod 600 placeholder is in place; CEO writes the literal admin password) BEFORE Phase G compose-up.
+2. **Phase G (compose up + healthcheck)** per `tasks/H1_observability.md` section 11. Phase G validates the bridge-NAT concern against runtime; if Prom can't scrape SlimJim's node_exporter, Paco rules on resolution path.
+3. **Phase H + I queued** (Grafana smoke + LAN smoke; restart safety + ship report).
+4. P5 carryovers from Phase D: 3 firewall hardening items still pending.
+
+### Anchor commit at close
+
+(pending) -- single git commit fold of: `tasks/H1_observability.md` spec amendment for Correction 1 + P6 #17 + new A.6 subsection + `docs/paco_review_h1_phase_f_ufw.md` (new) + this SESSION.md update + `paco_session_anchor.md` surgical edits + `CHECKLIST.md` audit entry. observability/ files live on SlimJim filesystem (operational config), NOT in control-plane.git.

@@ -151,6 +151,14 @@ For phases that fan out across multiple hosts (e.g., D = node_exporter on 4 node
 
 **Single-host phases** (H2 Cortez integration, H3 Pi3 DNS Gateway) capture single-host preflight only; the matrix template applies whenever a future spec phase touches multiple hosts.
 
+### A.6 -- Upstream-product env var convention preflight (P6 #17, banked Phase E close-out 2026-04-29)
+
+When a spec phase references upstream-product env vars (e.g., `GF_SECURITY_ADMIN_PASSWORD__FILE` for Grafana, `POSTGRES_PASSWORD_FILE` for Postgres, `MQTT_BROKER_*` for Mosquitto, etc.), cross-check the env var name against current upstream docs at directive-author time. Single-vs-double-underscore conventions, hyphen-vs-underscore in YAML keys, capitalization quirks, and trailing-colon syntax all silent-fail at runtime instead of raising parse errors. The fix at directive-write-time is one URL fetch; the fix at deploy-time costs at minimum one escalation roundtrip and at worst ships broken silently.
+
+**Banked from H1 Phase E Day 74**: spec wrote `GF_SECURITY_ADMIN_PASSWORD_FILE` (single underscore + `_FILE`); Grafana 11.x canonical is `GF_SECURITY_ADMIN_PASSWORD__FILE` (double underscore + `__FILE`); single-underscore variant is silently ignored (Grafana parses as setting a non-existent config key `[security].admin_password_file`). PD's guardrail 5 reflex caught the discrepancy mid-write via auth-surface awareness, reverted to spec literal pre-deploy, escalated for Paco ruling. Paco approved Option A (amend at Phase E review time, single follow-up commit folded with Phase F) -- Correction 1 is this spec amendment; Correction 2 is the on-disk compose.yaml fix at `/home/jes/observability/compose.yaml` (md5 changed from `b40dd1ed...` to `db89319cad27c091ab1675f7035d7aa3`).
+
+**Cross-reference**: `docs/paco_response_h1_phase_e_confirm_phase_f_go.md` (commit `dcd41ef`).
+
 ## 6. Phase B -- docker compose v2 plugin + docker group
 
 **Goal:** enable `docker compose` (v2) and let `jes` use Docker without sudo.
@@ -363,7 +371,7 @@ services:
       - "192.168.1.40:3000:3000"
     environment:
       GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD_FILE: /run/secrets/grafana_admin_pw
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin_pw  # double underscore: Grafana 11.x file-provider convention (Correction 1, banked P6 #17 Phase E close 2026-04-29)
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - ./grafana/provisioning:/etc/grafana/provisioning:ro
