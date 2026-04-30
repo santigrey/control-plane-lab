@@ -1,97 +1,110 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-04-29 evening (Day 74 evening)
-**Anchor commit:** TBD (this Phase H close-out commit)
-**Resume Phrase:** "Day 74 close: H1 Phase H 4/4 literal PASS + dashboard 3662 P5 + 4th standing rule banked, P6=19, ready for Phase I (restart safety + ship report)."
+**Last updated:** 2026-04-30 (Day 74)
+**Anchor commit:** TBD (this Phase I close-out commit + H1 SHIP)
+**Resume Phrase:** "H1 SHIPPED end-to-end Day 74. Atlas v0.1 unblocked. P6=19, standing rules=4, v0.2 queue=6. Awaiting Atlas v0.1 spec drafting."
 
 ---
 
-## Current state (as of Phase H close)
+## H1 SHIPPED
 
-### Substrate (dataplane v1) -- ALL HOLDING
+Full observability stack on SlimJim + MQTT broker close-out. Ship report at `docs/H1_ship_report.md` (21,860 bytes / 17 sections). Atlas v0.1 unblocked.
+
+---
+
+## Substrate (dataplane v1) -- ALL HOLDING
+
 - **B2a** Postgres+pgvector on Beast -- CLOSED (7/7 gates)
 - **B2b** logical replication CK->Beast -- CLOSED (12/12 gates)
 - **B1**  Garage S3 on Beast -- CLOSED (8/8 gates + 6/6 bonus)
 - **D1** MCP Pydantic limits -- VERIFIED
 - **D2** homelab_file_write tool -- VERIFIED
-- **B2b nanosecond anchor**: `2026-04-27T00:13:57.800746541Z` -- holding through 19+ phases (~52 hours)
-- **Garage anchor**: `2026-04-27T05:39:58.168067641Z` -- holding through 19+ phases
+- **B2b nanosecond anchor**: `2026-04-27T00:13:57.800746541Z` -- holding through H1 SHIP (~52 hours / 19+ phases)
+- **Garage anchor**: `2026-04-27T05:39:58.168067641Z` -- holding through H1 SHIP
 
-### H1 progression
-- **Phase A** (baseline + UFW orphans) -- CLOSED (3/3)
-- **Phase B** (compose v2 + docker group) -- CLOSED (4/4)
-- **Phase C side-task** (UFW delete syntax) -- CLOSED (3/3)
-- **Phase C** (mosquitto 2.x dual-listener) -- CLOSED (5/5, 7-ESC arc)
-- **Phase D** (node_exporter fan-out CK/Beast/Goliath/KaliPi) -- CLOSED (3/3)
-- **Phase E** (observability/ skeleton + compose + provisioning) -- CLOSED (4/4)
-- **Phase F** (UFW for SlimJim 9090+3000) -- CLOSED (3/3)
-- **Phase G** (compose up + healthcheck) -- CLOSED structural 5/5 (3-ESC arc + Path 1 generalization)
-- **Phase H** (Grafana smoke + CEO browser tests) -- **CLOSED 4/4 literal PASS** (one known limitation at ship documented under new standing closure pattern)
-  - Node Exporter Full (1860): PASS, full live data render
-  - Prometheus 2.0 Overview (3662): FAIL, P5 carryover banked
-  - 1 ESC resolved (Path A approved + standing closure pattern banked)
+---
 
-### Phase H final state on SlimJim
+## H1 progression -- ALL CLOSED
 
-- obs-prometheus: prom/prometheus:v2.55.1, Restarts=0, healthy
-- obs-grafana: grafana/grafana:11.3.0, Restarts=0, listening :3000
-- 7/7 Prometheus scrape targets up
-- compose.yaml: md5 `db89319cad27c091ab1675f7035d7aa3` (Phase F state, unchanged)
-- grafana-admin.pw: 600 472:472 11 bytes (unchanged from CEO write)
-- UFW: 9 rules (unchanged from Phase G close)
-- Provisioning: datasource (Prometheus default) + 2 dashboards (1 working / 1 known-broken)
+- **Phase A** (baseline + UFW orphans) -- 3/3 PASS
+- **Phase B** (compose v2 + docker group) -- 4/4 PASS
+- **Phase C side-task** (UFW delete syntax) -- 3/3 PASS
+- **Phase C** (mosquitto 2.x dual-listener + Day 67 YELLOW #5 closure) -- 5/5 PASS, 7-ESC arc
+- **Phase D** (node_exporter fan-out CK/Beast/Goliath/KaliPi) -- 3/3 PASS
+- **Phase E** (observability/ skeleton + compose + provisioning) -- 4/4 PASS
+- **Phase F** (UFW for SlimJim 9090+3000) -- 3/3 PASS
+- **Phase G** (compose up + healthcheck + Bridge NAT) -- structural 5/5 PASS, 3-ESC arc
+- **Phase H** (Grafana smoke + CEO browser tests) -- literal 4/4 PASS, 1 ESC + new standing closure pattern banked
+- **Phase I** (restart safety + ship report) -- 7/7 PASS, H1 SHIPS
 
-### P6 lessons banked: 19 (no new this Phase H)
+**Total: 9 phases + 1 side-task. 12 ESCs. 0 substrate disturbances.**
 
-### Standing rules: 4 memory files
+---
 
-1. `feedback_directive_command_syntax_correction_pd_authority.md` (5-guardrail + 2A carve-out)
-2. `feedback_paco_review_doc_per_step.md` (per-step review)
-3. `feedback_paco_pd_handoff_protocol.md` (handoff protocol + bidirectional one-liner)
-4. **`feedback_phase_closure_literal_vs_spirit.md` (NEW Phase H -- closure pattern for literal-PASS + spirit-partial)**
+## Final on-disk state
 
-### Open specs / phases
-- **H1 Phase I** (restart safety + 17-section ship report per spec section 13) -- ready, gated on Paco confirm + GO
-- **H2 Cortez integration** -- not drafted (gated post-H1)
-- **H3 Pi3 DNS Gateway** -- not drafted (gated post-H1)
-- **H4 VLAN** -- DEFERRED (router-replacement-gated)
-- **Atlas v0.1** -- not drafted (gated post-hardware-org-complete)
+### SlimJim observability stack
+- compose.yaml: md5 `db89319cad27c091ab1675f7035d7aa3` (Phase F state, short-syntax secrets)
+- grafana-admin.pw: 600 472:472 11 bytes
+- prom-data: 700 65534:65534
+- grafana-data: 700 472:472
+- UFW: 9 rules (incl bridge NAT [8] + [9])
+- Containers: obs-prometheus + obs-grafana running, post-reboot StartedAt `2026-04-30T00:28:42`, restart-safe verified
+- 7/7 Prometheus scrape targets UP
 
-### v0.2 hardening pass grouping (5 P5 carryovers)
-- Goliath UFW enable (Phase D)
-- KaliPi UFW install + enable (Phase D)
-- grafana-data subdirs ownership cleanup (Phase G)
-- Grafana admin password rotation helper script (Phase G)
-- Dashboard 3662 replacement (Phase H -- 3 candidates: 15489, 3681, hand-rolled minimal)
+### Beast (substrate) -- bit-identical through entire H1
+- control-postgres-beast: `2026-04-27T00:13:57.800746541Z` healthy 0
+- control-garage-beast: `2026-04-27T05:39:58.168067641Z` healthy 0
 
-### Other carryovers
-- `docs/paco_response_h1_phase_c_hypothesis_f_test.md` -- still untracked orphan, low priority
+---
 
-### Org chart
+## Counts at H1 ship
+
+- **P6 lessons banked:** 19 (catalog in ship report section 9)
+- **Standing rule memory files:** 4 (catalog in ship report section 10)
+- **Spec amendments folded:** 4 (catalog in ship report section 11)
+- **v0.2 hardening pass queue:** 6 grouped P5 items (catalog in ship report section 12 + Phase I addition)
+- **Operational runbooks:** 4 (catalog in ship report section 13)
+- **ESCs across H1:** 12, all resolved
+
+---
+
+## Open specs / phases
+
+- **Atlas v0.1** -- UNBLOCKED. Paco drafts spec next; PD executes.
+- **v0.2 hardening pass** -- 6 grouped P5 items queued.
+- **H2 (Cortez integration)** -- not drafted (gated on Atlas v0.1 priority)
+- **H3 (Pi3 DNS Gateway)** -- not drafted (gated on Atlas v0.1 priority)
+- **H4 (VLAN segmentation)** -- DEFERRED (router-replacement-gated)
+
+---
+
+## Org chart
+
 - COO: Paco ✓
 - Engineering: PD/Cowork ✓ + Cortez/JesAir/Macmini
 - L&D: Axiom ✓
-- Operations: Atlas v0.1 (TBD, gated on H1 ship)
+- Operations: **Atlas v0.1** -- unblocked, ready for spec drafting
 - Security: KaliPi + Pi3 + future SlimJim IDS (no agent head)
 - CEO-direct: Brand & Market ✓
+- Family Office: deferred
 
 ---
 
 ## On resume
 
-1. **Paco confirms Phase H** (independent verification of literal scorecard + standing pattern application).
-2. **Phase I GO authorization** (restart safety + ship report).
-3. PD executes Phase I per spec section 13.
-4. Phase I close-out commit (single fold pattern).
-5. H1 SHIPS.
-6. H2 / H3 spec drafting begins (Atlas v0.1 substrate-prep gated post-H1).
+1. **Paco confirms Phase I + H1 SHIP** (independent verification of 7-gate Phase I scorecard + ship report sections).
+2. **Atlas v0.1 spec drafting begins** -- Paco architects, references H1 ship report as substrate dependency record.
+3. PD executes Atlas v0.1 per spec.
+4. v0.2 hardening pass queued for separate execution window.
 
 ---
 
 ## Notes for Paco
 
-- Phase H closed cleanly under the new standing closure pattern (first application of the rule). 5-condition framework worked exactly as designed -- PD escalated when uncertain, Paco ruled + banked the rule, future cases follow the pattern without per-case escalation.
-- Required documentation elements (Known limitations / P5 by reference / inline-fix rationale / spec amendment) all present in `paco_review_h1_phase_h_grafana_smoke.md`.
-- v0.2 hardening pass now has 5 grouped items (was 3 at Phase G close) -- single pass at hardening time addresses all.
-- B2b + Garage nanosecond invariants holding through 19+ phases / ~52 hours / 4 standing rule additions / 8 phase closures. Discipline scaled.
-- One untracked `paco_response_h1_phase_c_hypothesis_f_test.md` orphan persists (low priority).
+- H1 ships clean. Discipline scaled through 19+ phases, 12 ESCs, ~52 hours, 4 standing-rule additions. Substrate held bit-identical throughout.
+- Bidirectional one-liner handoff protocol effective end-to-end through Phases F-I (last 4 phases under the new protocol). Enabled CEO-low-cognitive-load routing of multi-step rulings without per-step ask churn.
+- Phase H standing closure pattern (`feedback_phase_closure_literal_vs_spirit.md`) was first-applied successfully. Future literal-PASS + spirit-partial cases follow this pattern unless a condition fails.
+- Two informational findings from Phase I worth noting at Atlas v0.1 spec time: (a) sshd recovery delay ~140s (typical 30-90s), (b) CK -> slimjim hostname DNS broken. Both added to v0.2 hardening pass.
+- One untracked orphan persists: `docs/paco_response_h1_phase_c_hypothesis_f_test.md` -- not PD-authored, low priority. Surface for Paco review at convenience.
+- **Atlas v0.1 substrate dependencies all satisfied** (B2a + B2b + B1 + D1 + D2 + H1). Paco's next architectural work is the Atlas v0.1 spec.

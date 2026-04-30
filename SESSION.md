@@ -1384,3 +1384,61 @@ One grouped pass at v0.2 hardening time addresses all 5.
 Phase I scope: restart safety + ship report (per spec section 13). `docker compose restart` + healthcheck poll + 17-section H1 ship report at `/home/jes/observability/H1_ship_report.md`.
 
 Resume phrase for next session anchor: "Day 74 close: H1 Phase H 4/4 literal PASS + dashboard 3662 P5 + 4th standing rule banked, P6=19, ready for Phase I (restart safety + ship report)."
+
+
+---
+
+## Day 74 evening -- H1 Phase I (restart safety + ship report) CLOSED 7/7 PASS -- H1 SHIPS
+
+**Major work:** Final phase of H1 build. Two halves: (A) SlimJim full systemctl reboot for restart safety verification, (B) 17-section H1 ship report at `docs/H1_ship_report.md` (21,860 bytes). Both containers came back via `restart: unless-stopped` policy without manual intervention. UFW + bridge subnet + systemd state all persisted byte-identical across reboot. Beast anchors bit-identical (substrate independent of SlimJim reboot). **H1 SHIPPED.**
+
+### Phase I 7-gate scorecard
+
+1. SlimJim reboot completes cleanly + SSH + Docker recover within window: PASS (40.6s boot per systemd-analyze; SSH ready ~180s post-reboot)
+2. Both containers come back up + reach healthy without manual intervention: PASS (`restart: unless-stopped` policy worked; obs-prometheus healthy ~30s post-Docker-daemon-up; new StartedAt `2026-04-30T00:28:42`)
+3. All 7 Prometheus scrape targets return UP within ~60s of containers reaching healthy: PASS
+4. UFW rules persist post-reboot (9 rules + bridge NAT [8] + [9] intact): PASS
+5. mosquitto + prometheus-node-exporter come back active+enabled: PASS
+6. Bridge subnet stable at 172.18.0.0/16: PASS
+7. H1 ship report delivered (17 sections per spec section 13): PASS
+
+Plus standing gate: B2b + Garage anchors bit-identical pre/post reboot -- PASS.
+
+### New P5 surfaced + banked
+
+**CK -> slimjim hostname DNS resolution broken.** During Phase I recovery polling, `ssh slimjim` from CK returned `Temporary failure in name resolution` while SlimJim was actually up + sshd accepting. Polling loop failed silently for ~3 minutes due to this DNS issue. Worked via direct IP (192.168.1.40) + via MCP's own SSH resolution. Added to v0.2 hardening pass -- now 6 grouped items.
+
+### v0.2 hardening pass grouping (6 items)
+
+1. Goliath UFW enable (Phase D)
+2. KaliPi UFW install + enable (Phase D)
+3. grafana-data subdirs ownership cleanup (Phase G)
+4. Grafana admin password rotation helper script (Phase G)
+5. Dashboard 3662 replacement (Phase H)
+6. **CK -> slimjim DNS resolution fix** (Phase I)
+
+### sshd recovery delay (informational P5)
+
+~140s delay between OS-up (network/TCP layer responding) and sshd accepting connections. Typical is 30-90s. Possible causes: cloud-init wait / network-online.target / slow fsck / systemd unit ordering. If pattern recurs, investigate at v0.2 via systemd-analyze blame + journalctl. Not blocking H1 ship.
+
+### State at H1 ship
+
+- Phase I CLOSED 7/7 PASS
+- H1 SHIPPED (9 phases A-I + side-task all closed; ship report at `docs/H1_ship_report.md` 21,860 bytes / 17 sections)
+- 12 ESCs across the build, all resolved cleanly
+- 19 P6 lessons banked
+- 4 standing rule memory files banked
+- 4 spec amendments folded into `tasks/H1_observability.md`
+- 6 P5 items grouped for v0.2 hardening pass
+- B2b + Garage anchors bit-identical pre/post entire H1 build (~52 hours / 19+ phases / 0 substrate disturbances)
+- **Atlas v0.1 unblocked.** All H1 + B-substrate dependencies satisfied.
+
+### Forward state
+
+- **Atlas v0.1** -- spec drafting next (Paco), execution after (PD)
+- **v0.2 hardening pass** -- 6 grouped items, queued
+- **H2 (Cortez integration)** -- not drafted, gated on Atlas v0.1 priority
+- **H3 (Pi3 DNS Gateway)** -- not drafted, gated on Atlas v0.1 priority
+- **H4 (VLAN segmentation)** -- DEFERRED, router-replacement-gated (MR60 cannot route VLANs)
+
+Resume phrase for next session anchor: "H1 SHIPPED end-to-end Day 74. Atlas v0.1 unblocked. P6=19, standing rules=4, v0.2 queue=6. Awaiting Atlas v0.1 spec drafting."
