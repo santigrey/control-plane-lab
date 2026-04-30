@@ -1600,3 +1600,50 @@ All 13 verifications run live this turn against running Beast Postgres + filesys
 Cycle 1C scope per spec v3: `atlas.storage` module wrapping boto3 against Garage. Bucket adoption (NOT creation) for existing pre-allocated `atlas-state`, `backups`, `artifacts`. Awaits Paco confirm + GO.
 
 Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1B 5/5 PASS, atlas schema + migrations on santigrey/atlas at `42e41b7`, P6=20, ready for Cycle 1C (Garage S3 client + bucket adoption)."
+
+
+---
+
+## Day 75 -- Atlas v0.1 Cycle 1C (Garage S3 client + bucket adoption) CLOSED 5/5 PASS
+
+**Major work:** `atlas.storage` module on Beast: boto3 wrapper against Garage S3 LAN endpoint `http://192.168.1.152:3900` with path-style addressing. Credentials resolved via env > file precedence (default file `/home/jes/garage-beast/.s3-creds` mode 600 jes:jes). Adopted 3 pre-allocated buckets (atlas-state + backups + artifacts) -- no creation. Key prefix conventions documented.
+
+### Cycle 1C 5-gate scorecard
+
+1. atlas.storage imports cleanly: PASS
+2. list_buckets returns 3 expected: PASS
+3. Round-trip on atlas-state (put/head/get/delete/list-cleanup; bucket ends 0 B 0 objects): PASS
+4. Cred resolution env > file precedence verified: PASS (2 test codepaths)
+5. B2b + Garage anchors bit-identical: PASS
+
+Plus 8 pytest tests pass (4 prior + 4 new), secret-grep clean, B2b subscription untouched, Garage admin endpoint :3903 untouched, no new Garage keys created.
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `81de0b2` -- *feat: Cycle 1C Garage S3 client + bucket adoption*
+**Push:** `42e41b7..81de0b2 main -> main`
+7 new files (3 module + 4 tests), secret-grep clean (no AKIA / sk- / real GK keys; test fakes correctly excluded).
+
+### Implementation: 0 deviations from Paco's sketches
+
+Unlike Cycle 1B (where DSN needed user= explicit), Cycle 1C sketches landed verbatim. Path-style addressing for Garage compat applied per spec. No new access keys created (using existing root `GK21...`; per-Atlas key is v0.2 P5 #9).
+
+### Verified live block per 5th standing rule (second clean PD-side application)
+
+14 verifications run live this turn against Beast Garage cluster + filesystem state. All matched spec v3 claims. No surprises.
+
+### State at Cycle 1C close
+
+- Atlas commit: `81de0b2` on `santigrey/atlas`
+- atlas-state / backups / artifacts buckets: 0 modifications (cleanup verified)
+- Garage cluster: 1 healthy node b90a0fe8e46f883c, 4.0 TB capacity, 4.4 TB avail (91.7%), v2.1.0 -- unchanged
+- B2b + Garage anchors bit-identical (~73+ hours since Day 71)
+- v0.2 P5 queue: 9 items unchanged from Cycle 1B close
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 20
+
+### Cycle 1D next
+
+Cycle 1D scope per spec v3: Goliath inference RPC layer (`atlas.inference` module wrapping Ollama API at `http://192.168.1.20:11434`). 70B+ models verified live in Cycle 1A preflight: qwen2.5:72b / deepseek-r1:70b / llama3.1:70b. Awaits Paco confirm + GO.
+
+Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1C 5/5 PASS, atlas.storage on santigrey/atlas at `81de0b2`, P6=20, ready for Cycle 1D (Goliath inference RPC)."
