@@ -1647,3 +1647,61 @@ Unlike Cycle 1B (where DSN needed user= explicit), Cycle 1C sketches landed verb
 Cycle 1D scope per spec v3: Goliath inference RPC layer (`atlas.inference` module wrapping Ollama API at `http://192.168.1.20:11434`). 70B+ models verified live in Cycle 1A preflight: qwen2.5:72b / deepseek-r1:70b / llama3.1:70b. Awaits Paco confirm + GO.
 
 Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1C 5/5 PASS, atlas.storage on santigrey/atlas at `81de0b2`, P6=20, ready for Cycle 1D (Goliath inference RPC)."
+
+
+---
+
+## Day 75 -- Atlas v0.1 Cycle 1D (Goliath inference RPC) CLOSED 5/5 PASS
+
+**Major work:** `atlas.inference` module on Beast: httpx async wrapper against Goliath Ollama LAN `http://192.168.1.20:11434`. 3 models (qwen2.5:72b primary, deepseek-r1:70b, llama3.1:70b fallbacks). Sync + streaming for /api/generate + /api/chat. Token telemetry to atlas.events with ns -> ms conversion. NDJSON streaming via httpx aiter_lines (NOT SSE). Library-default discipline applied (explicit timeouts + base_url + raise_for_status + json= kwarg).
+
+### Cycle 1D 5-gate scorecard
+
+1. atlas.inference imports cleanly: PASS
+2. Sync generate qwen 72b returns done=True + eval_count > 0: PASS
+3. Streaming yields chunks; final has done=True + telemetry: PASS
+4. Token logging atlas.events row inserted with correct payload: PASS (delta +2 rows; payload structure verified)
+5. B2b + Garage anchors bit-identical: PASS
+
+Plus 12 pytest pass total in 6.37s (8 prior + 4 new), secret-grep clean, B2b subscription untouched, Garage cluster unchanged.
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `752134f` -- *feat: Cycle 1D Goliath inference RPC + token telemetry to atlas.events*
+**Push:** `81de0b2..752134f main -> main`
+9 new files (4 module + 5 tests). Secret-grep clean.
+
+### Implementation: 0 deviations
+
+models.py + telemetry.py + client.py + __init__.py landed verbatim. Pattern: 0 deviations in Cycle 1C + 1D. Cycle 1B DSN adaptation was a one-off.
+
+### atlas.events sample (post Cycle 1D)
+
+```
+   kind   |     model     | tokens | dur_ms  |  status
+----------+---------------+--------+---------+-----------
+ generate | "qwen2.5:72b" | 2      | 592.174 | "success"
+ generate | "qwen2.5:72b" | 2      | 579.540 | "success"
+```
+
+Ns -> ms conversion verified working. Payload structure correct.
+
+### Verified live block (third clean PD-side application of 5th rule)
+
+14 verifications run live; all matched spec v3 claims; no surprises.
+
+### State at Cycle 1D close
+
+- Atlas commit: `752134f` on `santigrey/atlas`
+- atlas.events: 2 rows (Cycle 1D test telemetry); structure validated
+- Goliath cluster: 3 70B+ models reachable via LAN, model warm post-test
+- B2b + Garage anchors bit-identical (~73+ hours since Day 71)
+- v0.2 P5 queue: 9 items unchanged
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 20
+
+### Cycle 1E next
+
+Cycle 1E scope per spec v3: `atlas.embeddings` module against TheBeast localhost mxbai-embed-large at `192.168.1.152:11434` (Beast's own Ollama, NOT Goliath). Dimension 1024, matches `atlas.memory.embedding` column type from Cycle 1B. Awaits Paco confirm + GO.
+
+Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1D 5/5 PASS, atlas.inference on santigrey/atlas at `752134f`, P6=20, ready for Cycle 1E (mxbai-embed-large embeddings)."
