@@ -1763,3 +1763,57 @@ Ns -> ms conversion verified. atlas.inference: 4 rows; atlas.embeddings: 2 rows.
 Cycle 1F scope per spec v3: `atlas.mcp` MCP client gateway outbound to CK MCP server. Awaits Paco confirm + GO.
 
 Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1E 5/5 PASS, atlas.embeddings on santigrey/atlas at `6c0b8d6`, P6=20, ready for Cycle 1F (MCP client gateway)."
+
+
+---
+
+## Day 76 -- Atlas v0.1 Cycle 1F (MCP client gateway) BLOCKED at Step 3
+
+**Status:** Cycle 1F HALTED. paco_request filed. Awaiting Paco direction.
+
+### What happened
+
+Step 3 connectivity smoke from Beast against `https://sloan3.tail1216a3.ts.net:8443/mcp` hangs on `session.initialize()`. Replicated with raw `curl -X POST` (same Accept headers, same JSON-RPC body) -- also hangs. Confirms not SDK-specific.
+
+MCP server itself works fine: 23 successful 200 POSTs from Mac mini Tailscale source (100.102.87.70) in last 30 nginx access entries. Beast LAN source (192.168.1.152) gets 4x 499 (client closed before nginx responded).
+
+### Pre-flight (Steps 1--2) completed
+
+- Beast anchors PRE captured (B2b 2026-04-27T00:13:57.800746541Z, Garage 2026-04-27T05:39:58.168067641Z) -- bit-identical with Day 71
+- atlas.events PRE: atlas.embeddings=2, atlas.inference=4
+- /etc/hosts entry on Beast added: `192.168.1.10 sloan3.tail1216a3.ts.net` (revertable)
+- DNS resolves locally: getent hosts -> 192.168.1.10
+
+### Diagnostic gathered
+
+- TCP open to :8443; TLS handshake completes; cert SAN matches `sloan3.tail1216a3.ts.net`
+- nginx running, MCP server (mcp_http.py PID 3631249) running, no auth middleware
+- nginx /mcp proxies to 127.0.0.1:8001/mcp with `Connection "upgrade"` header rewrite
+- Python SDK trace: transport opens, ClientSession enters, initialize() never returns -> TimeoutError
+- nginx 499 0 bytes for every Beast request
+
+### What I did NOT do (per hard rules)
+
+- Did not modify nginx config
+- Did not bypass nginx for testing
+- Did not generate certs / disable cert verification
+- Did not improvise tokens or auth headers
+- Did not restart MCP server
+- Did not attempt to install Tailscale on Beast
+
+### paco_request filed
+
+`docs/paco_request_atlas_v0_1_cycle_1f_transport_hang.md` (6754 bytes) -- 4 candidate paths: A (install Tailscale on Beast), B (LAN-internal MCP listener), C (FastMCP/uvicorn debug), D (stdio transport). Spec-named `_auth.md` intentionally not used since this is not a 401.
+
+### State at Cycle 1F BLOCK
+
+- Atlas commit: `6c0b8d6` on `santigrey/atlas` (unchanged from Cycle 1E close)
+- atlas.events: 6 rows total (4 atlas.inference + 2 atlas.embeddings) -- delta 0
+- B2b + Garage anchors bit-identical (~76+ hours since Day 71) -- substrate invariant held
+- v0.2 P5 queue: 9 items unchanged
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 20
+
+### Resume phrase for next session anchor
+
+"Day 76: Atlas Cycle 1F BLOCKED at Step 3 connectivity smoke. paco_request `_transport_hang.md` filed. Beast LAN-source POSTs to /mcp hang via nginx; Tailscale-source POSTs from Mac mini work. Awaiting Paco verdict on Path A/B/C/D."
