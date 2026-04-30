@@ -1501,3 +1501,56 @@ Resume phrase for next session anchor: "H1 SHIPPED end-to-end Day 74. Atlas v0.1
 **Standing rules in effect (carry from H1):** 5-guardrail+carve-outs+compose-down-ESC-pre-auth / per-step review docs / handoff protocol+bidirectional one-liner / closure pattern. Substrate invariant: B2b + Garage anchors bit-identical.
 
 **Pending:** CEO triggers PD via one-liner "Read docs/handoff_paco_to_pd.md and execute." CEO creates santigrey/atlas repo (action prerequisite). PD executes Cycle 1A.
+
+
+---
+
+## Day 75 -- Atlas v0.1 Cycle 1A CLOSED 5/5 PASS
+
+**Major work:** First Atlas execution cycle. Package skeleton on Beast at `/home/jes/atlas/`. Python 3.11.15 venv (deadsnakes PPA), pyproject.toml + src layout, 47 packages installed (atlas + mcp 1.27.0 + psycopg 3.3.3 + boto3 + pydantic + httpx + structlog + dev deps), pytest smoke passes 1/1, first commit pushed to `santigrey/atlas` at hash `3e50a13`.
+
+### Cycle 1A 5-gate scorecard
+
+1. atlas/ tree exists with required files: PASS
+2. python3.11 venv + pip install -e ".[dev]" succeeds: PASS (47 packages)
+3. atlas --version + pytest smoke: PASS (atlas 0.1.0 / 1 passed)
+4. Git remote + first commit pushed: PASS (commit `3e50a13` on santigrey/atlas)
+5. B2b + Garage anchors bit-identical: PASS
+
+### Preflight ESC #1 resolved (4 paths applied)
+
+1. Python 3.11 -- Path A (deadsnakes PPA): python3.11 3.11.15 installed, system default python3 stays 3.10
+2. PG creds -- Path A (.pgpass): admin/controlplane/adminpass at mode 600; libpq picks up automatically
+3. Garage URL -- spec amendment: `:3903` admin endpoint (NOT `:3900` S3 listener); already in spec v3
+4. Tailscale -- Path B (skip, use LAN): Goliath LAN `192.168.1.20:11434` reachable, 3 70B+ models hosted there
+
+### Spec v3 published (commit `93b97e6`) -- includes 5th standing rule
+
+Paco published spec v3 + 5th standing rule memory file (`feedback_paco_pre_directive_verification.md`) AFTER 3 consecutive Paco-side spec authoring errors (P6 #17 Grafana env var, #19 compose long-syntax swarm-only, #20 Atlas spec fictional names + wrong Garage URL). Spec v3 has master Verified live block at top with 14 commands run live against Beast/CK. Standing rules count 4 -> 5. P6 lessons 19 -> 20.
+
+### State at Cycle 1A close
+
+- Atlas package: `/home/jes/atlas/` on Beast, Python 3.11.15 venv, 47 packages installed
+- First commit pushed: `3e50a13` on `santigrey/atlas` repo
+- B2b + Garage anchors bit-identical: `2026-04-27T00:13:57.800746541Z` + `2026-04-27T05:39:58.168067641Z`
+- Standing rules: 5 memory files
+- P6 lessons: 20
+- v0.2 P5 queue: 9 items (added 2 this cycle: rotate adminpass + Beast Tailscale enrollment)
+
+### v0.2 hardening pass grouping (9 items now)
+
+1. Goliath UFW enable (Phase D)
+2. KaliPi UFW install + enable (Phase D)
+3. grafana-data subdirs ownership cleanup (Phase G)
+4. Grafana admin password rotation helper script (Phase G)
+5. Dashboard 3662 replacement (Phase H)
+6. CK -> slimjim DNS resolution fix (Phase I)
+7. sshd recovery delay investigation if pattern recurs (Phase I)
+8. **Rotate Postgres `adminpass`** (Cycle 1A NEW)
+9. **Beast Tailscale enrollment if any cycle requires** (Cycle 1A NEW)
+
+### Cycle 1B next
+
+Cycle 1B scope per spec v3 section 7: `atlas.db` module wrapping psycopg pool against `controlplane` DB; create `atlas` schema in controlplane DB; basic CRUD methods for atlas-owned tables. Awaits Paco confirm + GO.
+
+Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1A 5/5 PASS, package on `santigrey/atlas` at `3e50a13`, P6=20, standing rules=5, ready for Cycle 1B (Postgres connection layer in atlas schema)."
