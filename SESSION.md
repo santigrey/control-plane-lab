@@ -1705,3 +1705,61 @@ Ns -> ms conversion verified working. Payload structure correct.
 Cycle 1E scope per spec v3: `atlas.embeddings` module against TheBeast localhost mxbai-embed-large at `192.168.1.152:11434` (Beast's own Ollama, NOT Goliath). Dimension 1024, matches `atlas.memory.embedding` column type from Cycle 1B. Awaits Paco confirm + GO.
 
 Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1D 5/5 PASS, atlas.inference on santigrey/atlas at `752134f`, P6=20, ready for Cycle 1E (mxbai-embed-large embeddings)."
+
+
+---
+
+## Day 75 -- Atlas v0.1 Cycle 1E (Embedding service mxbai-embed-large) CLOSED 5/5 PASS
+
+**Major work:** `atlas.embeddings` module on Beast: httpx wrapper against TheBeast localhost Ollama 0.17.4 `/api/embed`. Default model mxbai-embed-large:latest dim 1024 (matches atlas.memory.embedding vector(1024)). LRU in-memory cache. Token telemetry to atlas.events with ns -> ms conversion (reuses atlas.inference.telemetry._ns_to_ms).
+
+### Cycle 1E 5-gate scorecard
+
+1. atlas.embeddings imports cleanly: PASS
+2. Single embed returns dim 1024: PASS
+3. Batch embed returns N=3 vectors of dim 1024: PASS
+4. Cache hit returns identical vector + stats increment: PASS
+5. Token logging atlas.events row inserted with correct payload: PASS
+
+Plus 16 pytest pass total in 7.36s, secret-grep clean, B2b untouched, Garage untouched, anchors bit-identical, dim exactly 1024.
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `6c0b8d6` -- *feat: Cycle 1E embedding service against TheBeast localhost mxbai-embed-large*
+**Push:** `752134f..6c0b8d6 main -> main`
+8 new files (3 module + 5 tests). Secret-grep clean.
+
+### Implementation: 0 deviations
+
+Cache + client + __init__ landed verbatim. Reused `atlas.inference.telemetry._ns_to_ms` via direct import. Pattern: 0 deviations in Cycles 1C + 1D + 1E.
+
+### atlas.events sample (post Cycle 1E)
+
+```
+     kind     |          model           | inputs | pec | dur_ms | status
+--------------+--------------------------+--------+-----+--------+---------
+ embed_single | mxbai-embed-large:latest | 1      | 7   | 45.493 | success
+ embed_single | mxbai-embed-large:latest | 1      | 7   | 74.162 | success
+```
+
+Ns -> ms conversion verified. atlas.inference: 4 rows; atlas.embeddings: 2 rows.
+
+### Verified live (fourth clean PD-side application of 5th rule)
+
+16 verifications run live; all matched spec v3 claims.
+
+### State at Cycle 1E close
+
+- Atlas commit: `6c0b8d6` on `santigrey/atlas`
+- atlas.events: 6 rows total (4 atlas.inference + 2 atlas.embeddings)
+- TheBeast Ollama 0.17.4 + mxbai-embed-large:latest reachable at localhost
+- B2b + Garage anchors bit-identical (~73+ hours since Day 71)
+- v0.2 P5 queue: 9 items unchanged
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 20
+
+### Cycle 1F next
+
+Cycle 1F scope per spec v3: `atlas.mcp` MCP client gateway outbound to CK MCP server. Awaits Paco confirm + GO.
+
+Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1E 5/5 PASS, atlas.embeddings on santigrey/atlas at `6c0b8d6`, P6=20, ready for Cycle 1F (MCP client gateway)."
