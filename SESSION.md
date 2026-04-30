@@ -1465,3 +1465,39 @@ Resume phrase for next session anchor: "H1 SHIPPED end-to-end Day 74. Atlas v0.1
 **Session save:** session anchor refreshed at `paco_session_anchor.md` with resume directive. Working device on resume: likely JesAir per CEO note.
 
 **Pending close-out commit folds this turn:** paco_response_h1_ship_attestation.md + paco_session_anchor.md + this SESSION.md append.
+
+## 2026-04-30 (Day 75) -- Atlas v0.1 spec RATIFIED + Cycle 1A dispatched
+
+**Context:** CEO resumed on JesAir, ratified Atlas v0.1 full charter scope (Option C) with eyes open on placement-slip risk and aggressive sequencing assumptions.
+
+**Spec ratification path this session:**
+- CEO resume one-liner: "Paco, resume. H1 SHIPPED Day 74 commit f9a4e85. Begin Atlas v0.1 spec drafting."
+- Paco verified state, read CHARTERS_v0.1.md Charter 5, surfaced 4 scope options (A/B/C/custom)
+- CEO ratified Option C (full charter) with placement-slip risk acknowledgment
+- 3 architectural decisions resolved through measure-twice-cut-once: Decision A1 (Atlas on Beast charter-literal), Decision B1 (record once edit twice for demo), Q1+Q2+Q3 (sub-function order Runtime->Talent Ops->Infra->Vendor / aggressive sequencing both folded gates AND parallelization / mid-Cycle-3 demo gate timing)
+- Spec v1 drafted, surfaced for ratification, CEO flagged 3 corrections (repo name confirmation / demo gate placement / charter-literal MCP-server-on-Beast architecture)
+- Spec v2 drafted with all 3 corrections applied
+- CEO ratified spec v2 final
+
+**Spec committed to canon:** `tasks/atlas_v0_1.md` at commit `9176634`. 37087 bytes / 616 lines / 15 sections.
+
+**Architecture (corrected v2):** Atlas hosts own MCP server on Beast (NEW capability, INBOUND) + consumes CK MCP server (OUTBOUND) -- multi-MCP-host architecture as portfolio differentiator.
+
+**Cycle 1A dispatched** to PD via handoff protocol. Cycle 1A scope: P6 #16 preflight on Beast + project scaffold at /home/jes/atlas/ + pip install + version smoke + pytest smoke + git init + push to santigrey/atlas + Beast anchor preservation. 5-gate acceptance.
+
+**CEO action prerequisite:** create `github.com/santigrey/atlas` repo before PD reaches Step 4 git push. If not ready, PD halts at Step 4 and files brief paco_request.
+
+**Timeline back-schedule (revised v2 for mid-Cycle-3 demo):**
+- TODAY (2026-04-30 Day 75): spec ratified + Cycle 1A dispatched
+- ~May 6-12: Cycle 1 close (Runtime + own MCP server)
+- ~May 14-18: Cycle 2 close (Talent Ops)
+- ~May 18-22: Cycle 3 phases 3A+3B close (alert ingestion + restart playbooks)
+- May 24-28: Demo recording (capstone + placement, record once edit twice)
+- ~June 1: Capstone deadline
+- ~May 28-June 4: Cycle 3 phases 3C+3D (backup verify + security posture)
+- ~June 4-14: Cycle 4 (Vendor & Admin)
+- ~June 14-18: v0.1 SHIPS
+
+**Standing rules in effect (carry from H1):** 5-guardrail+carve-outs+compose-down-ESC-pre-auth / per-step review docs / handoff protocol+bidirectional one-liner / closure pattern. Substrate invariant: B2b + Garage anchors bit-identical.
+
+**Pending:** CEO triggers PD via one-liner "Read docs/handoff_paco_to_pd.md and execute." CEO creates santigrey/atlas repo (action prerequisite). PD executes Cycle 1A.
