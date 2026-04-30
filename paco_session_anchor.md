@@ -1,56 +1,47 @@
 # Paco Session Anchor
 
 **Last updated:** 2026-04-30 (Day 75)
-**Anchor commit:** TBD (this Cycle 1A close-out commit)
-**Resume Phrase:** "Day 75 close: Atlas Cycle 1A 5/5 PASS, package on santigrey/atlas at 3e50a13, P6=20, standing rules=5, ready for Cycle 1B."
+**Anchor commit:** TBD (this Cycle 1B close-out commit)
+**Resume Phrase:** "Day 75 close: Atlas Cycle 1B 5/5 PASS, atlas schema + migrations on santigrey/atlas at 42e41b7, P6=20, ready for Cycle 1C."
 
 ---
 
-## Current state (Atlas v0.1 Cycle 1A close)
+## Current state (Atlas v0.1 Cycle 1B close)
 
-### H1 SHIPPED Day 74 (commit `e61582f`); Atlas v0.1 build cycle in progress
+### H1 SHIPPED Day 74; Atlas v0.1 build cycle in progress
 
-All H1 + B-substrate dependencies satisfied. Atlas v0.1 Cycle 1A landed Day 75; Cycles 1B-1H + 2-4 ahead.
+### Substrate -- HOLDING through Cycle 1B
 
-### Substrate -- HOLDING through Atlas Cycle 1A
-
-- B2a / B2b / B1 / D1 / D2 / H1: all CLOSED (per H1 ship report)
-- B2b nanosecond anchor: `2026-04-27T00:13:57.800746541Z` -- holding through Cycle 1A (~73 hours)
+- B2b nanosecond anchor: `2026-04-27T00:13:57.800746541Z` -- holding through Cycle 1B (~73+ hours)
 - Garage anchor: `2026-04-27T05:39:58.168067641Z` -- holding
+- B2b subscription `controlplane_sub`: untouched, enabled
 
 ### Atlas v0.1 progression
 
-- **Spec ratification (Day 75):** v1 -> v2 (3 corrections) -> v3 (Verified live block, real names, 5th memory file). Current md5 `79c365406453d84ba7be54346287b3b9` at commit `93b97e6`.
-- **Cycle 1A package skeleton:** CLOSED 5/5 PASS Day 75
-  - 1 ESC resolved (preflight FAIL, 4 paths applied)
-  - First commit on santigrey/atlas: `3e50a13`
-  - Python 3.11.15 + 47 packages
-  - Beast anchors bit-identical
-- **Cycle 1B (Postgres connection layer):** NEXT, awaiting Paco confirm + GO
-- **Cycles 1C-1H + 2 + 3 + 4:** ahead per spec v3
+- **Spec v3** (commit `93b97e6`, md5 `79c365406453d84ba7be54346287b3b9`): current
+- **Cycle 1A** package skeleton: CLOSED 5/5 PASS (commit `3aac4b0` on control-plane-lab; first atlas commit `3e50a13`)
+- **Cycle 1B** Postgres connection layer + atlas schema: CLOSED 5/5 PASS Day 75
+  - 12 new files (3 module + 5 migrations + 4 tests)
+  - atlas commit: `42e41b7` (`3e50a13..42e41b7`)
+  - 1 PD-side adaptation: DSN explicit user=admin (within Paco's authorized scope)
+  - 4 pytest tests pass (1 existing + 3 new)
+  - First application of 5th standing rule: Verified live block in PD's review
+- **Cycle 1C (Garage S3 client + bucket adoption):** NEXT, awaiting Paco confirm + GO
+- **Cycles 1D-1H + 2 + 3 + 4:** ahead per spec v3
 
-### Atlas package final state (post Cycle 1A on Beast)
+### Atlas package state (Beast `/home/jes/atlas/`)
 
-```
-/home/jes/atlas/
-├── .git/ (initialized, remote = github.com/santigrey/atlas, branch main, commit 3e50a13)
-├── .gitignore (excludes .venv/ + secrets)
-├── .venv/ (Python 3.11.15 deadsnakes)
-├── README.md
-├── pyproject.toml (atlas 0.1.0; 6 runtime deps + 3 dev deps)
-├── src/atlas/
-│   ├── __init__.py (__version__ = '0.1.0')
-│   └── __main__.py (--version flag)
-└── tests/
-    ├── __init__.py
-    └── test_smoke.py (test_version_string PASS)
-```
+- Cycle 1A: scaffold (pyproject + src/atlas/__init__.py + __main__.py + tests/test_smoke.py + .gitignore + README.md + .venv with 47 packages)
+- Cycle 1B: src/atlas/db/ (3 .py + 5 .sql migrations) + tests/db/ (3 test files)
+- Total source files in repo: 20 (including __init__.py files + SQL migrations)
+- Latest commit: `42e41b7` on `santigrey/atlas` main
 
-### Beast environment (post Cycle 1A)
+### atlas schema state (Beast Postgres)
 
-- Python 3.11.15 at `/usr/bin/python3.11` (deadsnakes); system default `python3` -> 3.10 unchanged
-- `~/.pgpass` with admin/controlplane creds, mode 600
-- Postgres + Garage Docker substrates: bit-identical to all H1 captures, untouched
+- Schema `atlas` exists, 4 user tables (events, memory, schema_version, tasks), all owned by `admin`
+- `atlas.schema_version` 5 rows logged (versions 1-5)
+- `atlas.memory.embedding` is `vector(1024)` (matches mxbai-embed-large)
+- `pgvector 0.8.2` extension in place (CREATE EXTENSION IF NOT EXISTS no-op)
 
 ### Standing rules: 5 memory files
 
@@ -58,53 +49,34 @@ All H1 + B-substrate dependencies satisfied. Atlas v0.1 Cycle 1A landed Day 75; 
 2. `feedback_paco_review_doc_per_step.md` (per-step review)
 3. `feedback_paco_pd_handoff_protocol.md` (handoff + bidirectional one-liner)
 4. `feedback_phase_closure_literal_vs_spirit.md` (closure pattern)
-5. **`feedback_paco_pre_directive_verification.md` (Day 75 -- three-layer pre-directive verification rule)**
+5. `feedback_paco_pre_directive_verification.md` (Day 75 -- pre-directive verification + Verified live block)
+
+First PD-side application of #5 in Cycle 1B paco_review section 0. No mismatches surfaced between spec-claimed state and live state.
 
 ### P6 lessons banked: 20
 
-### v0.2 hardening pass queue: 9 items
-
-1. Goliath UFW enable
-2. KaliPi UFW install + enable
-3. grafana-data subdirs ownership cleanup
-4. Grafana admin password rotation helper script
-5. Dashboard 3662 replacement
-6. CK -> slimjim DNS resolution fix
-7. sshd recovery delay investigation
-8. **Rotate Postgres adminpass** (Cycle 1A new)
-9. **Beast Tailscale enrollment if needed** (Cycle 1A new)
+### v0.2 hardening pass queue: 9 items (unchanged from Cycle 1A close)
 
 ### Open Atlas cycles
 
-- **Cycle 1B (Postgres connection layer):** ready, gated on Paco confirm + GO
-- **Cycle 1C (Garage S3 storage layer):** ahead
-- **Cycle 1D (Working memory):** ahead
-- **Cycle 1E (Embeddings + atlas schema in controlplane DB):** ahead
-- **Cycle 1F (Atlas's own MCP server):** ahead
-- **Cycle 1G (Inference RPC to Goliath):** ahead
-- **Cycle 1H (Tool execution):** ahead
-- **Cycle 2 (Talent Ops):** ahead
-- **Cycle 3 (Infra ops + mid-Cycle-3 demo gate):** ahead
-- **Cycle 4 (Vendor & Admin):** ahead
-- **v0.1 ships ~2026-06-14**
+- **Cycle 1C (Garage S3 client + bucket adoption):** ready, gated on Paco confirm + GO. Existing buckets `atlas-state` + `backups` + `artifacts` pre-allocated by B1 ship Day 73; Cycle 1C adopts them, does not create.
+- Cycles 1D-1H + 2 + 3 + 4: ahead per spec v3
+- v0.1 ships ~2026-06-14
 
 ---
 
 ## On resume
 
-1. **Paco confirms Cycle 1A** (independent verification of 5-gate scorecard from fresh shell + Beast anchor preservation + first commit on santigrey/atlas).
-2. **Cycle 1B GO authorization** (Postgres connection layer).
-3. PD executes Cycle 1B per spec v3 section 7.
-4. Cycle 1B close-out commit (single fold pattern).
-5. Continue through Cycles 1C-1H + 2 + 3 (mid-Cycle-3 demo gate) + 4.
+1. **Paco confirms Cycle 1B** (verifies 5-gate scorecard + Verified live block + Beast anchor preservation + atlas commit `42e41b7` on fresh shell).
+2. **Cycle 1C GO authorization** (Garage S3 client + bucket adoption).
+3. PD executes Cycle 1C per spec v3.
+4. Continue through Cycles 1D-1H + 2 + 3 (mid-Cycle-3 demo gate) + 4.
 
 ---
 
 ## Notes for Paco
 
-- Cycle 1A first application of pre-directive verification rule (5th memory file). Spec v3's master Verified live block enabled clean execution -- real names propagated correctly through preflight + scaffold.
-- 4 path rulings from preflight ESC all applied successfully. Python 3.11 via deadsnakes is the new standard for Beast Python tools going forward.
-- v0.2 P5 queue grew 6 -> 9 items this cycle. Still groupable for one hardening pass post-Atlas-v0.1 ship.
-- B2b + Garage nanosecond invariants holding through Atlas Cycle 1A. ~73 hours since establishment, untouched.
-- `paco_response_h1_phase_c_hypothesis_f_test.md` orphan still untracked (low priority, persists from Phase C).
-- Atlas Cycle 1B is the next architectural confirm + dispatch.
+- Cycle 1B included one PD-side DSN adaptation (`postgresql://admin@localhost/controlplane` instead of the sketch's `postgresql:///controlplane?host=localhost`). Empirical: original DSN had no user so libpq defaulted to OS user `jes` which has no PG role; explicit `user=admin` resolves it. Documented in review section 3 per guardrail 4. Pattern note: this is the first time a Paco sketch has needed adaptation that wasn't a deployed-state-name correction. Worth observing whether it recurs in future cycles or stays a one-off.
+- 5th standing rule's PD-side application worked clean. The Verified live block at the top of paco_review documented all 13 deployed-state references against live state. No surprises.
+- Atlas package code now lives on `santigrey/atlas` at `42e41b7`; canonical record (this anchor + paco_review + SESSION) lives on `santigrey/control-plane-lab`.
+- v0.2 P5 queue and standing rules count unchanged this cycle. P6 lessons unchanged at 20.

@@ -1554,3 +1554,49 @@ Paco published spec v3 + 5th standing rule memory file (`feedback_paco_pre_direc
 Cycle 1B scope per spec v3 section 7: `atlas.db` module wrapping psycopg pool against `controlplane` DB; create `atlas` schema in controlplane DB; basic CRUD methods for atlas-owned tables. Awaits Paco confirm + GO.
 
 Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1A 5/5 PASS, package on `santigrey/atlas` at `3e50a13`, P6=20, standing rules=5, ready for Cycle 1B (Postgres connection layer in atlas schema)."
+
+
+---
+
+## Day 75 -- Atlas v0.1 Cycle 1B (Postgres connection layer + atlas schema) CLOSED 5/5 PASS
+
+**Major work:** Implemented `atlas.db` module on Beast. AsyncConnectionPool wrapper + idempotent SQL migration runner + 5 migrations creating `atlas` schema with 4 tables (`schema_version`, `tasks`, `events`, `memory`). Embedding column dim 1024 matches mxbai-embed-large. pgvector 0.8.2 already installed.
+
+### Cycle 1B 5-gate scorecard
+
+1. atlas.db imports cleanly: PASS
+2. 5 migrations applied; 4 tables in atlas schema: PASS (events, memory, schema_version, tasks; schema_version 5 rows)
+3. Pool initializes via .pgpass (no PGPASSWORD env): PASS
+4. Cross-schema read `public.agent_tasks` succeeds: PASS
+5. B2b + Garage anchors bit-identical: PASS
+
+Plus 4 pytest tests pass (1 existing + 3 new), secret-grep clean, B2b subscription `controlplane_sub` untouched.
+
+### Implementation adaptation from Paco's sketch
+
+**`pool.py` DEFAULT_DSN updated** from `postgresql:///controlplane?host=localhost` (no user, libpq defaulted to OS user `jes` which has no PG role -> `fe_sendauth: no password supplied`) to `postgresql://admin@localhost/controlplane` (explicit user matches `.pgpass` entry). Per Paco's authorization: "PD adapts these sketches to actual implementation; the schemas + DSN convention + division of responsibility are the contract."
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `42e41b7` -- *feat: Cycle 1B Postgres connection layer + atlas schema migrations*
+**Push:** `3e50a13..42e41b7 main -> main`
+12 new files staged (3 module .py + 5 migrations .sql + 4 test files), secret-grep clean.
+
+### Verified live block per 5th standing rule
+
+All 13 verifications run live this turn against running Beast Postgres + filesystem state. Section 0 of `paco_review_atlas_v0_1_cycle_1b_db_layer.md` documents each command + output trace. Substantively the rule's first PD-side application worked exactly as designed -- no surprise mismatches between spec-claimed state and live state.
+
+### State at Cycle 1B close
+
+- Atlas commit: `42e41b7` on `santigrey/atlas`
+- atlas schema: 4 user tables + schema_version (5 rows)
+- B2b + Garage anchors bit-identical (~73+ hours since Day 71)
+- v0.2 P5 queue: 9 items unchanged from Cycle 1A close
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 20
+
+### Cycle 1C next
+
+Cycle 1C scope per spec v3: `atlas.storage` module wrapping boto3 against Garage. Bucket adoption (NOT creation) for existing pre-allocated `atlas-state`, `backups`, `artifacts`. Awaits Paco confirm + GO.
+
+Resume phrase for next session anchor: "Day 75 close: Atlas Cycle 1B 5/5 PASS, atlas schema + migrations on santigrey/atlas at `42e41b7`, P6=20, ready for Cycle 1C (Garage S3 client + bucket adoption)."
