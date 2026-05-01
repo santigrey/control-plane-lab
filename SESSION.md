@@ -2385,3 +2385,103 @@ Server-side ACL = authoritative; Pydantic Field validators carry allow-list weig
 Cycle 1I scope per Paco's deferred-scope notes: atlas.tasks.* state machine paco_request. Awaits Paco confirm + entry-point trigger.
 
 Resume phrase for next session anchor: "Day 77 close: Atlas Cycle 1H 5/5 PASS, atlas-mcp tool surface 4 tools live on `bfed019`, P6=28, v0.2 P5 queue +1, ready for Cycle 1I (atlas.tasks state machine paco_request)."
+
+---
+
+# Day 77 -- Cycle 1H SHIPPED + Cycle 1I entry + CK MCP transport saga + spec error #3 owned
+
+**Anchor commit at section open:** e441a23 (Cycle 1H CLOSE-OUT FOLD by PD)
+**Anchor commit at section close:** post this turns commit (Cycle 1I tasks state machine paco_request gate dispatched)
+**Status:** Cycle 1H SHIPPED 5/5 PASS. Cycle 1I dispatched as paco_request gate (atlas.tasks state machine ratification BEFORE build). Atlas v0.1 progression: 1A-1H closed (8/9 of Cycle 1).
+
+## Cycle 1H execution summary (PD)
+
+- 4 atlas-mcp tools shipped on Beast inbound MCP: atlas_events_search atlas_memory_query atlas_memory_upsert atlas_inference_history
+- Pydantic-wrapped argshape mirroring CK pattern; readOnlyHint/destructiveHint annotations
+- Server-side ACL src/atlas/mcp_server/acl.py = authoritative authorization boundary
+- Pydantic Field validators enforce per-tool allow-list constraints declaratively at parse time
+- Telemetry source=atlas.mcp_server with 4 kinds; P6 #27 caller_arg_keys captured before internal transformation; secrets discipline keys-not-values
+- caller_endpoint extracted from nginx X-Real-IP (100.121.109.112 confirmed live; NOT loopback)
+- atlas.memory id=1 first row (smoke_test) with embedding + metadata
+- Atlas commit bfed019; control-plane-lab close-out fold e441a23
+
+## Two PD spec deviations during build (both honest; both correct)
+
+1. embed_single non-existent symbol in atlas.embeddings module: actual API is get_embedder().embed(text); PD used actual API and documented in commit body
+2. _log_event instance method to module function: server has no shared instance; module function is cleaner shape; v0.2 P5 #23 will extract both client+server into shared atlas.telemetry utility at extraction time
+
+## Paco close-confirm rulings (4 asks)
+
+1. 5/5 PASS scorecard ACCEPTED (10-row Verified live; all 4 tool_call rows status=success; caller_endpoint=100.121.109.112; arg_keys per-tool not [params]; atlas.memory id=1 with embedding=t; substrate anchors bit-identical 96+ hours)
+2. Both spec deviations ACCEPTED with correct disposition; spec error #3 owned by Paco (sketched embed_single without verifying API symbol exists)
+3. P6 #29 BANKED -- API symbol verification before reference. Distinct from P6 #20 (deployed-state names) and P6 #28 (behavioral patterns); covers function/class/method symbol exports from modules. Probe: grep on actual module file or python -c import + dir.
+4. Pre-Pydantic raw arg_keys decision: ACCEPT AS-IS at v0.1 (server captures resolved schema fields via model_dump; client captures raw caller subset; both legitimate signals at different granularity); v0.2 P5 #27 NEW BANKED for symmetry via FastMCP middleware
+
+## CK MCP transport saga (separate from Cycle 1H; Beast substrate untouched)
+
+Mid-Cycle-1H ratification CK homelab-mcp gateway entered degraded state:
+- ~17:37 UTC route registration appeared to drop (200 OK to 404 Not Found in journalctl)
+- systemctl restart homelab-mcp.service brought up new PID 31842 -- listener restored route restored
+- Claude Desktop mcp-remote continued to use stale session ID against fresh server
+- Server returned Session not found with HTTP 404; client cached the failure; retries timed out at 60s with McpError -32001 Request timed out
+- Resolution: CEO ran pkill mcp-remote.*sloan3 + rm -rf ~/.npm/_npx/705d23756ff7dacc + Claude Desktop quit and reopen -> fresh handshake -> session re-established
+- MCP gateway restored mid-turn; Cycle 1H verification + close-confirm proceeded normally
+
+## v0.2 P5 banked this turn
+
+- #26 NEW CK MCP transport hardening (FastMCP session lifecycle + mcp-remote reconnect-on-session-invalidation; second client-side recovery issue in 2 days; deserves dedicated investigation)
+- #27 NEW pre-Pydantic raw arg_keys symmetry (FastMCP middleware to capture caller-intent keys alongside resolved schema keys for full audit-vs-intent distinction)
+- #28 NEW Alexandra dashboard postgres connection string fix (UI alert was config bug; postgres lives in Docker container control-postgres-beast NOT CK 127.0.0.1:5432; non-blocking)
+
+## Cycle 1I entry-point dispatched
+
+Atlas v0.1 Cycle 1I: atlas.tasks.* tool surface for inbound MCP. State machine ratification:
+- atlas.tasks CHECK constraint allows status IN (pending|running|done|failed)
+- Decision space: tool selection (create/list/get/claim/complete/fail/cancel/update_status) + state transition rules + owner field semantics (caller derivation; authorization rules) + completion semantics (result jsonb shape; updated_at handling)
+- Argshape Path X carries forward (Pydantic-wrapped mirror Cycle 1H)
+- Telemetry contract carries forward (source=atlas.mcp_server; existing 4 kinds cover new tools)
+- caller_endpoint via X-Real-IP carries forward (verified working in Cycle 1H)
+
+Handoff handoff_paco_to_pd.md armed with 9-section paco_request structure + Verified live PRE capture commands + P6 #26 notification format + commit/push instructions.
+
+## Cumulative discipline metrics (post Cycle 1H close)
+
+- Cumulative findings caught at directive-authorship: 30
+- Cumulative findings caught at PD pre-execution review: 4 (was 3; +1 this cycle -- embed_single + _log_event shape)
+- Cumulative findings caught at PD execution failure: 2
+- Total findings caught pre-failure-cascade: 36
+- Spec errors owned + corrected: 3 (Cycle 1G binding pattern + Cycle 1H tool naming + Cycle 1H embed_single API symbol)
+- Protocol slips caught + closed: 1 (P6 #26 first end-to-end use Cycle 1F)
+
+## P6 lessons banked
+
+#21-#29 = 9 lessons from Cycle 1F + 1G + 1H saga.
+
+Cumulative P6: **29**.
+
+## v0.2 P5 backlog (28 items)
+
+#10-#13 from Cycle 1F saga; #14-#15 from Cycle 1F close; #16-#20 from Cycle 1G saga; #21 P6 heading normalization; #22 Tailscale auth key residual; #23 _log_event utility extraction; #24 atlas.events.source allowlist; #25 caller IP propagation hardening; #26 NEW CK MCP transport hardening; #27 NEW pre-Pydantic raw arg_keys symmetry; #28 NEW Alexandra dashboard postgres fix.
+
+Total: **28**.
+
+## Substrate state (end of Cycle 1H close)
+
+- B2b anchor 2026-04-27T00:13:57.800746541Z bit-identical 96+ hours
+- Garage anchor 2026-04-27T05:39:58.168067641Z bit-identical 96+ hours
+- atlas.events 36 rows total (12 embeddings + 14 inference + 6 mcp_client + 4 mcp_server NEW from Cycle 1H smoke)
+- atlas.memory 1 row id=1 smoke_test (first row in atlas.memory; was empty pre-Cycle-1H)
+- atlas.tasks 0 rows (untouched; will be exercised in Cycle 1I)
+- atlas-mcp.service active running on Beast 127.0.0.1:8001 strict-loopback; 4 tools registered
+- Beast nginx :8443 vhost untouched (Cycle 1G config carries forward)
+- mcp_server.py on CK 388 lines committed at 34838bd; uvicorn PID rotated multiple times this session due to gateway restart saga
+- Atlas package HEAD bfed019 santigrey/atlas
+
+## CEO action items (24-72h, non-blocking)
+
+- v0.2 P5 #22: Confirm Tailscale auth key from Cycle 1G is consumed/revoked via https://login.tailscale.com/admin/settings/keys
+- v0.2 P5 #28: Alexandra dashboard postgres connection string fix (UI alert; non-substrate)
+
+## Resume phrase for next session anchor
+
+"Day 77: Atlas Cycle 1H SHIPPED 5/5 PASS (control-plane-lab e441a23 + santigrey/atlas bfed019). 4 atlas-mcp tools live on Beast inbound MCP at https://sloan2.tail1216a3.ts.net:8443/mcp. Cycle 1I entry-point dispatched as atlas.tasks state machine paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request CEO triggers Paco: 'Paco, PD escalated, check handoff.' Atlas v0.1 8/9 of Cycle 1; only Cycle 1I tasks remains."
