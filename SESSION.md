@@ -2485,3 +2485,70 @@ Total: **28**.
 ## Resume phrase for next session anchor
 
 "Day 77: Atlas Cycle 1H SHIPPED 5/5 PASS (control-plane-lab e441a23 + santigrey/atlas bfed019). 4 atlas-mcp tools live on Beast inbound MCP at https://sloan2.tail1216a3.ts.net:8443/mcp. Cycle 1I entry-point dispatched as atlas.tasks state machine paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request CEO triggers Paco: 'Paco, PD escalated, check handoff.' Atlas v0.1 8/9 of Cycle 1; only Cycle 1I tasks remains."
+
+
+---
+
+## Day 77 -- Atlas v0.1 Cycle 1I (atlas.tasks state machine) CLOSED 5/5 PASS -- Atlas v0.1 Cycle 1 COMPLETE
+
+**Major work:** 6 atlas.tasks tools shipped on Beast inbound MCP. State machine with 4 legal transitions (null->pending / pending->running with FOR UPDATE SKIP LOCKED / running->done / running->failed). AtlasTaskStateError disambiguation (4 kinds). v0.1 owner = caller_endpoint (X-Real-IP).
+
+### Cycle 1I 5-gate scorecard
+
+1. tools_count=10 + names match: PASS
+2. Round-trip SUCCESS path (create -> claim -> complete; status=done verified): PASS
+3. Round-trip FAIL path (create -> claim -> fail; status=failed): PASS
+4. Race-safety + 3 disambiguation kinds (3 successful claims + 2 null + not_found + wrong_status + wrong_owner): PASS
+5. Anchors bit-identical + secrets discipline 0 hits: PASS
+
+Plus 6 standing gates met (secret-grep clean, B2b/Garage untouched, mcp_server.py on CK untouched, atlas-mcp loopback :8001 preserved post-restart, nginx vhost untouched).
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `d383fe0` -- *feat: Cycle 1I atlas.tasks state machine (6 tools)*
+**Push:** `bfed019..d383fe0`
+4 files changed (2 NEW + 2 MODIFIED). 644 insertions, 10 deletions.
+
+Files: src/atlas/mcp_server/{errors,tasks}.py NEW + {inputs,server}.py EXTENDED.
+
+### 10 tools live on atlas-mcp (Cycle 1H + 1I total)
+
+- atlas_events_search / atlas_inference_history / atlas_memory_query / atlas_memory_upsert (Cycle 1H)
+- atlas_tasks_create / atlas_tasks_list / atlas_tasks_get / atlas_tasks_claim / atlas_tasks_complete / atlas_tasks_fail (Cycle 1I)
+
+FOR UPDATE SKIP LOCKED race-safety verified: 3 pending + 5 concurrent claims = 3 success + 2 null. Strict-loopback :8001 invariant preserved.
+
+### Verified live (seventh clean PD-side application of 5th rule)
+
+21 verifications run live; all matched directive claims. **P6 #29 applied (canonical case):** Paco's tasks.py skeleton used asyncpg-style `db.fetch(sql, $1)` -- verified live before authoring that actual atlas.db.Database is psycopg-style; translated all 6 SQL functions to `async with db.connection cursor execute %s` API.
+
+### State at Cycle 1I close
+
+- Atlas commit: `d383fe0` on `santigrey/atlas`
+- atlas.events: 56 rows total (12 embeddings + 14 inference + 6 mcp_client + 24 mcp_server NEW)
+- atlas.tasks: 6 rows (running=4, done=1, failed=1) reflecting smoke outcomes
+- atlas-mcp.service: active MainPID 2111126 (rotated from 2042174)
+- B2b + Garage anchors bit-identical (~96+ hours since Day 71)
+- v0.2 P5 queue: P5 #29-34 banked + new candidate (explicit MCP ToolError wrapping)
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 29
+
+### Atlas v0.1 Cycle 1 COMPLETE
+
+- 1A package skeleton (3e50a13)
+- 1B Postgres + atlas schema (42e41b7)
+- 1C Garage S3 client (81de0b2)
+- 1D Goliath inference RPC + telemetry (752134f)
+- 1E mxbai-embed-large embedding service (6c0b8d6)
+- 1F MCP client gateway + ACL + auto-wrap (5a9e458)
+- 1G inbound MCP server skeleton (2f2c3b7)
+- 1H atlas-mcp tool surface 4 tools (bfed019)
+- 1I atlas.tasks state machine 6 tools (d383fe0)
+
+Inflection point reached: Atlas v0.2 entry = Alexandra integration / capstone demo wiring.
+
+### Cycle 1I -> Atlas v0.2 next
+
+Awaits Paco confirm + Atlas v0.2 entry-point paco_request directive.
+
+Resume phrase for next session anchor: "Day 77 close: Atlas Cycle 1I 5/5 PASS, atlas.tasks state machine 6 tools live on santigrey/atlas `d383fe0`, Atlas v0.1 Cycle 1 COMPLETE, P6=29, v0.2 P5 queue +1, ready for Atlas v0.2 entry-point."
