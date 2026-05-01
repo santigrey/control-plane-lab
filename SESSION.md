@@ -1817,3 +1817,143 @@ MCP server itself works fine: 23 successful 200 POSTs from Mac mini Tailscale so
 ### Resume phrase for next session anchor
 
 "Day 76: Atlas Cycle 1F BLOCKED at Step 3 connectivity smoke. paco_request `_transport_hang.md` filed. Beast LAN-source POSTs to /mcp hang via nginx; Tailscale-source POSTs from Mac mini work. Awaiting Paco verdict on Path A/B/C/D."
+
+---
+
+# Day 76 evening -- Cycle 1F transport saga: Phase C diagnostics + Phase 3 GO
+
+**Anchor commit at section open:** `1550eb2` (Cycle 1F BLOCK)
+**Anchor commit at section close:** `f998883` (Phase 3 GO dispatched, awaiting PD execution)
+**Status:** Cycle 1F BUILD pending PD's Phase 3 execution; Atlas commit `6c0b8d6` unchanged.
+
+## Chronology (5 directive turns + 2 PD diagnostic phases)
+
+### Turn 1 -- Path C verdict (commit `560fb77`)
+
+Paco evaluated paco_request_transport_hang.md's 4 candidate paths (A install Tailscale on Beast / B new LAN nginx vhost on :8002 / C uvicorn debug logs / D stdio transport). **Verified live** caught `host='0.0.0.0'` in mcp_http.py disproving hypothesis 5.A (Tailscale-bound listener) before authoring the directive. Path A would have been cargo-culting; B would hide the bug; D would over-correct. Selected **Path C diagnostic-first** with 4 read-only probes (P1.a Beast SDK direct uvicorn:8001 bypassing nginx / P1.b CK loopback SDK / P1.c tcpdump on lo:8001 header capture / P1.d progressive curl headers).
+
+### Turn 2 -- PD's Phase C.1 diagnostic (commit `1f6896c`)
+
+PD ran the 4 probes successfully. Identified that FastMCP server `homelab_mcp v1.26.0` requires HTTP header `MCP-Protocol-Version: 2025-03-26` on initialize; python `mcp` SDK 1.27.0 does not send it by default. P1.d.3 (curl loopback HTTP + magic header) returned `http_code=200`. Recommended single-line fix: add header to `streamablehttp_client(...)` in atlas.mcp_client.
+
+### Turn 3 -- Paco's Phase C.1 verdict revision via counter-probes (commit `61b663b`)
+
+**5th standing rule earned its keep at highest-stakes turn.** Per directive-author Verified live discipline, Paco ran 4 counter-probes from Beast that PD did not run:
+
+- **CP1**: Python SDK + uvicorn:8001 direct + magic header -> still HANG (header alone doesn't fix the SDK)
+- **CP3**: curl + HTTPS+nginx + magic header -> http_code=000 (HTTPS path fails for Beast LAN source even with PD's fix)
+- **CP4**: Python SDK + magic header + Accept -> still HANG (Accept doesn't rescue it)
+- **CP5**: curl + HTTPS+nginx + magic header + Mac mini's stolen session-id -> http_code=000 (Beast can't reuse working session via HTTPS)
+
+Header necessary but NOT sufficient. PD's `http_code=200` from P1.d.3 was likely a false positive (curl filled SSE stream budget). Two issues persisted: (A) Python SDK fails initialize even with header; (B) HTTPS+nginx fails for non-Tailscale source. Hypothesis 5.B revised; 5.E (init handler hangs for fresh inits) and 5.F (HTTPS+nginx + non-Tailscale asymmetry) added as candidates. **Phase 3 fix directive deferred -- would have caused BLOCK #2.** Phase C.2 escalation issued: C.2.0 non-restart attach diagnostics (PD authority); C.2.1 uvicorn debug-restart (CEO single-confirm gate, deferred).
+
+### Turn 4 -- PD's Phase C.2.0 attach diagnostic + root cause PROVEN (commit `3bb9517`)
+
+PD installed py-spy ephemerally to /tmp/pyspy-diag, attached to running uvicorn PID 3631249 during a hanging Beast probe. **Stack revealed event-loop blocking:**
+
+```
+select (selectors.py:416)
+_communicate (subprocess.py:2021)
+run (subprocess.py:505)
+ssh_run (mcp_server.py:58)              <- sync helper
+homelab_ssh_run (mcp_server.py:102)     <- async handler, NO to_thread wrapper
+call_tool (mcp/server/fastmcp/...)
+asyncio_run (uvicorn/_compat.py:60)
+```
+
+Connection state during hang: `ESTAB Recv-Q=450 0 127.0.0.1:8001 127.0.0.1:53862` -- POST body sat unread in kernel buffer because event loop was blocked elsewhere in `subprocess.run`. TCP/TLS/nginx all innocent.
+
+**Hypothesis 5.E PROVEN.** Mechanism: server's `mcp_server.py` async @mcp.tool handlers call sync helpers (`ssh_run` -> `subprocess.run`, `get_embedding` -> `requests.post`, psycopg2 inline) WITHOUT `asyncio.to_thread()`, blocking entire uvicorn asyncio event loop for full duration of every SSH command (up to 1800s SSHRunInput.timeout max). Same anti-pattern in 8+ other DB-using handlers.
+
+**Recursive observer effect noted:** Paco's own homelab_ssh_run calls during Phase C.1 diagnostic were the in-flight blockers that caused Phase C.1's probes to hang. Banked as P6 #24.
+
+PD's recommendation: server-side mcp_server.py edit + atlas client header fix (carries forward) + uvicorn restart. Restart suggested via `nohup python3 mcp_http.py &`.
+
+### Turn 5 -- Paco's Phase 3 GO directive (commit `f998883`, this section's anchor)
+
+**5th standing rule earned its keep again.** Per directive-author Verified live (14 rows), Paco caught two critical gaps in PD's recommendation pre-directive:
+
+1. **`asyncio` not yet imported in mcp_server.py** -- patch must add it. Verified via `grep -nE '^import asyncio'` returning empty.
+2. **PD's `nohup` relaunch would have orphaned the systemd-managed process.** Verified live confirmed uvicorn PID 3631249 has PPID=1 (init/systemd) + systemd unit at `/etc/systemd/system/homelab-mcp.service` with `Restart=always RestartSec=5 KillMode=mixed TimeoutStopSec=10`. Bare nohup would have caused chaos: SIGTERM the systemd-managed PID -> systemd auto-restarts within 5s -> two competing processes briefly bound to :8001 OR systemd's auto-restart would relaunch the original ExecStart ignoring PD's nohup copy. **Correct restart command: `sudo systemctl restart homelab-mcp.service`.** Banked as P6 #23.
+
+Phase 3 directive (17 steps, 492 lines) dispatched in `docs/handoff_paco_to_pd.md`:
+
+1. Anchors PRE + uvicorn PID + systemd status
+2. Server patch: add `import asyncio` + wrap 14 @mcp.tool handlers in `asyncio.to_thread` + `.bak.phase3` backup
+3. Server patch syntax validate (`from mcp_server import mcp`)
+4. Atlas client patch: add `MCP-Protocol-Version: 2025-03-26` header to `streamablehttp_client(...)`
+5. Build atlas.mcp_client per original Cycle 1F handoff (acl.py + client.py + __init__.py)
+6. Atlas client syntax validate
+7. Snapshot 16 prior tests passing
+8. Pre-deploy paco_request checkpoint file
+9. **DEPLOY-RESTART via `sudo systemctl restart homelab-mcp.service`** (CEO trigger == single-confirm)
+10. Verify Mac mini reconnects (~10-30s window)
+11. End-to-end Beast smoke: `tools_count >= 14` + `homelab_ssh_run whoami` -> contains `jes`
+12. Run pytest 20/20 (16 prior + 4 new mcp_client)
+13. atlas.events delta + secrets discipline audit (0 hits on `whoami`/`ciscokid`)
+14. Anchors POST + bit-identical diff
+15. Commits: santigrey/atlas + control-plane-lab close-out fold (single commit each)
+16. paco_review with Verified live block + 12 sections
+17. Append P6 #21-#24 to canonical `docs/feedback_paco_pre_directive_verification.md`
+
+Plus cleanup of ephemerals.
+
+## Discipline metrics (Day 75-76 cumulative)
+
+10 directive verifications + 6 PD reviews + 1 paco_request + 1 verdict + 1 verdict revision + 1 confirm-and-Phase-3-go.
+
+| Directive | Findings caught at authorship |
+|-----------|-------------------------------|
+| Spec v3 master block | 4 |
+| Cycle 1B GO | 1 |
+| Cycle 1C GO | 3 |
+| Cycle 1D GO | 4 |
+| Cycle 1E GO | 5 |
+| Cycle 1F GO (original) | 5 |
+| Cycle 1F transport-hang verdict (Path C) | 1 |
+| Cycle 1F Phase C.1 review (counter-probes) | 4 |
+| Cycle 1F Phase C.2.0 confirm + Phase 3 directive | 2 (asyncio not imported; nohup vs systemctl gap) |
+| **Cumulative** | **30** |
+
+**Cycle 1F transport saga ROI on the 5th standing rule:** prevented at least 2 BLOCKs (incomplete fixes shipping) and 1 outage event (chaotic restart with two competing processes).
+
+## P6 lessons banked from Cycle 1F transport saga
+
+- **#21** tcpdump-on-lo for client-server impedance pattern (PD-side discipline; PD proposed)
+- **#22** PD diagnostic verdicts on transport/protocol issues MUST be validated end-to-end against actual runtime path before issuing build directive (PD-side discipline; this turn caught it via CP1-CP5)
+- **#23** Verify launch mechanism (systemd vs nohup vs screen vs supervisord) BEFORE authoring restart commands -- PPID=1 + systemd unit existence is a 10-second probe (Paco-side discipline)
+- **#24** Account for recursive observer effect when attaching diagnostic tools (py-spy/strace/tcpdump) to long-running production server (Paco-side discipline)
+
+Cumulative P6 banked: **24** (PD will write all four to canonical feedback file in Phase 3 Step 17).
+
+## v0.2 P5 backlog Day 76 close
+
+- #1-#9: unchanged from Day 75 close
+- **#10** (NEW Day 76): file upstream issue/PR with mcp python SDK 1.27.0 to default `MCP-Protocol-Version: 2025-03-26` header on initialize when not user-overridden
+
+Total: **10**.
+
+## Substrate state (Day 76 evening)
+
+- B2b anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical for ~76+ hours through Cycles 1A-1E + Cycle 1F BLOCK + Phase C.1 + Phase C.1 review counter-probes + Phase C.2.0 + Phase 3 GO
+- Garage anchor: `2026-04-27T05:39:58.168067641Z` -- bit-identical for ~76+ hours
+- atlas.events: 6 rows total (atlas.embeddings=2, atlas.inference=4) -- delta 0 since Cycle 1E close
+- uvicorn PID 3631249: alive, ELAPSED 3-04+ hours; will restart in Phase 3 Step 9
+- Atlas commit: `6c0b8d6` on santigrey/atlas (unchanged from Cycle 1E close; will advance with Phase 3 commit)
+- Standing rules: 5 (unchanged)
+- v0.2 P5 queue: 10 items
+- P6 lessons banked: 22 in commit messages; 24 will land canonically in feedback file at Phase 3 Step 17
+
+## CEO transition note (Day 76 evening)
+
+Sloan moving from Mac mini to Cortez (Windows thin client, PowerShell). State frozen at HEAD `f998883`. Phase 3 directive is gitignored but already on CK at `/home/jes/control-plane/docs/handoff_paco_to_pd.md`. CEO Cortez startup sequence:
+
+1. CEO trigger to PD: `Read docs/handoff_paco_to_pd.md and execute.`
+2. PD pulls origin/main (HEAD `f998883`), reads handoff, executes 17-step Phase 3 cycle
+3. CEO trigger to Paco when PD finishes: `Paco, PD finished Cycle 1F, check handoff.`
+
+No new chat session anchor needed unless Paco's session expires before PD finishes. If new chat needed, paste `paco_session_anchor.md` (also at `/home/jes/control-plane/paco_session_anchor.md`, updated this turn to reflect Phase 3 GO state).
+
+## Resume phrase for next session anchor
+
+"Day 76 evening: Atlas Cycle 1F Phase 3 GO dispatched (commit f998883). PD has armed Phase 3 directive at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' Sloan is on Cortez. After PD finishes, CEO will trigger Paco: 'Paco, PD finished Cycle 1F, check handoff.'"
