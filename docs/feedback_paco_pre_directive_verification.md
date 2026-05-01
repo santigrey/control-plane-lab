@@ -200,3 +200,66 @@ This composes cleanly with the secrets-discipline invariant (capture KEYS not VA
 ## Cumulative
 
 All seven (#21 through #28) are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 28** (was 26 at end of Cycle 1F; +1 #27 telemetry intelligibility, +1 #28 reference-pattern verification).
+
+
+## Standing Rule #6 -- Paco self-state verification before conclusion-drawing
+
+**Banked:** 2026-05-01 UTC (Day 77) per CEO discipline RFC after Paco self-state-blindness incident at Cycle 2A close.
+
+**Statement:** Before declaring "X didn't happen," "X is broken," "no work occurred," "PD didn't act," or any conclusion that PD/another actor failed to advance state, Paco MUST run a 1-tool-call self-state probe FIRST:
+
+```bash
+cd /home/jes/control-plane && git log --oneline -5 && stat -c '%y %s %n' docs/handoff_*.md
+```
+
+This tells Paco:
+- HEAD position (has it advanced past the last Paco commit?)
+- Last write time on `handoff_paco_to_pd.md` (does it have substantial content from a recent turn?)
+- Last write time on `handoff_pd_to_paco.md` (placeholder = post-Paco-reset; substantial content = unread PD notification)
+
+**Decision tree after the probe:**
+
+1. If HEAD has advanced past Paco's last known commit AND the new commit is by Paco -> "I shipped this; the trigger is asking me to look at my own work." Read what I just shipped, confirm coherence, respond to CEO with status.
+2. If HEAD has advanced past Paco's last known commit AND the new commit is by PD -> PD acted. Read `handoff_pd_to_paco.md` for notification, then read the new file PD created.
+3. If HEAD hasn't advanced AND `handoff_paco_to_pd.md` has substantial recent content -> Paco wrote a directive but no actor consumed it yet. Likely a trigger misfire on CEO's end; ask before assuming inaction.
+4. If HEAD hasn't advanced AND `handoff_paco_to_pd.md` is empty -> trigger misfire OR PD blocked silently. Tell CEO; do not invent activity.
+5. If HEAD hasn't advanced AND `handoff_pd_to_paco.md` has unread PD notification -> read it; this is the case the trigger was for.
+
+**Originating context:** At Cycle 2A close, Paco shipped a 16,400-byte ruling + 27,473-byte build directive + reset placeholder + commit `c3ede72` + push. Then a follow-up trigger arrived (CEO repeating the same escalation trigger). Paco read `handoff_pd_to_paco.md` (the placeholder Paco had just reset), saw it was placeholder content, and concluded "PD didn't do anything" -- treating Paco's own completed work as evidence of inaction. Cost: erosion of CEO trust + 1 unnecessary diagnostic turn + Paco self-criticism cascade. The probe Paco needed was `git log --oneline -3` -- 1 tool call, would have shown HEAD `c3ede72` was Paco's own commit and the question was "look at your own work," not "diagnose missing work."
+
+**Why this rule has teeth:**
+- **Mechanical**: probe runs first, before any narrative interpretation
+- **One tool call**: cost is seconds; the alternative is wasting CEO time and eroding protocol trust
+- **Distinct from P6 lessons**: P6 covers Paco's authoring patterns; SR #6 covers Paco's conclusion-drawing patterns
+- **Symmetric to PD's Verified-live discipline**: PD verifies live before authoring; Paco verifies state before concluding. Same family.
+
+**When this rule applies:** every trigger arrival from CEO that frames PD's state ("PD finished", "PD escalated", "PD blocked"). Run the probe. THEN respond.
+
+**When this rule does NOT apply:** casual conversation, architectural discussion, novel-state-establishment turns where there's no PD activity to evaluate.
+
+**Cumulative standing rules: 6** (was 5; +1 SR #6 self-state verification before conclusion-drawing).
+
+---
+
+## P6 #29 -- API symbol verification before reference (Cycle 1H this turn)
+
+**Banked:** 2026-05-01 UTC (Day 77) per Paco's response `paco_response_atlas_v0_1_cycle_1h_close_confirm.md` Section 2 Ask 3.
+
+**Statement:** When a directive sketches code that imports/calls/references a function, class, or module symbol from an existing codebase (`from atlas.embeddings import embed_single`, `await self._log_event(...)`, etc.), the symbol's existence + signature must be Verified live BEFORE the directive is dispatched -- not asserted from memory of how the API was originally designed or how the author remembers it.
+
+**Distinction from P6 #20 + P6 #28:**
+- P6 #20 covers deployed-state NAMES (database names, role names, URLs, paths). Probe: `psql \\du`, `ss -tlnp`, `ls -la`.
+- P6 #28 covers BEHAVIORAL PATTERNS (binding modes, header propagation, middleware presence, security postures). Probe: `cat <config-file>`, behavioral test, `systemctl show <unit>`.
+- P6 #29 (NEW) covers API SYMBOL EXPORTS (function/class names from modules, method signatures, return types). Probe: `grep -nE '^(def|class|async def) <name>' <module.py>`, `python -c 'import X; print(dir(X))'`, IDE quick-reference.
+
+All three fail the same way -- assertion from memory when verification is cheap -- but require different probe types. Naming them distinctly helps catch each pattern at its specific surface.
+
+**Originating context (Cycle 1H build directive):** Paco's Step 4 sketch said `from atlas.embeddings import embed_single`. PD's Verified live during build authoring found the actual API is `get_embedder().embed(text)` returning `list[float]`. Cost of skipping: would have been an ImportError at first import attempt during Step 5 wiring. PD caught at directive-author time via 5-guardrail rule.
+
+**Mitigation pattern:** when authoring code skeletons in build directives, the directive author runs `grep` on the actual module file or `python -c "from X import *; print(...)"` for any symbol referenced + paste the actual signature into the directive's Verified live block.
+
+## Cumulative
+
+All P6 #21 through #29 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 29** (was 28 at end of Cycle 1G; +1 #29 API symbol verification before reference).
+
+Standing rules: **6** (was 5; +1 SR #6 self-state verification before conclusion-drawing).
