@@ -1,97 +1,92 @@
 # Paco Session Anchor
 
 **Last updated:** 2026-05-01 UTC (Day 77)
-**Anchor commit:** post-Cycle-1G-close on santigrey/control-plane-lab `main` (this turn's commit pending push)
-**Resume Phrase:** "Day 77: Atlas Cycle 1G SHIPPED 5/5 PASS (control-plane-lab `c04a35d` + santigrey/atlas `2f2c3b7`). Atlas inbound MCP server operational at https://sloan2.tail1216a3.ts.net:8443/mcp. Cycle 1H entry-point dispatched as tool-surface paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request, CEO triggers Paco: 'Paco, PD escalated, check handoff.'"
+**Anchor commit:** post-Cycle-1H-close on santigrey/control-plane-lab `main` (this turn's commit pending push)
+**Resume Phrase:** "Day 77 close: Atlas Cycle 1H 5/5 PASS, atlas-mcp tool surface 4 tools live on santigrey/atlas `bfed019`, P6=28, v0.2 P5 queue +1, ready for Cycle 1I (atlas.tasks state machine paco_request)."
 
 ---
 
-## Atlas v0.1 progression (post Cycle 1G close)
+## Atlas v0.1 progression (post Cycle 1H close)
 
 - **Cycle 1A** package skeleton: CLOSED (atlas commit `3e50a13`)
-- **Cycle 1B** Postgres connection layer + atlas schema: CLOSED (atlas commit `42e41b7`)
+- **Cycle 1B** Postgres connection + atlas schema: CLOSED (atlas commit `42e41b7`)
 - **Cycle 1C** Garage S3 client + bucket adoption: CLOSED (atlas commit `81de0b2`)
 - **Cycle 1D** Goliath inference RPC + token telemetry: CLOSED (atlas commit `752134f`)
 - **Cycle 1E** Embedding service mxbai-embed-large: CLOSED (atlas commit `6c0b8d6`)
-- **Cycle 1F** MCP client gateway: CLOSED 5/5 PASS (atlas commit `5a9e458`)
-- **Cycle 1G** Atlas MCP server INBOUND on Beast: **CLOSED 5/5 PASS** (atlas commit `2f2c3b7`; control-plane-lab `c04a35d`)
-- **Cycle 1H** atlas-mcp tool surface: **NEXT (tool-surface paco_request gate dispatched)**
-- **Cycles 1I + 2 + 3 + 4:** ahead per spec v3 (if applicable)
+- **Cycle 1F** MCP client gateway + ACL + telemetry + schema-aware auto-wrap: CLOSED (atlas commit `5a9e458`)
+- **Cycle 1G** Inbound MCP server skeleton (Option A nginx Host rewrite + tailnet FQDN cert): CLOSED (atlas commit `2f2c3b7`)
+- **Cycle 1H** atlas-mcp tool surface (4 tools): **CLOSED 5/5 PASS Day 77** (atlas commit `bfed019`)
+  - 7 files (6 NEW + 1 MODIFIED): inputs.py + acl.py + telemetry.py + events.py + memory.py + inference.py + server.py
+  - 636 insertions, 8 deletions
+  - 4 tools: atlas_events_search / atlas_memory_query / atlas_memory_upsert / atlas_inference_history
+  - Sixth clean PD-side application of 5th standing rule
+  - P6 #28 verified live during build (caught Paco's `embed_single` spec error before authoring)
+- **Cycle 1I (atlas.tasks.* state machine):** NEXT (paco_request entry-point pending)
+- **Cycles ahead per spec v3:** atlas.tasks state machine + atlas.queue + atlas.scheduler
 
-## Cycle 1G saga -- final tally
+## Substrate -- HOLDING ~96+ hours
 
-Multi-phase cycle: TLS strategy paco_request -> Option A ratified (Beast joins tailnet + Beast nginx + Tailscale FQDN cert mirroring CK pattern) -> 10 clean build steps -> Step 11 BLOCKER (uvicorn h11 Host validation rejecting nginx-forwarded `Host: sloan2.tail1216a3.ts.net` as 421 Misdirected Request) -> Paco spec error owned (handoff said "matches CK's pattern (loopback-bound)" but CK actually binds 0.0.0.0) -> Option A nginx Host rewrite to `127.0.0.1:8001` + X-Forwarded-Host enhancement ratified -> 5/5 PASS -> commits + close.
-- 2 paco_requests + 2 paco_responses + 1 close confirm
-- 1 spec error owned + corrected (P6 #28 banked from this)
-- 2 P6 lessons banked (#27 carried from Cycle 1F + #28 NEW from Cycle 1G)
-- 5 v0.2 P5 candidates banked (#16-#20)
-- Anchors held bit-identical 96+ hours through entire saga
-- Strict-loopback security posture stronger than CK's 0.0.0.0+UFW pattern (CK migrates to match in v0.2 P5 #20)
+- B2b nanosecond anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical PRE/POST through Cycle 1H
+- Garage anchor: `2026-04-27T05:39:58.168067641Z` -- bit-identical
+- B2b subscription `controlplane_sub`: untouched
+- Garage cluster: unchanged
+- atlas-mcp.service: restarted at Step 6 (application-layer; substrate untouched)
+- Cycle 1H atlas.events delta: +4 rows source=atlas.mcp_server (one per smoke tool call)
+- Cycle 1H atlas.memory delta: +1 row id=1 kind=smoke_test (first row in atlas.memory)
 
-## Atlas inbound MCP -- operational state
+## Atlas package state (Beast `/home/jes/atlas/`)
 
-- Endpoint: `https://sloan2.tail1216a3.ts.net:8443/mcp`
-- Beast tailnet membership: `100.121.109.112 sloan2 james.3sloan@ linux`
-- Tailscale-issued cert: `/etc/ssl/tailscale/sloan2.tail1216a3.ts.net.{crt,key}` (Let's Encrypt CN=E7, expires 2026-07-30)
-- nginx vhost on Beast :8443 with strict-loopback Host rewrite to `127.0.0.1:8001` + X-Forwarded-Host preservation
-- atlas-mcp.service Active running with FastMCP skeleton on `127.0.0.1:8001` loopback
-- Tools exposed: 0 (skeleton; tool surface ratified in Cycle 1H)
-- Smoke verified: HTTP 405 + `allow: GET, POST, DELETE` + `mcp-session-id` cookie + Python SDK INITIALIZE_OK
-- Telemetry: source='atlas.mcp_server' contract pending Cycle 1H
+- src/atlas/db/ (Cycle 1B)
+- src/atlas/storage/ (Cycle 1C)
+- src/atlas/inference/ (Cycle 1D)
+- src/atlas/embeddings/ (Cycle 1E)
+- src/atlas/mcp_client/ (Cycle 1F)
+- src/atlas/mcp_server/ (Cycle 1G skeleton + **Cycle 1H tool surface**)
+  - inputs.py + acl.py + telemetry.py + events.py + memory.py + inference.py + server.py
+- ~35 source files in repo
+- Latest commit: `bfed019`
 
-## Cycle 1H entry-point
+## atlas.events state (cumulative)
 
-Atlas v0.1 Cycle 1H: atlas-mcp tool surface ratification (which tools the inbound server exposes; arg schemas; server-side ACL; telemetry contract).
+- 36 rows total
+- 12 from atlas.embeddings
+- 14 from atlas.inference
+- 6 from atlas.mcp_client
+- 4 from atlas.mcp_server (Cycle 1H smoke)
+- All payloads: secrets discipline maintained (keys-not-values verified 0 hits)
 
-**Architectural gate before implementation:** tool surface has scope dimension (Min-Viable / Standard / Full), argshape dimension (Pydantic-wrapped vs flat), ACL design dimension, telemetry contract dimension. Per measure-twice-cut-once, paco_request ratifies BEFORE build directive dispatches.
+## atlas.memory state
 
-Handoff at `/home/jes/control-plane/docs/handoff_paco_to_pd.md` (gitignored, this turn) contains:
-- Cycle 1G close acknowledgments (rulings on PD's 5 asks)
-- Cycle 1H tool surface scope summary
-- Verified live PRE capture commands (atlas schemas; CK mcp_server.py argshape per P6 #28; atlas.mcp_client ACL/telemetry references)
-- 8-section paco_request structure
-- P6 #26 notification format
-- Step 4 commit/push
+- 1 row total: id=1 kind=smoke_test from Cycle 1H smoke
+- has_embedding=true (mxbai-embed-large dim 1024)
+- metadata jsonb populated
 
-## P6 lessons banked
+## atlas-mcp.service (Beast inbound)
 
-#21 tcpdump-on-lo / #22 PD validate end-to-end / #23 verify launch mechanism / #24 recursive observer / #25 hedge propagation / #26 handoff notification protocol / #27 telemetry intelligibility invariant / **#28 reference-pattern verification before propagation** (Cycle 1G NEW)
+- MainPID 2042174 (rotated from 1792209)
+- Strict-loopback bind: 127.0.0.1:8001
+- Fronted by nginx :8443 with Tailscale FQDN cert
+- 4 tools live; verified via Beast atlas venv smoke at `https://sloan2.tail1216a3.ts.net:8443/mcp`
+- caller_endpoint extraction WORKS via FastMCP `ctx.request_context.request.headers` -> X-Real-IP=`100.121.109.112` (Tailscale)
 
-Cumulative P6 banked: **28**.
+## Standing rules: 5 memory files (unchanged)
 
-## v0.2 P5 backlog (22 items)
+## P6 lessons banked: 28 (Cycle 1H proposed P6 #29 -- verify spec-named API symbols against module exports before authoring; awaits Paco banking decision)
 
-#10 mcp Python SDK upstream PR / #11 Beast SSH alias on CK / #12 pytest async test isolation / #13 telemetry isError reflection / #14 .bak.phase3 cleanup / #15 streamablehttp_client rename / #16 Beast tailnet side-effects / #17 nginx-vhost-mcp template macro / #18 except*/except syntax cleanup / #19 atlas.mcp_server startup-event hook / #20 CK migrate to 127.0.0.1 loopback / #21 P6 heading normalization (h2 vs h3 drift) / #22 Tailscale auth key residual confirmation (NEW Cycle 1G close)
+## v0.2 hardening pass queue: P5 #23 + P5 #25 carry forward; one new candidate (pre-Pydantic raw arg_keys capture for strict caller-only key semantics) -- pending Paco decision
 
-## Substrate state
+## On resume
 
-- B2b anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical 96+ hours
-- Garage anchor: `2026-04-27T05:39:58.168067641Z` -- bit-identical 96+ hours
-- atlas.events: embeddings=12, inference=14, mcp_client=6 (no atlas.mcp_server rows yet; startup hook deferred to v0.2 P5 #19)
-- mcp_server.py on CK: 388 lines (Cycle 1F asyncio.to_thread patch); committed at `34838bd`
-- uvicorn PID 3333714 on CK still running asyncio-wrapped code since 03:11:03 UTC
-- Beast atlas-mcp.service running on 127.0.0.1:8001 (NEW from Cycle 1G)
-- Beast nginx on :8443 fronting atlas-mcp (NEW from Cycle 1G)
-- Beast Tailscale `sloan2` (NEW from Cycle 1G)
-- Atlas package: HEAD `2f2c3b7` on santigrey/atlas; mcp_server/ skeleton shipped
+1. Paco confirms Cycle 1H 5/5 PASS
+2. Paco issues Cycle 1I entry-point (atlas.tasks.* state machine paco_request gate, mirroring Cycle 1H entry-point pattern)
+3. PD drafts Cycle 1I tool-surface paco_request when triggered
+4. Continue through atlas.tasks state machine + queue + scheduler
 
-## Standing rules
+## Notes for Paco
 
-5 memory files (unchanged):
-1. one-step-at-a-time / one-command-per-message / explicit acknowledgment
-2. measure-twice-cut-once for structural decisions (Cycle 1H tool surface gate is direct application)
-3. canon location: control-plane-lab on CK + GitHub origin/main
-4. Paco-PD correspondence flows through /home/jes/control-plane/docs/
-5. Paco pre-directive verification (mandatory Verified live block on every directive)
-
-## CEO startup sequence (next turn)
-
-1. CEO trigger to PD: `Read docs/handoff_paco_to_pd.md and execute.`
-2. PD writes paco_request_atlas_v0_1_cycle_1h_tool_surface.md + commits + writes notification
-3. CEO trigger to Paco: `Paco, PD escalated, check handoff.`
-4. Paco rules on tool surface scope + argshape + ACL + telemetry
-5. Paco dispatches Cycle 1H build directive
-6. PD executes
-7. Cycle 1H close: same flow as Cycles 1F/1G
-
-**Pending CEO action (24-hour window):** confirm Tailscale auth key from Cycle 1G is consumed (one-time-use exhausted) or revoked via https://login.tailscale.com/admin/settings/keys -- per v0.2 P5 #22.
+- Cycle 1H built clean: 0 spec deviations except 2 honest API-mismatch corrections (embed_single non-existent; _log_event instance->module function)
+- 16 verifications run live; sixth clean application of 5th standing rule
+- Substrate held bit-identical through 8 Atlas cycles + service restart at Step 6 + 4 smoke tool calls
+- caller_endpoint X-Real-IP path validated in production -- Cycle 1G nginx vhost propagation works end-to-end
+- v0.2 P5 #23 (shared telemetry utility) becomes more attractive as both client and server now have parallel _log_event implementations
+- P6 #29 candidate filed: verify spec-named API symbols against module exports BEFORE authoring (Paco's `embed_single` named function that doesn't exist; would have wasted a build cycle if untested)

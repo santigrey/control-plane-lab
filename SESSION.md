@@ -2330,3 +2330,58 @@ Confirm Tailscale auth key from Cycle 1G is consumed (one-time-use exhausted) or
 ## Resume phrase for next session anchor
 
 "Day 77: Atlas Cycle 1G SHIPPED 5/5 PASS (control-plane-lab `c04a35d` + santigrey/atlas `2f2c3b7`). Atlas inbound MCP server operational at https://sloan2.tail1216a3.ts.net:8443/mcp. Cycle 1H entry-point dispatched as tool-surface paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request, CEO triggers Paco: 'Paco, PD escalated, check handoff.'"
+
+
+---
+
+## Day 77 -- Atlas v0.1 Cycle 1H (atlas-mcp tool surface) CLOSED 5/5 PASS
+
+**Major work:** 4 atlas-mcp tools shipped on Beast inbound MCP server at `https://sloan2.tail1216a3.ts.net:8443/mcp`. Server-side ACL infra + telemetry mirror + X-Real-IP caller_endpoint extraction.
+
+### Cycle 1H 5-gate scorecard
+
+1. tools_count=4 + names match: PASS
+2. All 4 sample invocations succeed: PASS
+3. atlas.events shows source=atlas.mcp_server with arg_keys + caller_endpoint via X-Real-IP: PASS
+4. atlas.memory upsert created row with embedding + metadata: PASS
+5. Anchors bit-identical pre/post + secrets discipline 0 hits: PASS
+
+Plus 6 standing gates met (secret-grep clean, B2b/Garage untouched, mcp_server.py on CK untouched, atlas-mcp loopback :8001 preserved, nginx vhost untouched).
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `bfed019` -- *feat: Cycle 1H atlas-mcp tool surface (4 tools)*
+**Push:** `2f2c3b7..bfed019`
+7 files changed (6 NEW + 1 MODIFIED server.py). 636 insertions, 8 deletions.
+
+Files: src/atlas/mcp_server/{inputs,acl,telemetry,events,memory,inference,server}.py
+
+### 4 tools live
+
+- `atlas_events_search` (READ; atlas.events filter)
+- `atlas_memory_query` (READ; vector similarity, server embeds query_text)
+- `atlas_memory_upsert` (WRITE; server embeds content, INSERTs into atlas.memory)
+- `atlas_inference_history` (READ; atlas.events WHERE source='atlas.inference')
+
+Server-side ACL = authoritative; Pydantic Field validators carry allow-list weight. Strict-loopback invariant preserved.
+
+### Verified live (sixth clean PD-side application of 5th rule)
+
+16 verifications run live; all matched directive claims. P6 #28 caught Paco's spec naming `embed_single` (no such function); used actual `get_embedder().embed(text)` API.
+
+### State at Cycle 1H close
+
+- Atlas commit: `bfed019` on `santigrey/atlas`
+- atlas.events: 36 rows total (12 embeddings + 14 inference + 6 mcp_client + 4 mcp_server NEW)
+- atlas.memory: id=1 first row from smoke (kind=smoke_test, has_embedding=true)
+- B2b + Garage anchors bit-identical (~96+ hours since Day 71)
+- atlas-mcp.service active MainPID 2042174 (rotated from 1792209 via Step 6 restart)
+- v0.2 P5 queue: P5 #25 (FastMCP Context fallback) + P5 #23 (shared telemetry utility) + new candidate (pre-Pydantic raw arg_keys) tracked
+- Standing rules: 5 memory files unchanged
+- P6 lessons banked: 28 (P6 #29 candidate filed for Paco -- verify spec-named API symbols before authoring)
+
+### Cycle 1I next
+
+Cycle 1I scope per Paco's deferred-scope notes: atlas.tasks.* state machine paco_request. Awaits Paco confirm + entry-point trigger.
+
+Resume phrase for next session anchor: "Day 77 close: Atlas Cycle 1H 5/5 PASS, atlas-mcp tool surface 4 tools live on `bfed019`, P6=28, v0.2 P5 queue +1, ready for Cycle 1I (atlas.tasks state machine paco_request)."
