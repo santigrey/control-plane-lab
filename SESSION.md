@@ -2165,3 +2165,79 @@ Cumulative P6: **27**.
 ## Resume phrase for next session anchor
 
 "Day 77 entering: Atlas Cycle 1F SHIPPED 5/5 PASS (control-plane-lab `34838bd` + santigrey/atlas `5a9e458`). Cycle 1G entry-point dispatched as TLS strategy paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request, CEO triggers Paco: 'Paco, PD escalated, check handoff.'"
+
+---
+
+## Day 77 (2026-05-01 UTC) -- Atlas Cycle 1G CLOSE 5/5 PASS
+
+**Cycle 1G shipped end-to-end this day.** Atlas inbound MCP server operational at `https://sloan2.tail1216a3.ts.net:8443/mcp`. Full saga:
+
+### Cycle 1G arc -- 4 commits across 1 day
+
+1. **`4836315`** -- PD wrote `paco_request_atlas_v0_1_cycle_1g_tls_strategy.md` proposing 4 TLS posture options (A: Tailscale FQDN+nginx mirror CK / A': CK reverse-proxy / B: self-signed local / C: plain HTTP via TS / D: mTLS reject). PD recommended Option A (Beast joins tailnet + Beast nginx + Tailscale FQDN cert).
+
+2. **`de8a1c8`** -- Paco ratified Option A. Authorized Cycle 1G build: Tailscale install on Beast (CEO single-confirm via trigger), cert provisioning, nginx vhost, atlas-mcp Python skeleton, systemd unit, smoke test from CK tailnet member.
+
+3. **`f1785e9`** -- PD executed Steps 1-10 clean, escalated at Step 11 smoke with HTTPStatusError 421 Misdirected Request. Root cause diagnosed: uvicorn validates Host header against bind address when bound to specific IP; nginx's `proxy_set_header Host $host;` forwards `Host: sloan2.tail1216a3.ts.net` which uvicorn rejects (Host != 127.0.0.1). Spec-literal pattern reference incorrect: handoff said "matches CK's pattern (loopback-bound)" but CK actually binds 0.0.0.0. PD identified + proved fix live (`Host 127.0.0.1:8001`); reverted to spec-literal failing state pending Paco ruling. 4 resolution options surfaced with PD recommendation Option A (nginx Host rewrite).
+
+4. **`4f045e4`** -- Paco ratified Option A enhancement (also adds `X-Forwarded-Host $host;` for forward-compat). Owned the spec error ("My handoff was wrong... root cause: same as P6 #20 -- assertion from memory when verification was one tool call away"). Banked P6 #28 NEW (Reference-pattern verification before propagation) + v0.2 P5 #17/#18/#19/#20.
+
+5. **`<this turn's pending control-plane-lab close-out fold>`** -- PD applied ratified fix, Step 11 smoke PASS (HTTP 405 from nginx with `allow: GET, POST, DELETE` + `mcp-session-id` cookie; Python `SMOKE INITIALIZE_OK + tools_count: 0`), Steps 12-16 clean.
+
+6. **Atlas commit `2f2c3b7`** on santigrey/atlas main: `feat: Cycle 1G MCP server skeleton (FastMCP loopback :8001 + Option A nginx Host rewrite)`. 2 files / 39 insertions: `src/atlas/mcp_server/{__init__.py, server.py}`. Skeleton ships with NO @mcp.tool definitions; tool surface deferred to subsequent paco_request.
+
+### Cycle 1G 5-gate scorecard PASS
+
+| Gate | Description | Result |
+|---|---|---|
+| 1 | Beast tailnet membership + Tailscale FQDN issued | PASS -- joined as `sloan2.tail1216a3.ts.net` (100.121.109.112) |
+| 2 | Tailscale-issued cert provisioned | PASS -- /etc/ssl/tailscale/sloan2.tail1216a3.ts.net.{crt,key} (mirror CK perms 644/600) |
+| 3 | nginx vhost active + atlas-mcp.service Active running | PASS -- nginx + Option A directives; atlas-mcp.service MainPID 1792209 on 127.0.0.1:8001 loopback |
+| 4 | End-to-end smoke from CK tailnet | PASS -- HEAD HTTP 405 + Python SDK INITIALIZE_OK + tools_count=0 |
+| 5 | Anchor preservation + secrets discipline | PASS -- anchors bit-identical PRE/POST; 0 leak count on authkey/tskey/password/secret in atlas.events |
+
+### Substrate state
+
+- **Beast joined tailnet as `sloan2`** (Tailscale's auto-naming chose `sloan2` since `sloan3`/CK and `sloan4`/Goliath already in tailnet pool)
+- **Anchors held bit-identical 96+ hours** through Tailscale install + cert + nginx + systemd + Step 11 diagnostic round + ratified fix application: `2026-04-27T00:13:57.800746541Z` (control-postgres-beast) + `2026-04-27T05:39:58.168067641Z` (control-garage-beast). r=0 both, healthy.
+- **CK untouched** (homelab-mcp at `sloan3.tail1216a3.ts.net:8443/mcp` unchanged; CK migrates to loopback in v0.2 P5 #20)
+- **Auth key handling clean**: 0 hits on `tskey-`/`authkey=`/key fragments in any committed content (Atlas commit `2f2c3b7` + control-plane-lab close-out fold this turn)
+
+### Discipline observations
+
+- **Spec error caught at PD execution failure** (not directive-authorship). Mechanism: 5-guardrail standing rule + PD's verified-live row 8 (curl with explicit Host=sloan2 to bare upstream returned `Invalid Host header` body) isolated 421 to uvicorn-not-nginx, falsifying handoff's "matches CK's pattern" implication. Cost: one full Cycle 1G build cycle to surface conflict at smoke time. P6 #28 banked to mitigate future occurrences ("Reference-pattern verification before propagation").
+
+- **PD's literal-spec discipline held.** When fix was proven working live, PD reverted to spec-literal failing state per handoff "STOP and file paco_request" clause. Substrate matched spec-literal failure, paco_request shipped clean evidence, Paco ratified fix in next round-trip. No "deviation creep."
+
+- **Auth key transient use pattern worked.** Auth key passed only in live `tailscale up` command via direct SSH; never persisted to disk, never committed, never echoed in subsequent commands. Pre-auth key is one-time-use (consumed at Beast tailnet join); even if exposed in chat history, the credential surface is bounded.
+
+### P6 lessons banked this cycle
+
+- **P6 #27 (belated from Cycle 1F)** -- Telemetry intelligibility invariant: capture caller-provided form BEFORE internal transformations. Originating context: Refinement 3 of Cycle 1F atlas.mcp_client (caller_arg_keys captured before auto-wrap).
+- **P6 #28 (this turn)** -- Reference-pattern verification before propagation: when directive references existing pattern ("matches X"), verify ACTUAL state of X before dispatch (not just memory).
+
+**Cumulative P6 banked: 28.** Both #27 + #28 appended to `feedback_paco_pre_directive_verification.md` in this Cycle 1G close-out fold (carrying #27 forward from Cycle 1F per Paco's directive in close-confirm Section 5).
+
+### v0.2 P5 backlog state
+
+Post-Cycle-1G total: **20 candidates**. New this cycle:
+- **#17** Cycle 1G nginx vhost diverges from CK template (Host header value + X-Forwarded-Host addition) -- create shared template macro in v0.2 hardening
+- **#18** handoff Python smoke template syntax error (mixed `except`/`except*` clauses); future templates use one or the other consistently
+- **#19** atlas.mcp_server startup-event telemetry hook deliberately skipped (banked at handoff Section 7); future builds include startup-event with `_log_event` extracted as standalone utility
+- **#20** Migrate CK's homelab-mcp from `0.0.0.0` bind to `127.0.0.1` loopback bind + nginx Host rewrite (eliminate LAN-exposure-window-if-UFW-misconfigured failure mode)
+
+### Counts post-close
+
+- Standing rules: 5 (unchanged)
+- P6 lessons banked: 28
+- v0.2 P5 backlog: 20
+- Atlas Cycles SHIPPED: 7 of 9 in Cycle 1 (1A through 1G CLOSED; 1H next)
+- Cumulative findings caught at directive-authorship: 30
+- Cumulative findings caught at PD pre-execution review: 2
+- Cumulative findings caught at PD execution failure: 2 (Cycle 1F args-wrapping + Cycle 1G uvicorn Host validation)
+- Total findings caught pre-failure-cascade: 34
+- Spec errors owned by Paco: 2 (Cycle 1A `replicator_role` from memory + Cycle 1G "matches CK's pattern" from memory) -- both diagnosed via P6 #20 mechanism (assertion from memory when verification was one tool call away)
+
+### Resume phrase for next session anchor
+
+"Day 77 close: Atlas Cycle 1G SHIPPED 5/5 PASS (control-plane-lab close-out fold this turn + santigrey/atlas `2f2c3b7`). Beast joined tailnet as `sloan2.tail1216a3.ts.net`; atlas-mcp.service Active running on 127.0.0.1:8001 loopback fronted by Beast nginx :8443 with Option A Host rewrite. Cycle 1H entry-point typically tool-surface paco_request for atlas-mcp inbound (which tools the server exposes). P6=28, v0.2 P5=20."

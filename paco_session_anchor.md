@@ -1,8 +1,8 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-05-01 UTC (Day 76 / Day 77 boundary)
-**Anchor commit:** post-Cycle-1F-close on santigrey/control-plane-lab `main` (commit pending this turn's push)
-**Resume Phrase:** "Day 77 entering: Atlas Cycle 1F SHIPPED 5/5 PASS (control-plane-lab `34838bd` + santigrey/atlas `5a9e458`). Cycle 1G entry-point dispatched as TLS strategy paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request, CEO triggers Paco: 'Paco, PD escalated, check handoff.'"
+**Last updated:** 2026-05-01 UTC (Day 77) -- Atlas Cycle 1G CLOSE
+**Anchor commit:** Cycle 1G CLOSE close-out (see git log for SHA) on santigrey/control-plane-lab `main`. Atlas commit `2f2c3b7` on santigrey/atlas main.
+**Resume Phrase:** "Day 77 close: Atlas Cycle 1G SHIPPED 5/5 PASS (control-plane-lab close-out fold this turn + santigrey/atlas `2f2c3b7`). Beast joined tailnet as `sloan2.tail1216a3.ts.net`; atlas-mcp.service Active running on 127.0.0.1:8001 loopback fronted by Beast nginx :8443 with Option A Host rewrite (Host->127.0.0.1:8001 + X-Forwarded-Host). Cycle 1H entry-point typically tool-surface paco_request for atlas-mcp inbound. P6=28, v0.2 P5=20."
 
 ---
 

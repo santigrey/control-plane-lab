@@ -164,3 +164,39 @@ When directive-author hedges with placeholder language (any Nth item I missed du
 ALL Paco<->PD events (paco_request escalation, paco_review phase close, mid-cycle checkpoint, anything requiring Paco/CEO attention) MUST write a notification line in handoff_pd_to_paco.md so the CEO trigger remains a single canonical phrase Paco check handoff regardless of event type. CEO should never have to compose triggers with filenames or event hints; PDs notification carries that context. Notification line minimum content: event type, filename, one-line summary of Paco action expected, spec context (Cycle/Phase/Step).
 
 All six are direct applications of 5th standing rules principles. Cumulative count: P6 lessons banked = 26.
+
+## P6 #27 -- Telemetry intelligibility invariant (Cycle 1F belated bank)
+
+**Banked:** 2026-05-01 UTC (Day 77) -- carried forward from Cycle 1F close-confirm `paco_response_atlas_v0_1_cycle_1f_close_confirm.md` Section 5 (commit `3baa455`); appended to this file in Cycle 1G close-out fold per Paco directive.
+
+**Statement:** When a client introspects schema and applies caller-transparent transformations (auto-wrap, format conversion, default-injection), telemetry MUST capture the **caller-provided** form of inputs BEFORE transformation. This preserves intelligibility for downstream consumers (audit logs, debug traces, anomaly detection) while letting the wire-format stay schema-compliant. Capture happens at the function boundary, before any internal transformation.
+
+**Originating context:** Refinement 3 of Option B for Cycle 1F atlas.mcp_client (caller_arg_keys captured before auto-wrap). Verified live at Cycle 1F close: `arg_keys=["command", "host"]` in atlas.events for tool_call rows, NOT `["params"]` (which would be the post-wrap form). Pattern works as designed and generalizes to any future schema-aware wrapper across Atlas (e.g., Atlas inbound MCP server, future RAG retrieval gateway, future inference-side schema adapters).
+
+**Application pattern:** Every function that does caller-transparent transformation should:
+1. Capture caller-provided form FIRST (`caller_arg_keys = sorted(args.keys())` or equivalent)
+2. Apply the transformation
+3. Write to wire / send / call upstream with the transformed form
+4. Emit telemetry with the captured caller-provided form (NOT the transformed form)
+
+This composes cleanly with the secrets-discipline invariant (capture KEYS not VALUES; both invariants are upheld at the same capture point).
+
+## P6 #28 -- Reference-pattern verification before propagation (Cycle 1G this turn)
+
+**Banked:** 2026-05-01 UTC (Day 77) per Paco's response `paco_response_atlas_v0_1_cycle_1g_uvicorn_host_validation.md` Section 3 Ask 5 (commit `4f045e4`).
+
+**Statement:** When a directive references an existing pattern ("matches X", "mirrors X", "uses Y's approach"), the existing pattern's ACTUAL state MUST be Verified live BEFORE the directive is dispatched -- not asserted from memory of how the pattern was originally designed or how the author remembers it working.
+
+**Distinction from P6 #20:** P6 #20 covers deployed-state NAMES (database names, role names, URLs, paths). P6 #28 covers BEHAVIORAL PATTERNS (binding modes, header propagation, middleware presence, security postures). Both fail the same way -- assertion from memory when verification is cheap -- but they involve different probe types:
+- P6 #20 probe: `psql -c '\\du'`, `ss -tlnp`, `ls -la`
+- P6 #28 probe: `cat <config-file>`, behavioral test (curl with specific Host header), `systemctl show <unit>` for ExecStart, etc.
+
+**Originating context (Cycle 1G):** handoff Section 7 said: "Note: bind to 127.0.0.1 (loopback ONLY), not 0.0.0.0. nginx is the only external access path. **This matches CK's pattern (homelab-mcp also loopback-bound and nginx-fronted).**" Verified live at PD Step 11 escalation: CK's `mcp_http.py` actually contains `uvicorn.run(mcp.streamable_http_app(), host='0.0.0.0', port=8001)`. CK is **0.0.0.0-bound**, not loopback. Verifying-live would have been `cat /home/jes/control-plane/mcp_http.py | grep host=` or `ss -tlnp | grep :8001` on CK -- 3 seconds. Cost of skipping: one full Cycle 1G build-execution cycle to surface the conflict at Step 11 smoke time (HTTP 421 Misdirected Request from uvicorn h11 layer rejecting Host header).
+
+**Mitigation pattern:** when authoring "matches X" claims in directives, the directive author runs a quick reference-state probe and pastes the actual config snippet/output into the Verified live block. Future directives that reference patterns get a Verified-live row that pins what the pattern actually IS at directive-author time.
+
+**Resolution at Cycle 1G:** Option A (nginx Host rewrite to `127.0.0.1:8001` + X-Forwarded-Host enhancement) ratified. Atlas's strict-loopback bind is the BETTER security posture; CK's 0.0.0.0 was likely a historical accident, and CK migrates in v0.2 P5 #20.
+
+## Cumulative
+
+All seven (#21 through #28) are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 28** (was 26 at end of Cycle 1F; +1 #27 telemetry intelligibility, +1 #28 reference-pattern verification).
