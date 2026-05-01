@@ -595,7 +595,7 @@ def _memory_recall_handler(args):
         return {"ok": False, "tool": "memory_recall", "error": "query cannot be empty"}
     try:
         db_pass = os.getenv("CONTROLPLANE_DB_PASS", "adminpass")
-        db_url = f"postgresql://admin:{db_pass}@127.0.0.1:5432/controlplane"
+        db_url = f"postgresql://admin:{db_pass}@192.168.1.10:5432/controlplane"
         embed_resp = requests.post("http://192.168.1.152:11434/api/embeddings", json={"model": "mxbai-embed-large", "prompt": query}, timeout=30)
         embed_resp.raise_for_status()
         embedding = embed_resp.json().get("embedding")
@@ -634,7 +634,7 @@ def _memory_save_handler(args):
         return {"ok": False, "tool": "memory_save", "error": "content cannot be empty"}
     try:
         db_pass = os.getenv("CONTROLPLANE_DB_PASS", "adminpass")
-        db_url = f"postgresql://admin:{db_pass}@127.0.0.1:5432/controlplane"
+        db_url = f"postgresql://admin:{db_pass}@192.168.1.10:5432/controlplane"
         embed_model = "mxbai-embed-large"
         embed_resp = requests.post(
             "http://192.168.1.152:11434/api/embeddings",
@@ -1063,7 +1063,7 @@ def default_registry() -> ToolRegistry:
     def _get_job_pipeline_handler(args):
         import psycopg2 as _pg2
         from datetime import datetime as _dt, timezone as _tz
-        conn = _pg2.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+        conn = _pg2.connect('postgresql://admin:adminpass@192.168.1.10:5432/controlplane')
         cur = conn.cursor()
         cur.execute('SELECT status, COUNT(*) FROM job_applications GROUP BY status ORDER BY COUNT(*) DESC')
         counts = {r[0]: r[1] for r in cur.fetchall()}

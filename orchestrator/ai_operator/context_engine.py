@@ -6,7 +6,7 @@ from datetime import datetime, date, timedelta
 import psycopg2
 import pytz
 
-DB_DSN = f"postgresql://admin:{os.getenv('CONTROLPLANE_DB_PASS', 'adminpass')}@127.0.0.1:5432/controlplane"
+DB_DSN = f"postgresql://admin:{os.getenv('CONTROLPLANE_DB_PASS', 'adminpass')}@192.168.1.10:5432/controlplane"
 DENVER = pytz.timezone('America/Denver')
 
 

@@ -489,3 +489,228 @@ async def dashboard_chat_history_by_date(date: str):
                 return {'messages': [{'role': r[0], 'content': r[1], 'created_at': r[2].isoformat()} for r in rows]}
     except Exception as e:
         return {'messages': [], 'error': str(e)}
+
+
+# =============================================================================
+# Cycle 2B -- Memory Browser panel (atlas-mcp integration)
+# =============================================================================
+
+from typing import Optional as _Optional
+from fastapi import HTTPException as _HTTPException
+from pydantic import BaseModel as _BaseModel, Field as _Field
+
+from ai_operator.atlas_bridge import AtlasBridge, AtlasBridgeError
+
+
+class _MemoryQueryRequest(_BaseModel):
+    query_text: str = _Field(..., min_length=1, max_length=10_000)
+    top_k: int = _Field(default=5, ge=1, le=20)
+    kind: _Optional[str] = _Field(default=None, max_length=50)
+
+
+class _MemoryUpsertRequest(_BaseModel):
+    kind: str = _Field(
+        ...,
+        min_length=1,
+        max_length=50,
+        pattern=r"^[a-z][a-z0-9_]*$",
+    )
+    content: str = _Field(..., min_length=1, max_length=100_000)
+    metadata: _Optional[dict] = _Field(default=None)
+
+
+def _result_to_dict(result) -> dict:
+    """Normalize FastMCP CallToolResult into a JSON-serializable dict."""
+    out: dict = {"isError": getattr(result, "isError", False)}
+    content_list = getattr(result, "content", None) or []
+    text_parts = []
+    for c in content_list:
+        t = getattr(c, "text", None)
+        if t is not None:
+            text_parts.append(t)
+    out["text"] = "\n".join(text_parts) if text_parts else ""
+    structured = getattr(result, "structuredContent", None)
+    if structured is not None:
+        out["structured"] = structured
+    return out
+
+
+HTML_MEMORY = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Memory Browser \u2014 Alexandra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-family: 'Courier New', monospace; padding: 20px; max-width: 1100px; margin: 0 auto; }
+h1 { color: #58a6ff; font-size: 1.4rem; margin-bottom: 6px; }
+h2 { color: #8b949e; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 10px; }
+.meta { color: #8b949e; font-size: 0.78rem; margin-bottom: 22px; }
+.panel { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px; margin-bottom: 18px; }
+label { display: block; color: #8b949e; font-size: 0.75rem; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+input[type=text], textarea { width: 100%; background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 8px 12px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; outline: none; }
+input:focus, textarea:focus { border-color: #58a6ff; }
+textarea { resize: vertical; min-height: 80px; }
+.row { display: flex; gap: 10px; margin-bottom: 10px; }
+.row > * { flex: 1; }
+.row > .narrow { flex: 0 0 110px; }
+button { background: #1f6feb; color: #fff; border: none; padding: 9px 16px; border-radius: 6px; font-family: monospace; font-size: 0.88rem; cursor: pointer; }
+button:hover { background: #388bfd; }
+button.secondary { background: #1a2f1a; color: #3fb950; border: 1px solid #3fb950; }
+button.secondary:hover { background: #3fb950; color: #0d1117; }
+#status { margin-top: 12px; color: #8b949e; font-size: 0.78rem; min-height: 1.2em; }
+#status.error { color: #f85149; }
+#status.ok { color: #3fb950; }
+#results { margin-top: 14px; }
+.result { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 10px 12px; margin-bottom: 8px; }
+.result .kind { color: #58a6ff; font-size: 0.75rem; }
+.result .dist { color: #8b949e; font-size: 0.7rem; float: right; }
+.result .content { color: #e6edf3; font-size: 0.82rem; line-height: 1.5; margin: 6px 0; white-space: pre-wrap; }
+.result .meta { color: #8b949e; font-size: 0.68rem; margin-top: 4px; }
+nav a { color: #58a6ff; text-decoration: none; font-size: 0.8rem; margin-right: 14px; }
+nav a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<nav><a href="/dashboard">&larr; Dashboard</a><a href="/dashboard/memory">Memory Browser</a></nav>
+<h1>Memory Browser</h1>
+<div class="meta">atlas-mcp @ sloan2.tail1216a3.ts.net &middot; mxbai-embed-large dim 1024</div>
+
+<h2>Save a memory</h2>
+<div class="panel">
+  <div class="row">
+    <div class="narrow">
+      <label>kind</label>
+      <input type="text" id="upsert-kind" placeholder="e.g. note" value="note">
+    </div>
+    <div>
+      <label>content</label>
+      <textarea id="upsert-content" placeholder="Note text..."></textarea>
+    </div>
+  </div>
+  <button onclick="upsertMemory()">Save</button>
+</div>
+
+<h2>Recall a memory</h2>
+<div class="panel">
+  <div class="row">
+    <div>
+      <label>query</label>
+      <input type="text" id="query-text" placeholder="What do I know about...?">
+    </div>
+    <div class="narrow">
+      <label>top_k</label>
+      <input type="text" id="query-topk" value="5">
+    </div>
+  </div>
+  <button class="secondary" onclick="queryMemory()">Search</button>
+  <div id="results"></div>
+</div>
+
+<div id="status"></div>
+
+<script>
+const statusEl = document.getElementById('status');
+function setStatus(msg, cls) {
+  statusEl.className = cls || '';
+  statusEl.textContent = msg;
+}
+
+async function upsertMemory() {
+  const kind = document.getElementById('upsert-kind').value.trim();
+  const content = document.getElementById('upsert-content').value.trim();
+  if (!kind || !content) { setStatus('kind and content are required', 'error'); return; }
+  setStatus('Saving...');
+  try {
+    const r = await fetch('/dashboard/api/memory/upsert', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({kind, content})
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { setStatus('Error: ' + (j.detail || JSON.stringify(j)), 'error'); return; }
+    setStatus('Saved. ' + (j.text || ''), 'ok');
+    document.getElementById('upsert-content').value = '';
+  } catch (e) { setStatus('Network error: ' + e.message, 'error'); }
+}
+
+async function queryMemory() {
+  const query_text = document.getElementById('query-text').value.trim();
+  const top_k = parseInt(document.getElementById('query-topk').value, 10) || 5;
+  if (!query_text) { setStatus('query is required', 'error'); return; }
+  setStatus('Searching...');
+  try {
+    const r = await fetch('/dashboard/api/memory/query', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({query_text, top_k})
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { setStatus('Error: ' + (j.detail || JSON.stringify(j)), 'error'); return; }
+    renderResults(j);
+    setStatus('Search complete.', 'ok');
+  } catch (e) { setStatus('Network error: ' + e.message, 'error'); }
+}
+
+function renderResults(j) {
+  const el = document.getElementById('results');
+  el.innerHTML = '';
+  let rows = [];
+  try {
+    if (j.structured && j.structured.result) rows = JSON.parse(j.structured.result);
+    else if (j.text) rows = JSON.parse(j.text);
+  } catch (e) {
+    el.innerHTML = '<div class="result">Could not parse results: ' + e.message + '</div>';
+    return;
+  }
+  if (!rows || rows.length === 0) {
+    el.innerHTML = '<div class="result">No memories matched.</div>';
+    return;
+  }
+  for (const r of rows) {
+    const dist = r.distance != null ? r.distance.toFixed(4) : '';
+    const content = (r.content || '').replace(/</g, '&lt;');
+    const meta = r.metadata ? JSON.stringify(r.metadata) : '';
+    el.innerHTML += `<div class="result">
+      <span class="kind">${r.kind || ''}</span>
+      <span class="dist">distance ${dist}</span>
+      <div class="content">${content}</div>
+      <div class="meta">${r.id || ''} &middot; ${r.ts || ''} &middot; ${meta}</div>
+    </div>`;
+  }
+}
+</script>
+</body>
+</html>"""
+
+
+@router.get("/dashboard/memory", response_class=HTMLResponse)
+async def dashboard_memory():
+    return HTML_MEMORY
+
+
+@router.post("/dashboard/api/memory/query")
+async def dashboard_api_memory_query(req: _MemoryQueryRequest):
+    try:
+        async with AtlasBridge() as bridge:
+            result = await bridge.call(
+                "atlas_memory_query",
+                req.model_dump(exclude_none=True),
+            )
+            return {"ok": True, **_result_to_dict(result)}
+    except AtlasBridgeError as e:
+        raise _HTTPException(status_code=503, detail=f"atlas-mcp unavailable: {e}")
+
+
+@router.post("/dashboard/api/memory/upsert")
+async def dashboard_api_memory_upsert(req: _MemoryUpsertRequest):
+    try:
+        async with AtlasBridge() as bridge:
+            result = await bridge.call(
+                "atlas_memory_upsert",
+                req.model_dump(exclude_none=True),
+            )
+            return {"ok": True, **_result_to_dict(result)}
+    except AtlasBridgeError as e:
+        raise _HTTPException(status_code=503, detail=f"atlas-mcp unavailable: {e}")

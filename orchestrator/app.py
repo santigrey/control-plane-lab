@@ -224,7 +224,7 @@ def build_conversation_context() -> str:
     try:
         import psycopg as _pg
         from datetime import datetime, timezone
-        conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+        conn = _pg.connect('postgresql://admin:adminpass@192.168.1.10:5432/controlplane')
         cur = conn.cursor()
         cur.execute(
             "SELECT content, created_at FROM chat_history "
@@ -1139,7 +1139,7 @@ def _beast_embed(text: str):
 def _load_chat_history(sid: str, limit: int = 30):
     try:
         import psycopg as _pg
-        conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+        conn = _pg.connect('postgresql://admin:adminpass@192.168.1.10:5432/controlplane')
         cur = conn.cursor()
         cur.execute(
             'SELECT role, content FROM chat_history WHERE session_id=%s ORDER BY created_at DESC LIMIT %s',
@@ -1157,7 +1157,7 @@ def _load_chat_history(sid: str, limit: int = 30):
 def _save_chat_turn(sid: str, role: str, content: str):
     try:
         import psycopg as _pg
-        conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+        conn = _pg.connect('postgresql://admin:adminpass@192.168.1.10:5432/controlplane')
         cur = conn.cursor()
         cur.execute(
             'INSERT INTO chat_history (session_id, role, content) VALUES (%s, %s, %s)',
@@ -1195,7 +1195,7 @@ def _store_memory_async(text: str, source: str = 'chat',
                 'grounded': grounded,
                 'saved_at': datetime.now(timezone.utc).isoformat(),
             }
-            conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+            conn = _pg.connect('postgresql://admin:adminpass@192.168.1.10:5432/controlplane')
             cur = conn.cursor()
             # Fix #3 (premerge): thread role / grounded / endpoint into
             # provenance so Paco's verify query (provenance->>'role', etc.)
@@ -1239,7 +1239,7 @@ def _search_long_term_memory(msg: str, top_k: int = 3,
         vec = _beast_embed(msg)
         vec_str = '[' + ','.join(f'{float(v):.8f}' for v in vec) + ']'
         import psycopg as _pg
-        conn = _pg.connect('postgresql://admin:adminpass@127.0.0.1:5432/controlplane')
+        conn = _pg.connect('postgresql://admin:adminpass@192.168.1.10:5432/controlplane')
         cur = conn.cursor()
         filters = ["embedding IS NOT NULL", "(1 - (embedding <=> %s::vector)) >= 0.5"]
         params = [vec_str, vec_str]

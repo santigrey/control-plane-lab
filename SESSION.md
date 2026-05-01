@@ -2552,3 +2552,67 @@ Inflection point reached: Atlas v0.2 entry = Alexandra integration / capstone de
 Awaits Paco confirm + Atlas v0.2 entry-point paco_request directive.
 
 Resume phrase for next session anchor: "Day 77 close: Atlas Cycle 1I 5/5 PASS, atlas.tasks state machine 6 tools live on santigrey/atlas `d383fe0`, Atlas v0.1 Cycle 1 COMPLETE, P6=29, v0.2 P5 queue +1, ready for Atlas v0.2 entry-point."
+
+
+---
+
+## Day 77 -- Atlas v0.2 Cycle 2B (Alexandra atlas.mcp_client integration + Memory Browser) CLOSED 5/5 PASS
+
+**Major work:** Path A integration validated end-to-end. Alexandra dashboard now consumes atlas-mcp via AtlasBridge; Memory Browser panel ships at `/dashboard/memory`; v0.2 P5 #28 (broken pg connection) RESOLVED; EVENTS_SOURCE_ALLOWLIST extended on atlas-side.
+
+### Cycle 2B 5-gate scorecard
+
+1. atlas-mcp 10 tools live post-restart + ALLOWLIST contains 'alexandra': PASS
+2. AtlasBridge import + initialize from Alexandra venv: PASS
+3. Memory Browser API end-to-end (upsert + query); atlas.memory row created: PASS (id=2)
+4. atlas.events captures Alexandra's calls server-side with caller_endpoint=`100.115.56.89` + arg_keys preserved: PASS (Gate 4 reframed -- Path A decoupling means server-side atlas.mcp_server is canonical, NOT client-side atlas.mcp_client)
+5. Anchors bit-identical + secrets discipline 0 hits + dashboard /memory http_code=200: PASS
+
+Plus 6 standing gates met.
+
+### Atlas commit on santigrey/atlas
+
+**Hash:** `d4f1a81` -- *feat: Cycle 2B EVENTS_SOURCE_ALLOWLIST adds alexandra source*
+**Push:** `d383fe0..d4f1a81` (1 file, 1 insertion)
+
+### Alexandra-side changes
+
+- `orchestrator/ai_operator/atlas_bridge.py` NEW (5657 B; AtlasBridge wrapper around mcp.ClientSession)
+- `orchestrator/ai_operator/dashboard/dashboard.py` EXTENDED (+8829 B; HTML_MEMORY + 3 routes)
+- `orchestrator/ai_operator/context_engine.py` MODIFIED (P5 #28 fix; 1 line)
+- `orchestrator/ai_operator/tools/registry.py` MODIFIED (P5 #28 fix; 3 lines)
+- `orchestrator/app.py` MODIFIED (P5 #28 fix; 5 lines -- scope expanded per P6 #28)
+- `orchestrator/.env` MODIFIED on-disk (P5 #28 fix; gitignored, not committed)
+- mcp SDK 1.27.0 installed in Alexandra venv (10 deps)
+
+### Path A integration validated
+
+Flow: Alexandra dashboard (sloan3.tail1216a3.ts.net) -> /dashboard/api/memory/* -> AtlasBridge -> mcp.ClientSession -> nginx :8443 (sloan2.tail1216a3.ts.net) -> uvicorn :8001 -> atlas.mcp_server -> server-side embedding (mxbai-embed-large dim 1024) -> atlas.memory INSERT/SELECT
+
+Server-side telemetry captures Alexandra's calls with caller_endpoint=`100.115.56.89` (CK Tailscale IP via Cycle 1G nginx X-Real-IP propagation). arg_keys preserved (P6 #27).
+
+### v0.2 P5 #28 resolved
+
+10 occurrences of `127.0.0.1:5432` -> `192.168.1.10:5432` across 4 active files. Backup `app.py.bak-persona` untouched (5 occurrences remain). Scope expanded from Paco's named 3 source files + .env to include app.py per P6 #28 verified-live.
+
+### Verified live (eighth clean PD-side application of 5th rule)
+
+25 verifications run live; all matched directive claims.
+
+### State at Cycle 2B close
+
+- Atlas commit: `d4f1a81` on `santigrey/atlas`
+- atlas.events: 58 rows total (12 embeddings + 14 inference + 6 mcp_client + 26 mcp_server NEW +2)
+- atlas.memory: 2 rows (id=1 Cycle 1H smoke + id=2 Cycle 2B smoke)
+- atlas-mcp.service: active MainPID 2173807 (rotated)
+- orchestrator.service: active MainPID 292908 (rotated)
+- B2b + Garage anchors bit-identical (~96+ hours since Day 71)
+- v0.2 P5 queue: 38 banked + 3 candidates surfaced this cycle (#39 adminpass refactor, #40 declarative deps, #41 Path A telemetry doc)
+- Standing rules: 5 memory files unchanged (Standing Rule #6 banked at HEAD `01ff1a4` per Paco)
+- P6 lessons banked: 29 (P6 #28 + #29 applied this cycle)
+
+### Cycle 2C next
+
+Cycle 2C scope per Cycle 2A roadmap: Token Usage Dashboard panel + Audit Log Viewer panel + telemetry kinds for `agent_run` / `mqtt_command_approved`. PD bias: build directive (no paco_request gate; mirror Cycle 2B incremental cadence).
+
+Resume phrase: "Day 77 close: Atlas Cycle 2B 5/5 PASS, Alexandra atlas.mcp_client integration LIVE, Memory Browser at /dashboard/memory, P5 #28 RESOLVED, atlas/santigrey `d4f1a81`, P6=29, v0.2 P5 +3 candidates, ready for Cycle 2C (Token Dashboard + Audit Log Viewer)."
