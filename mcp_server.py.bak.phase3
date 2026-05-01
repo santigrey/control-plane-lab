@@ -4,7 +4,6 @@ homelab_mcp — Project Ascension MCP Server
 Runs on CiscoKid (192.168.1.10), port 8001.
 """
 
-import asyncio
 import json
 import subprocess
 import base64
@@ -100,8 +99,7 @@ async def homelab_ssh_run(params: SSHRunInput) -> str:
     if params.host not in ALLOWED_HOSTS:
         return json.dumps({"error": f"Unknown host '{params.host}'. Allowed: {list(ALLOWED_HOSTS.keys())}"})
     try:
-        result = await asyncio.to_thread(ssh_run, params.host, params.command, params.timeout)
-        return json.dumps(result, indent=2)
+        return json.dumps(ssh_run(params.host, params.command, params.timeout), indent=2)
     except subprocess.TimeoutExpired:
         return json.dumps({"error": f"Timed out after {params.timeout}s"})
     except Exception as e:
@@ -110,16 +108,13 @@ async def homelab_ssh_run(params: SSHRunInput) -> str:
 @mcp.tool(name="homelab_memory_search", annotations={"readOnlyHint": True, "destructiveHint": False})
 async def homelab_memory_search(params: MemorySearchInput) -> str:
     """Semantic similarity search against pgvector memory table on CiscoKid."""
-    def _sync_impl():
+    try:
         embedding = get_embedding(params.query)
         conn = db_connect()
         cur = conn.cursor()
         cur.execute("SELECT source, content, 1-(embedding <=> %s::vector) AS sim FROM memory ORDER BY embedding <=> %s::vector LIMIT %s", (embedding, embedding, params.top_k))
         rows = cur.fetchall()
         cur.close(); conn.close()
-        return rows
-    try:
-        rows = await asyncio.to_thread(_sync_impl)
         return json.dumps({"query": params.query, "results": [{"rank": i+1, "source": r[0], "content": (r[1] or "")[:200], "similarity": round(float(r[2]), 4)} for i, r in enumerate(rows)]}, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -127,16 +122,13 @@ async def homelab_memory_search(params: MemorySearchInput) -> str:
 @mcp.tool(name="homelab_memory_store", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_memory_store(params: MemoryStoreInput) -> str:
     """Store a new entry in pgvector memory table on CiscoKid."""
-    def _sync_impl():
+    try:
         embedding = get_embedding(params.content)
         conn = db_connect()
         cur = conn.cursor()
         row_id = str(uuid.uuid4())
         cur.execute("INSERT INTO memory (id, source, content, embedding, embedding_model) VALUES (%s, %s, %s, %s::vector, %s)", (row_id, params.source, params.content, embedding, EMBED_MODEL))
         conn.commit(); cur.close(); conn.close()
-        return row_id
-    try:
-        row_id = await asyncio.to_thread(_sync_impl)
         return json.dumps({"status": "stored", "id": row_id, "source": params.source})
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -147,7 +139,7 @@ async def homelab_file_read(params: FileReadInput) -> str:
     if params.host not in ALLOWED_HOSTS:
         return json.dumps({"error": f"Unknown host '{params.host}'"})
     try:
-        result = await asyncio.to_thread(ssh_run, params.host, f"cat {params.path}")
+        result = ssh_run(params.host, f"cat {params.path}")
         if result["exit_code"] != 0:
             return json.dumps({"error": result["stderr"]})
         return json.dumps({"host": params.host, "path": params.path, "content": result["stdout"]}, indent=2)
@@ -184,7 +176,7 @@ async def homelab_file_write(params: FileWriteInput) -> str:
         if params.file_mode:
             parts.append(f"chmod {params.file_mode} {qpath}")
         remote_cmd = " && ".join(parts)
-        result = await asyncio.to_thread(ssh_run, params.host, remote_cmd, timeout=60)
+        result = ssh_run(params.host, remote_cmd, timeout=60)
         ok = (result.get("exit_code") == 0)
         return json.dumps({"ok": ok, "host": params.host, "path": params.path,
                            "bytes_written": raw_bytes if ok else 0,
@@ -203,29 +195,26 @@ async def homelab_file_write(params: FileWriteInput) -> str:
 @mcp.tool(name="homelab_agent_status", annotations={"readOnlyHint": True, "destructiveHint": False})
 async def homelab_agent_status() -> str:
     """Get current status of Agent OS services: orchestrator, ollama, pgvector."""
-    def _sync_impl():
-        status = {}
-        try:
-            r = requests.get("http://127.0.0.1:8000/healthz", timeout=5)
-            status["orchestrator"] = "up" if r.status_code == 200 else f"degraded ({r.status_code})"
-        except Exception:
-            status["orchestrator"] = "down"
-        try:
-            conn = db_connect()
-            cur = conn.cursor()
-            cur.execute("SELECT COUNT(*) FROM memory")
-            status["pgvector"] = f"up — {cur.fetchone()[0]} memory rows"
-            cur.close(); conn.close()
-        except Exception as e:
-            status["pgvector"] = f"error: {e}"
-        try:
-            r = requests.get("http://192.168.1.152:11434/api/tags", timeout=5)
-            d = r.json()
-            status["ollama"] = f"up — {len(d.get('models', []))} models loaded"
-        except Exception as e:
-            status["ollama"] = f"error: {e}"
-        return status
-    status = await asyncio.to_thread(_sync_impl)
+    status = {}
+    try:
+        r = requests.get("http://127.0.0.1:8000/healthz", timeout=5)
+        status["orchestrator"] = "up" if r.status_code == 200 else f"degraded ({r.status_code})"
+    except Exception:
+        status["orchestrator"] = "down"
+    try:
+        conn = db_connect()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM memory")
+        status["pgvector"] = f"up — {cur.fetchone()[0]} memory rows"
+        cur.close(); conn.close()
+    except Exception as e:
+        status["pgvector"] = f"error: {e}"
+    try:
+        r = requests.get("http://192.168.1.152:11434/api/tags", timeout=5)
+        d = r.json()
+        status["ollama"] = f"up — {len(d.get('models', []))} models loaded"
+    except Exception as e:
+        status["ollama"] = f"error: {e}"
     return json.dumps(status, indent=2)
 
 class CreateTaskInput(BaseModel):
@@ -261,14 +250,11 @@ class ReadMessagesInput(BaseModel):
 @mcp.tool(name="homelab_create_task", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_create_task(params: CreateTaskInput) -> str:
     """Create a new task with status=pending_approval."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         cur.execute("INSERT INTO agent_tasks (created_by, assigned_to, title, payload) VALUES (%s, %s, %s, %s) RETURNING id, status, created_at",
             (params.created_by, params.assigned_to, params.title, json.dumps(params.payload) if params.payload else None))
         row = cur.fetchone(); conn.commit(); cur.close(); conn.close()
-        return row
-    try:
-        row = await asyncio.to_thread(_sync_impl)
         return json.dumps({"id": str(row[0]), "status": row[1], "created_at": str(row[2])}, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -276,7 +262,7 @@ async def homelab_create_task(params: CreateTaskInput) -> str:
 @mcp.tool(name="homelab_list_tasks", annotations={"readOnlyHint": True, "destructiveHint": False})
 async def homelab_list_tasks(params: ListTasksInput) -> str:
     """List tasks, optionally filtered by assigned_to and/or status."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         conds, vals = [], []
         if params.assigned_to: conds.append("assigned_to=%s"); vals.append(params.assigned_to)
@@ -284,9 +270,6 @@ async def homelab_list_tasks(params: ListTasksInput) -> str:
         w = ("WHERE " + " AND ".join(conds)) if conds else ""
         cur.execute(f"SELECT id,created_by,assigned_to,status,title,payload,result,created_at,updated_at FROM agent_tasks {w} ORDER BY created_at DESC", vals)
         rows = cur.fetchall(); cur.close(); conn.close()
-        return rows
-    try:
-        rows = await asyncio.to_thread(_sync_impl)
         tasks = [{"id":str(r[0]),"created_by":r[1],"assigned_to":r[2],"status":r[3],"title":r[4],"payload":r[5],"result":r[6],"created_at":str(r[7]),"updated_at":str(r[8])} for r in rows]
         return json.dumps({"count": len(tasks), "tasks": tasks}, indent=2)
     except Exception as e:
@@ -295,14 +278,11 @@ async def homelab_list_tasks(params: ListTasksInput) -> str:
 @mcp.tool(name="homelab_update_task", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_update_task(params: UpdateTaskInput) -> str:
     """Update a task status and optional result."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         cur.execute("UPDATE agent_tasks SET status=%s,result=%s,updated_at=NOW() WHERE id=%s::uuid RETURNING id,status,updated_at",
             (params.status, json.dumps(params.result) if params.result else None, params.task_id))
         row = cur.fetchone(); conn.commit(); cur.close(); conn.close()
-        return row
-    try:
-        row = await asyncio.to_thread(_sync_impl)
         if not row: return json.dumps({"error": f"Task {params.task_id} not found"})
         return json.dumps({"id": str(row[0]), "status": row[1], "updated_at": str(row[2])}, indent=2)
     except Exception as e:
@@ -311,14 +291,11 @@ async def homelab_update_task(params: UpdateTaskInput) -> str:
 @mcp.tool(name="homelab_send_message", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_send_message(params: SendMessageInput) -> str:
     """Send a message between agents."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         cur.execute("INSERT INTO messages (from_agent,to_agent,content,thread_id) VALUES (%s,%s,%s,%s::uuid) RETURNING id,created_at",
             (params.from_agent, params.to_agent, params.content, params.thread_id))
         row = cur.fetchone(); conn.commit(); cur.close(); conn.close()
-        return row
-    try:
-        row = await asyncio.to_thread(_sync_impl)
         return json.dumps({"id": str(row[0]), "created_at": str(row[1])}, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})
@@ -326,7 +303,7 @@ async def homelab_send_message(params: SendMessageInput) -> str:
 @mcp.tool(name="homelab_read_messages", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_read_messages(params: ReadMessagesInput) -> str:
     """Read messages for an agent and mark them as read."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         w = "WHERE to_agent=%s" + (" AND read=FALSE" if params.unread_only else "")
         cur.execute(f"SELECT id,from_agent,to_agent,thread_id,content,read,created_at FROM messages {w} ORDER BY created_at ASC", (params.to_agent,))
@@ -334,9 +311,6 @@ async def homelab_read_messages(params: ReadMessagesInput) -> str:
         ids = [str(r[0]) for r in rows]
         if ids: cur.execute("UPDATE messages SET read=TRUE WHERE id=ANY(%s::uuid[])", (ids,))
         conn.commit(); cur.close(); conn.close()
-        return rows
-    try:
-        rows = await asyncio.to_thread(_sync_impl)
         msgs = [{"id":str(r[0]),"from_agent":r[1],"to_agent":r[2],"thread_id":str(r[3]) if r[3] else None,"content":r[4],"read":r[5],"created_at":str(r[6])} for r in rows]
         return json.dumps({"count": len(msgs), "messages": msgs}, indent=2)
     except Exception as e:
@@ -353,13 +327,10 @@ class UpdateProfileInput(BaseModel):
 @mcp.tool(name="homelab_get_profile", annotations={"readOnlyHint": True, "destructiveHint": False})
 async def homelab_get_profile() -> str:
     """Return all user_profile rows grouped by category."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         cur.execute("SELECT category, key, value, updated_at FROM user_profile ORDER BY category, key")
         rows = cur.fetchall(); cur.close(); conn.close()
-        return rows
-    try:
-        rows = await asyncio.to_thread(_sync_impl)
         grouped = {}
         for category, key, value, updated_at in rows:
             grouped.setdefault(category, {})[key] = {"value": value, "updated_at": str(updated_at)}
@@ -370,7 +341,7 @@ async def homelab_get_profile() -> str:
 @mcp.tool(name="homelab_update_profile", annotations={"readOnlyHint": False, "destructiveHint": False})
 async def homelab_update_profile(params: UpdateProfileInput) -> str:
     """Upsert a key/value pair in the user_profile table."""
-    def _sync_impl():
+    try:
         conn = db_connect(); cur = conn.cursor()
         cur.execute(
             "INSERT INTO user_profile (category, key, value, source) VALUES (%s, %s, %s, %s) "
@@ -378,8 +349,6 @@ async def homelab_update_profile(params: UpdateProfileInput) -> str:
             (params.category, params.key, params.value, params.source)
         )
         conn.commit(); cur.close(); conn.close()
-    try:
-        await asyncio.to_thread(_sync_impl)
         return json.dumps({"category": params.category, "key": params.key, "value": params.value}, indent=2)
     except Exception as e:
         return json.dumps({"error": str(e)})

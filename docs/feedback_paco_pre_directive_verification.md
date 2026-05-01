@@ -134,3 +134,33 @@ Underlying cause across all three: directive authored before verification, not a
 ACTIVE from 2026-04-30 Day 75 forward. Applies to all Paco-authored directives across all charters and build cycles. No carve-outs.
 
 Periodic CEO evaluation per Day 75 ratification: "approved on all three then we evaluate as needed." If the rule produces excessive friction without proportional error-prevention, CEO can revise. Default measurement window: end of Atlas v0.1 Cycle 1 close (one full cycle). If P6 #17/#19/#20-class errors continue at the same rate, the rule isn't working and needs revision. If they drop to zero, the rule is working and stays.
+
+---
+
+## P6 Lessons banked from Cycle 1F transport saga (Day 76)
+
+### P6 #21 -- tcpdump-on-lo for client-server impedance
+
+When client-server impedance hangs initialize, capture both sides headers via tcpdump on lo (loopback interface between nginx and the local backend). 5-minute root-cause vs hours of speculation. Demonstrated value in Phase C.1 P1.c.
+
+### P6 #22 -- PD diagnostic verdicts must validate end-to-end against runtime path
+
+Diagnostic verdicts on transport/protocol issues MUST be validated end-to-end against the actual runtime path before issuing a build directive. Curl-loopback probes are not sufficient evidence for SDK+HTTPS+nginx claims. Phase C.1 verdict declared header is the fix based only on curl loopback HTTP; Pacos CP1-CP5 counter-probes caught the gap. The end-to-end question did we test the actual code path Atlas will use must be answered yes.
+
+### P6 #23 -- Verify launch mechanism before authoring restart commands
+
+Verify launch mechanism (systemd vs nohup vs screen vs supervisord) BEFORE authoring restart commands. PPID=1 + systemd unit existence is a 10-second probe (`ps -o ppid -p PID`; `find /etc/systemd -name *service*`). Phase C.2.0 recommendation said relaunch via nohup -- would have orphaned the process while systemd auto-restarted its own copy, creating chaos. Pacos Phase 3 directive Verified live caught it at directive-author time.
+
+### P6 #24 -- Recursive observer effect during long-running diagnostics
+
+When attaching diagnostic tools (py-spy, strace, tcpdump) to a long-running production server, account for the recursive observer effect. Pacos homelab_ssh_run calls during Phase C.1 diagnostic were themselves the in-flight blockers that made Phase C.1s probes hang. py-spys catching the same handler in 3 sequential dumps was partially because Paco was actively driving probe traffic. PDs Step 7 pretest flake reproduced under heavy Paco MCP traffic; in 3 controlled reruns it disappeared. Diagnostic methodology should isolate active observer load (e.g., pause tool calls for the diagnostic window OR attribute observed blocking to the observers own calls).
+
+### P6 #25 -- Hedge propagation discipline
+
+When directive-author hedges with placeholder language (any Nth item I missed during grep -- verify count via final grep), the hedge MUST propagate into all downstream gate text and acceptance criteria, not just the enumeration section. If the hedge is in section 2.3 but the gate text in section 11 is hardcoded, the contingency clause is incomplete. Better practice: re-count cleanly at directive-author time, OR make the gate text reference the live count. Two instances banked Day 76: handler count 14 vs 13 actual; Step 7 prior-test count 16 vs 15 actual. Both same root cause (memory-assertion vs ground-truth grep).
+
+### P6 #26 -- All Paco<->PD events write notification line in handoff_pd_to_paco.md
+
+ALL Paco<->PD events (paco_request escalation, paco_review phase close, mid-cycle checkpoint, anything requiring Paco/CEO attention) MUST write a notification line in handoff_pd_to_paco.md so the CEO trigger remains a single canonical phrase Paco check handoff regardless of event type. CEO should never have to compose triggers with filenames or event hints; PDs notification carries that context. Notification line minimum content: event type, filename, one-line summary of Paco action expected, spec context (Cycle/Phase/Step).
+
+All six are direct applications of 5th standing rules principles. Cumulative count: P6 lessons banked = 26.

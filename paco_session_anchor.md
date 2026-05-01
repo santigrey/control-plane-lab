@@ -1,8 +1,8 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-04-30 (Day 76 evening)
-**Anchor commit:** `f998883` on santigrey/control-plane-lab `main`
-**Resume Phrase:** "Day 76: Atlas Cycle 1F Phase 3 GO dispatched (commit f998883). PD has armed Phase 3 directive at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' Sloan is on Cortez. After PD finishes, CEO will trigger Paco: 'Paco, PD finished Cycle 1F, check handoff.'"
+**Last updated:** 2026-05-01 UTC (Day 76 night) -- Atlas Cycle 1F Phase 3 CLOSE
+**Anchor commit:** Cycle 1F Phase 3 CLOSE close-out (see git log for SHA) on santigrey/control-plane-lab `main`. Atlas commit `5a9e458` on santigrey/atlas main.
+**Resume Phrase:** "Day 76 night: Atlas Cycle 1F SHIPPED 5/5 PASS. atlas commit `5a9e458` (mcp_client gateway + Option B schema-aware auto-wrap). Server-side asyncio.to_thread fix deployed (uvicorn PID 3333714). Beast anchors bit-identical 96+ hours. P6 lessons banked = 26. control-plane-lab close-out commit pending PD push this turn. Awaiting Paco fidelity confirm + Cycle 1F CLOSE ratification + next cycle GO."
 
 ---
 

@@ -1957,3 +1957,119 @@ No new chat session anchor needed unless Paco's session expires before PD finish
 ## Resume phrase for next session anchor
 
 "Day 76 evening: Atlas Cycle 1F Phase 3 GO dispatched (commit f998883). PD has armed Phase 3 directive at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' Sloan is on Cortez. After PD finishes, CEO will trigger Paco: 'Paco, PD finished Cycle 1F, check handoff.'"
+
+---
+
+# Project Ascension — Day 76 night (Atlas Cycle 1F Phase 3 CLOSE)
+**Date:** 2026-05-01 UTC (Day 76 night)
+**Anchor commit (close-out):** (pending — Step 15.b control-plane-lab close-out fold)
+**Atlas commit:** `5a9e458` on santigrey/atlas main (Step 15.a, this turn)
+
+## Phase 3 ship summary
+
+### Atlas Cycle 1F MCP client gateway: SHIPPED end-to-end
+
+Atlas v0.1 Cycle 1F (MCP client gateway from Atlas to homelab MCP server) closed 5/5 PASS this turn. Server-side asyncio.to_thread fix landed Steps 2-3 (Cortez session); deploy-restart succeeded Step 9 (uvicorn PID 3631249 -> 3333714); atlas.mcp_client module + 4 tests written Steps 4-6; Step 7 prior-test snapshot 13 PASSED + 2 token_logging flake (banked v0.2 P5 #12 per Paco ratification commit `eadc2e7`); Step 11 initial smoke partial pass (validation error on params wrapper); Step 11 retry post-Option-B implementation ALL PASS this turn.
+
+### Cycle 1F 5-gate scorecard
+
+- Gate 1 (mcp_server.py asyncio.to_thread on 13 handlers): **PASS**
+- Gate 2 (atlas client imports + _tool_schemas populated post-__aenter__): **PASS**
+- Gate 3 (deploy-restart succeeded + Mac mini reconnect): **PASS**
+- Gate 4 (E2E Beast smoke retry result_str_contains_jes: True): **PASS**
+- Gate 5 (ACL deny via test_acl_denies_control_plane_write): **PASS**
+- Standing gate (B2b + Garage anchors bit-identical): **PASS** (96+ hours preserved)
+
+### Option B implementation evidence (this turn)
+
+Applied per Paco ratification commit `6eaab4e` with 3 refinements:
+- Refinement 1 (cache schemas at __aenter__): client.py +5 lines after `await self._session.initialize()`
+- Refinement 2 (ACL handles wrapped + unwrapped forms): acl.py +4 lines for nested params lookup
+- Refinement 3 (caller_arg_keys captured BEFORE auto-wrap): client.py 3 telemetry sites changed from `sorted(args.keys())` to `caller_arg_keys`; verified working via atlas.events row showing `arg_keys=["command", "host"]` (caller-provided), NOT `["params"]` (post-wrap)
+
+client.py: 213 -> 233 lines (+20). acl.py: 65 -> 69 lines (+4). All 7 surgical edits applied via Python heredoc str.replace with unique-anchor assertions; imports validated post-edit.
+
+### Step 11 retry result
+
+```
+SMOKE INITIALIZE_OK
+SMOKE tools_count: 13
+SMOKE has_homelab_ssh_run: True
+SMOKE has_homelab_file_write: True
+SMOKE tool_call result_str_contains_jes: True
+```
+
+Full pass; tool_call returns valid `{"stdout": "jes", "stderr": "", "exit_code": 0}` from CK MCP server.
+
+### Step 12 pytest result
+
+**20 passed in 8.68s** (4 mcp_client warnings list each test name; all 4 new tests passing). Count drift from handoff expectation of 19 (Step 7's amended count was 15; actual prior is 16). +1 test discrepancy flagged for Paco awareness; not a halt-condition.
+
+### Step 13 secrets discipline audit
+
+```
+atlas.events by source: atlas.embeddings=12 / atlas.inference=14 / atlas.mcp_client=4 (NEW source)
+atlas.mcp_client recent rows: 2x tool_call homelab_ssh_run (arg_keys=["command", "host"]) + 2x tools_list
+whoami in atlas.mcp_client payload: count=0 (PASS)
+ciscokid in atlas.mcp_client payload: count=0 (PASS)
+```
+
+Tool argument VALUES never persisted; only structural metadata + caller-provided keys.
+
+### Atlas commit `5a9e458`
+
+```
+feat: Cycle 1F MCP client gateway + ACL + telemetry + schema-aware auto-wrap
+10 files changed, 771 insertions(+)
+```
+
+2 source files (acl.py + client.py) post-Option-B + their .bak.phase3 rollback artifacts + __init__.py + 5 test files + tests/__init__.py.
+
+**Process observation banked**: .bak.phase3 files swept into commit per handoff's literal `git add src/atlas/mcp_client/` (no exclusion clause). Asking Paco discretion at review time whether to keep as canonical rollback-trail (matches mcp_server.py.bak.phase3 pattern) or follow-up cleanup commit.
+
+### P6 #21-#26 banked
+
+6 lessons appended to `docs/feedback_paco_pre_directive_verification.md` per handoff Step 17:
+- #21 tcpdump-on-lo for client-server impedance
+- #22 PD diagnostic verdicts validate end-to-end
+- #23 Verify launch mechanism before restart commands
+- #24 Recursive observer effect during long-running diagnostics
+- #25 Hedge propagation discipline
+- #26 All Paco<->PD events write notification in handoff_pd_to_paco.md
+
+**P6 lessons banked count: 26** (was 20 at start of Phase 3 saga).
+
+### Beast anchor preservation through entire Phase 3 saga
+
+```
+PRE (start of saga):
+  /control-postgres-beast StartedAt=2026-04-27T00:13:57.800746541Z healthy 0
+  /control-garage-beast   StartedAt=2026-04-27T05:39:58.168067641Z healthy 0
+
+POST (this turn, after Step 14):
+  /control-postgres-beast StartedAt=2026-04-27T00:13:57.800746541Z healthy 0
+  /control-garage-beast   StartedAt=2026-04-27T05:39:58.168067641Z healthy 0
+```
+
+BIT-IDENTICAL nanosecond match. **96+ hours of operational time across the entire Phase 3 saga (transport hang investigation + Path C verdict + Phase C.1 + Phase C.2.0 + Phase 3 GO + handler count reconciliation + P6 #26 banking + pretest flake + args wrapping + Cortez handoff + JesAir resume + Steps 11-14)**, both anchors held bit-identical.
+
+### State at close
+
+- **Atlas Cycle 1F SHIPPED 5/5 PASS** + standing PASS
+- **Atlas commit on canon**: `5a9e458` (santigrey/atlas main)
+- **mcp_server.py asyncio.to_thread patch** deployed (uvicorn PID 3333714 alive ~50min since Step 9)
+- **atlas.mcp_client schema-aware auto-wrap** live (Option B with Refinements 1+2+3 verified working)
+- **96+ hour anchor preservation** holding through Phase 3 saga
+- **6 P6 lessons banked** (#21-#26)
+- **0 standing rule changes**
+- **3 process observations** flagged for Paco discretion at review (.bak files / pytest count drift / DeprecationWarning)
+
+### On resume (Cycle 1F → next cycle)
+
+1. **Paco fidelity confirm + Cycle 1F CLOSE ratification** awaited
+2. **Next Atlas cycle** (1G or whatever Paco directs)
+3. P5 carryovers from prior cycles still pending
+
+### Anchor commit at close
+
+(pending) -- single git commit fold of: `mcp_server.py` (Step 2 patch deployed) + `mcp_server.py.bak.phase3` (rollback artifact) + `docs/paco_review_atlas_v0_1_cycle_1f_phase3_close.md` (new this turn) + `docs/feedback_paco_pre_directive_verification.md` (P6 #21-#26 appended) + this SESSION.md update + `paco_session_anchor.md` surgical edits + `CHECKLIST.md` audit entry. Atlas commit `5a9e458` referenced from close-out commit message.
