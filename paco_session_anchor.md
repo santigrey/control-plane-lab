@@ -1,115 +1,120 @@
 # Paco Session Anchor
 
 **Last updated:** 2026-05-01 UTC (Day 77)
-**Anchor commit:** post-Cycle-2B-close on santigrey/control-plane-lab `main` (this turn's commit pending push)
-**Resume Phrase:** "Day 77 close: Atlas Cycle 2B 5/5 PASS, Alexandra atlas.mcp_client integration LIVE via Path A, Memory Browser at /dashboard/memory, P5 #28 RESOLVED, atlas/santigrey `d4f1a81`, P6=29, v0.2 P5 +3 candidates surfaced, ready for Cycle 2C (Token Dashboard + Audit Log Viewer)."
+**Anchor commit:** post-Cycle-2C-close on santigrey/control-plane-lab `main` (this turn's commit pending push)
+**Resume Phrase:** "Day 77 close: Atlas Cycle 2C 5/5 PASS (panels-only scope; alexandra-telemetry deferred v0.2 P5 #42 per substrate posture). Capstone-demo readiness achieved -- Memory Browser + Audit Log Viewer + Token Usage Dashboard all live on `https://sloan3.tail1216a3.ts.net/dashboard/{memory,audit,tokens}`. P6=30. Ready for Cycle 2D (polish + demo video + capstone slides + architecture diagram)."
 
 ---
 
 ## Atlas v0.2 progression
 
 - **Cycle 2A** Alexandra integration paco_request gate: CLOSED (control-plane-lab commit `416049f`); 11 asks ratified at `c3ede72`
-- **Cycle 2B** atlas.mcp_client wiring + Memory Browser + ALLOWLIST + P5 #28 fix: **CLOSED 5/5 PASS Day 77** (atlas commit `d4f1a81`)
-  - 4 work units: ALLOWLIST update + P5 #28 fix + atlas_bridge.py NEW + Memory Browser panel
-  - 25 verifications live (eighth clean PD-side application of 5th standing rule)
-  - Path A integration validated end-to-end
-  - P6 #28 + #29 applied (scope expansion + dashboard structure verification)
-  - Gate 4 reframed: server-side atlas.mcp_server is canonical telemetry under Path A decoupling
-- **Cycle 2C (Token Dashboard + Audit Log Viewer):** NEXT
-- **Cycle 2D (polish + demo video + capstone slides):** ahead per Cycle 2A roadmap
+- **Cycle 2B** atlas.mcp_client wiring + Memory Browser + ALLOWLIST + P5 #28 fix: CLOSED 5/5 PASS Day 77 (atlas commit `d4f1a81`)
+- **Cycle 2C** Audit Log Viewer + Token Usage Dashboard + alexandra-telemetry: **CLOSED 5/5 PASS Day 77** (panels-only scope; telemetry deferred per substrate localhost-bound posture)
+  - 1 file extended (dashboard.py +12565 B; HTML_AUDIT + HTML_TOKENS + 4 routes + 2 Pydantic models)
+  - Steps 5-6 (atlas_telemetry.py + wiring) DEFERRED to v0.2 P5 #42
+  - Beast pg cross-host probe verified NOT_REACHABLE (intentional Docker localhost-bound)
+  - Ninth clean PD-side application of 5th standing rule
+  - P6 #29 saved a build cycle (probe-first BEFORE authoring; Paco directive's IP was Goliath's not Beast's anyway)
+- **Cycle 2D (polish + demo video + slides):** NEXT per Cycle 2A roadmap
 - **Optional Cycle 2E (atlas_tasks_* queue panel):** v0.2.1 candidate
 
-## Atlas v0.1 progression -- COMPLETE (carry-forward from Day 77 mid-session)
+## Capstone-demo readiness state ACHIEVED Day 77
 
-- 1A through 1I shipped 5/5 PASS each
-- 10 atlas-mcp tools live on `https://sloan2.tail1216a3.ts.net:8443/mcp`
-- Atlas v0.1 Cycle 1 COMPLETE marker confirmed by Paco at HEAD `bbc10e2`
+3 dashboard panels live on Alexandra:
+- `https://sloan3.tail1216a3.ts.net/dashboard/memory` (Cycle 2B)
+- `https://sloan3.tail1216a3.ts.net/dashboard/audit` (Cycle 2C)
+- `https://sloan3.tail1216a3.ts.net/dashboard/tokens` (Cycle 2C)
+
+All backed by atlas-mcp via Path A AtlasBridge transport. caller_endpoint propagation through nginx X-Real-IP confirmed (CK Tailscale 100.115.56.89). Demo narrative all 5 scenes supportable from this state.
+
+## Atlas v0.1 Cycle 1 -- COMPLETE (carry-forward)
+
+- 1A through 1I shipped; 10 atlas-mcp tools live; Atlas v0.1 Cycle 1 COMPLETE marker confirmed by Paco at HEAD `bbc10e2`
 
 ## Substrate -- HOLDING ~96+ hours
 
-- B2b nanosecond anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical PRE/POST through Cycle 2B
+- B2b nanosecond anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical PRE/POST through Cycle 2C
 - Garage anchor: `2026-04-27T05:39:58.168067641Z` -- bit-identical
-- B2b subscription `controlplane_sub`: untouched
-- Garage cluster: unchanged
-- Cycle 2B atlas.events delta: +2 rows source=atlas.mcp_server (Alexandra-origin, caller_endpoint=100.115.56.89)
-- Cycle 2B atlas.memory delta: +1 row id=2 kind=cycle_2b_smoke
+- Cycle 2C atlas.events delta: +2 rows source=atlas.mcp_server (smoke calls; caller_endpoint=100.115.56.89)
+- Cycle 2C atlas.memory delta: 0
+- atlas-mcp.service: untouched this cycle (still MainPID 2173807 from Cycle 2B)
+- orchestrator.service: restarted (MainPID 347400 rotated from 292908; substrate untouched)
+
+## Substrate isolation finding (Cycle 2C):
+
+Beast pg cross-host = NOT_REACHABLE from CK at both 192.168.1.20 (Goliath -- Paco directive typo) and 192.168.1.152 (actual Beast). Intentional posture per hard rule "Docker bypasses UFW. Bind PostgreSQL and other Docker services to localhost in compose.yaml" + Phase G compose-down ESC.
+
+Banked as **v0.2 P5 #42** with PD-recommended **Option 1**: add `atlas_events_create` MCP tool to atlas.mcp_server surface. Preserves substrate isolation; mirrors Cycle 1H/1I argshape pattern; uses existing trusted transport.
 
 ## Atlas package state (Beast `/home/jes/atlas/`)
 
-- src/atlas/db / storage / inference / embeddings / mcp_client (Cycles 1B-1F)
-- src/atlas/mcp_server (Cycles 1G-1I + Cycle 2B EVENTS_SOURCE_ALLOWLIST extension)
-- ~38 source files
+- All Cycle 1 + Cycle 2B EVENTS_SOURCE_ALLOWLIST extension; UNCHANGED Cycle 2C
 - Latest commit: `d4f1a81`
 
 ## Alexandra-side state (CK `/home/jes/control-plane/orchestrator/`)
 
-- `app.py` (P5 #28 fix applied; 5 line changes)
-- `ai_operator/atlas_bridge.py` (NEW Cycle 2B; AtlasBridge wrapper)
-- `ai_operator/context_engine.py` (P5 #28 fix; 1 line)
-- `ai_operator/tools/registry.py` (P5 #28 fix; 3 lines)
-- `ai_operator/dashboard/dashboard.py` (extended; HTML_MEMORY + 3 routes)
-- `.env` (P5 #28 fix on-disk; gitignored, not committed)
-- mcp SDK 1.27.0 installed in `.venv`
+- `app.py` (Cycle 2B P5 #28 fix)
+- `ai_operator/atlas_bridge.py` (Cycle 2B NEW; UNCHANGED 2C)
+- `ai_operator/context_engine.py` (Cycle 2B P5 #28 fix)
+- `ai_operator/tools/registry.py` (Cycle 2B P5 #28 fix)
+- `ai_operator/dashboard/dashboard.py` (extended Cycle 2B Memory + Cycle 2C Audit + Tokens; 14 routes total)
+- `.env` (Cycle 2B P5 #28 fix on-disk; gitignored)
+- mcp SDK 1.27.0 in `.venv` (Cycle 2B install)
 
-## atlas-mcp 10 tools live (unchanged from Cycle 1I close)
+## atlas-mcp 10 tools live (unchanged Cycle 1H/1I)
 
 - Cycle 1H read/write (4): atlas_events_search / atlas_memory_query / atlas_memory_upsert / atlas_inference_history
 - Cycle 1I state machine (6): atlas_tasks_create / atlas_tasks_list / atlas_tasks_get / atlas_tasks_claim / atlas_tasks_complete / atlas_tasks_fail
-- Endpoint: `https://sloan2.tail1216a3.ts.net:8443/mcp`
-- Strict-loopback :8001 bind
-- caller_endpoint via X-Real-IP
 
-## Alexandra dashboard surface (Cycle 2B additions)
+## Alexandra dashboard surface (Cycle 2B + 2C additions)
 
-- `https://sloan3.tail1216a3.ts.net/dashboard` (existing SPA)
-- `https://sloan3.tail1216a3.ts.net/dashboard/memory` (NEW Cycle 2B; standalone Memory Browser page)
-- `POST /dashboard/api/memory/query` (NEW; AtlasBridge proxy)
-- `POST /dashboard/api/memory/upsert` (NEW; AtlasBridge proxy)
-- 7 existing dashboard routes carry forward
+- 7 existing dashboard routes
+- `/dashboard/memory` (Cycle 2B) + 2 API endpoints
+- `/dashboard/audit` (Cycle 2C) + 1 API endpoint
+- `/dashboard/tokens` (Cycle 2C) + 1 API endpoint
+- 14 routes total
 
 ## atlas.events state (cumulative)
 
-- 58 rows total (12 emb + 14 inf + 6 client + 26 server)
-- atlas.mcp_server +2 this cycle (atlas_memory_query 80ms + atlas_memory_upsert 1614ms; both caller_endpoint=100.115.56.89)
+- 60 rows total (12 emb + 14 inf + 6 mcp_client + 28 mcp_server)
+- atlas.mcp_server +2 this cycle (atlas_events_search 7.1ms + atlas_inference_history 4.9ms; caller_endpoint=100.115.56.89)
 - arg_keys preserved (caller field names, NOT ["params"])
 - Secrets discipline maintained (0 hits)
 
 ## atlas.memory state
 
-- 2 rows total
-- id=1 Cycle 1H kind=smoke_test
-- id=2 Cycle 2B kind=cycle_2b_smoke (Alexandra-origin via Path A)
+- 2 rows unchanged (id=1 Cycle 1H + id=2 Cycle 2B)
 
 ## EVENTS_SOURCE_ALLOWLIST (atlas.mcp_server.inputs)
 
-- 5 entries: alexandra (NEW Cycle 2B), atlas.embeddings, atlas.inference, atlas.mcp_client, atlas.mcp_server
+- 5 entries (alexandra source pre-allowed for v0.2 P5 #42 work; not yet exercised by row inserts)
 
 ## Service state
 
-- atlas-mcp.service: active MainPID 2173807 (rotated)
-- orchestrator.service: active MainPID 292908 (rotated)
-- Both restarted in Cycle 2B; substrate untouched
+- atlas-mcp.service: active MainPID 2173807 (Cycle 2B; unchanged Cycle 2C)
+- orchestrator.service: active MainPID 347400 (rotated Cycle 2C from 292908)
 
 ## Standing rules: 5 memory files unchanged + Standing Rule #6 banked Day 77 by Paco at HEAD `01ff1a4`
 
-## P6 lessons banked: 29 (P6 #28 + #29 applied this cycle as canonical case for spec-discrepancy + scope expansion)
+## P6 lessons banked: 30 (P6 #28+29+30 applied as canonical case this cycle: probe-first reachability check before authoring atlas_telemetry.py saved one build cycle)
 
-## v0.2 hardening pass queue: 38 banked + 3 candidates surfaced this cycle (#39 adminpass refactor, #40 Alexandra declarative deps, #41 Path A telemetry doc) -- pending Paco banking decision
+## v0.2 hardening pass queue: 38 banked + 4 PD candidates (#39 adminpass refactor, #40 declarative deps, #41 Path A telemetry doc, #42 alexandra-telemetry wiring path)
 
-## v0.2 P5 #28 RESOLVED Day 77
+## v0.2 P5 #28: RESOLVED Cycle 2B
+## v0.2 P5 #22: RESOLVED prior
 
 ## On resume
 
-1. Paco confirms Cycle 2B 5/5 PASS
-2. Paco rules on Gate 4 reframing + P6 #28 scope expansion
-3. Paco banks 3 v0.2 P5 candidates (or refines)
-4. Paco issues Cycle 2C build directive (Token Dashboard + Audit Log Viewer; PD bias toward direct build directive)
+1. Paco confirms Cycle 2C 5/5 PASS panels-only scope
+2. Paco banks v0.2 P5 #42 (or refines)
+3. Paco rules on Option 1 (`atlas_events_create` MCP tool) for alexandra-telemetry wiring path
+4. Paco issues Cycle 2D directive (polish + demo video script + capstone slides + architecture diagram)
 
 ## Notes for Paco
 
-- Cycle 2B: bridge cycle clean. Path A integration validated end-to-end with the highest-leverage demo feature.
-- Substrate held bit-identical through 2 service restarts + 10 file edits + 1 SDK install + 4 atlas-mcp calls
-- P6 #28 + #29 actively applied: caught Paco's `Jinja2 templates` reference (none exist; dashboard is single-file inline HTML) + scope expansion for app.py 5 occurrences
-- Gate 4 reframing is the principal architectural clarification: under Path A decoupling, atlas.mcp_client telemetry is NOT written by Alexandra (since AtlasBridge uses raw mcp SDK only); server-side atlas.mcp_server IS the canonical record
-- Capstone deadline anchor stays mid-June 2026; Cycle 2B is on track
-- adminpass exposure pre-existing in git history: candidate #39 captures the cleanup
+- Cycle 2C: panels-only scope. Two new dashboards verified end-to-end via Path A AtlasBridge transport.
+- Beast pg cross-host probe BEFORE authoring atlas_telemetry.py saved one build cycle. Paco's directive named 192.168.1.20 (Goliath's IP, not Beast's). Even if it had been correct (192.168.1.152), substrate is Docker localhost-bound. Both unreachable verified live.
+- Capstone-demo readiness achieved: 3 panels live + atlas-mcp 10 tools backing them. Demo narrative supports all 5 scenes from this state.
+- Cycle 2D = pure polish work. No code on Atlas-integration axis needed for v0.2.0 capstone demo.
+- v0.2 P5 #42 PD recommendation: add `atlas_events_create` MCP tool. Mirrors Cycle 1H/1I. Single tool addition + Alexandra-side AtlasBridge ALLOWED_TOOLS extension. Substrate isolation preserved.

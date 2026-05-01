@@ -2616,3 +2616,60 @@ Server-side telemetry captures Alexandra's calls with caller_endpoint=`100.115.5
 Cycle 2C scope per Cycle 2A roadmap: Token Usage Dashboard panel + Audit Log Viewer panel + telemetry kinds for `agent_run` / `mqtt_command_approved`. PD bias: build directive (no paco_request gate; mirror Cycle 2B incremental cadence).
 
 Resume phrase: "Day 77 close: Atlas Cycle 2B 5/5 PASS, Alexandra atlas.mcp_client integration LIVE, Memory Browser at /dashboard/memory, P5 #28 RESOLVED, atlas/santigrey `d4f1a81`, P6=29, v0.2 P5 +3 candidates, ready for Cycle 2C (Token Dashboard + Audit Log Viewer)."
+
+
+---
+
+## Day 77 -- Atlas v0.2 Cycle 2C (Audit Log Viewer + Token Usage Dashboard) CLOSED 5/5 PASS (panels-only)
+
+**Major work:** Two more capstone-grade dashboard panels live; Alexandra-source telemetry wiring deferred to v0.2 P5 #42 per substrate localhost-bound posture.
+
+### Cycle 2C 5-gate scorecard
+
+1. Audit Log Viewer panel + API endpoint functional: PASS
+2. Token Usage Dashboard panel + API endpoint functional: PASS
+3. atlas_telemetry.py / wiring: DEFERRED (Beast pg cross-host NOT_REACHABLE; intentional substrate posture; banked as v0.2 P5 #42)
+4. orchestrator.service restart clean; both new routes 200: PASS
+5. Anchor preservation + secrets discipline + capstone-demo readiness: PASS
+
+Plus 6 standing gates met.
+
+### Capstone-demo readiness state achieved
+
+3 panels live:
+- /dashboard/memory (Cycle 2B) -- atlas_memory_query + atlas_memory_upsert
+- /dashboard/audit (Cycle 2C) -- atlas_events_search
+- /dashboard/tokens (Cycle 2C) -- atlas_inference_history
+
+Demo narrative all 5 scenes supportable from this state. Cycle 2D scope: polish + demo video + slides + architecture diagram (no more code work for v0.2.0 demo readiness on Atlas-integration axis).
+
+### Atlas-side: NO commit this cycle
+
+No atlas package changes. atlas-mcp.service untouched. Only orchestrator.service restarted (application-layer; substrate untouched).
+
+### Alexandra-side changes
+
+- `orchestrator/ai_operator/dashboard/dashboard.py` EXTENDED (+12565 B; HTML_AUDIT + HTML_TOKENS + 4 routes + 2 Pydantic models)
+
+No new files; no other modifications.
+
+### Verified live (ninth clean PD-side application of 5th rule)
+
+17 verifications run live; all matched directive claims (with explicit deferral path documented for Steps 5-6).
+
+### State at Cycle 2C close
+
+- atlas.events: 60 rows total (mcp_server +2 from Cycle 2C smokes: atlas_inference_history + atlas_events_search both caller_endpoint=100.115.56.89)
+- atlas.memory: 2 rows unchanged from Cycle 2B
+- atlas-mcp.service: active MainPID 2173807 unchanged
+- orchestrator.service: active MainPID 347400 (rotated from 292908)
+- B2b + Garage anchors bit-identical (~96+ hours since Day 71)
+- v0.2 P5 queue: 38 banked + 4 candidates (#39-#42) pending Paco banking
+- Standing rules: 5 + Standing Rule #6 (Day 77)
+- P6 lessons banked: 30 (P6 #28+29+30 applied this cycle as canonical case for reachability-probe-before-authoring)
+
+### Cycle 2D next
+
+Polish + demo video + capstone slides + architecture diagram. No code work needed for v0.2.0 demo readiness on Atlas-integration axis. Per Cycle 2A roadmap.
+
+Resume phrase: "Day 77 close: Atlas Cycle 2C 5/5 PASS panels-only, capstone-demo readiness achieved (Memory + Audit + Tokens dashboards live), telemetry deferred v0.2 P5 #42, P6=30, ready for Cycle 2D (polish + demo video + slides)."

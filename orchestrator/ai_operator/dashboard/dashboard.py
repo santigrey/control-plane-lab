@@ -714,3 +714,275 @@ async def dashboard_api_memory_upsert(req: _MemoryUpsertRequest):
             return {"ok": True, **_result_to_dict(result)}
     except AtlasBridgeError as e:
         raise _HTTPException(status_code=503, detail=f"atlas-mcp unavailable: {e}")
+
+
+# =============================================================================
+# Cycle 2C -- Audit Log Viewer + Token Usage Dashboard panels
+# =============================================================================
+
+from datetime import datetime as _datetime
+
+# Reuses _Optional / _BaseModel / _Field / _HTTPException / AtlasBridge /
+# AtlasBridgeError / _result_to_dict from the Cycle 2B Memory Browser block above.
+
+
+class _AuditSearchRequest(_BaseModel):
+    source: _Optional[str] = _Field(default=None, max_length=50)
+    kind: _Optional[str] = _Field(default=None, max_length=50)
+    ts_after: _Optional[_datetime] = _Field(default=None)
+    ts_before: _Optional[_datetime] = _Field(default=None)
+    limit: int = _Field(default=50, ge=1, le=100)
+
+
+class _TokensHistoryRequest(_BaseModel):
+    model: _Optional[str] = _Field(default=None, max_length=200)
+    ts_after: _Optional[_datetime] = _Field(default=None)
+    ts_before: _Optional[_datetime] = _Field(default=None)
+    limit: int = _Field(default=50, ge=1, le=50)
+
+
+HTML_AUDIT = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Audit Log Viewer \u2014 Alexandra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-family: 'Courier New', monospace; padding: 20px; max-width: 1400px; margin: 0 auto; }
+h1 { color: #58a6ff; font-size: 1.4rem; margin-bottom: 6px; }
+h2 { color: #8b949e; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 10px; }
+.meta { color: #8b949e; font-size: 0.78rem; margin-bottom: 22px; }
+.panel { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px; margin-bottom: 18px; }
+label { color: #8b949e; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; margin-right: 12px; }
+select, input { background: #0d1117; border: 1px solid #30363d; color: #e6edf3; padding: 6px 10px; border-radius: 4px; font-family: monospace; font-size: 0.82rem; outline: none; margin-right: 16px; }
+select:focus, input:focus { border-color: #58a6ff; }
+button { background: #1f6feb; color: #fff; border: none; padding: 8px 14px; border-radius: 6px; font-family: monospace; font-size: 0.85rem; cursor: pointer; }
+button:hover { background: #388bfd; }
+#status { margin-top: 12px; color: #8b949e; font-size: 0.78rem; min-height: 1.2em; }
+#status.error { color: #f85149; }
+#status.ok { color: #3fb950; }
+table { width: 100%; border-collapse: collapse; font-size: 0.78rem; }
+th { text-align: left; padding: 6px 8px; color: #8b949e; border-bottom: 1px solid #30363d; font-weight: bold; }
+td { padding: 6px 8px; border-bottom: 1px solid #21262d; vertical-align: top; }
+tr.error td { color: #f85149; }
+.ts { white-space: nowrap; color: #8b949e; }
+.endpoint { color: #3fb950; }
+.source { color: #58a6ff; }
+pre { white-space: pre-wrap; word-break: break-all; max-height: 200px; overflow: auto; background: #0d1117; padding: 6px; border-radius: 4px; font-size: 0.72rem; color: #e6edf3; }
+nav a { color: #58a6ff; text-decoration: none; font-size: 0.8rem; margin-right: 14px; }
+nav a:hover { text-decoration: underline; }
+</style>
+</head>
+<body>
+<nav><a href="/dashboard">&larr; Dashboard</a><a href="/dashboard/memory">Memory</a><a href="/dashboard/audit">Audit</a><a href="/dashboard/tokens">Tokens</a></nav>
+<h1>Audit Log Viewer</h1>
+<div class="meta">atlas.events filtered by source / kind / ts range &middot; ordered ts DESC</div>
+<div class="panel">
+  <label>source
+    <select id="source">
+      <option value="">(any)</option>
+      <option value="atlas.embeddings">atlas.embeddings</option>
+      <option value="atlas.inference">atlas.inference</option>
+      <option value="atlas.mcp_client">atlas.mcp_client</option>
+      <option value="atlas.mcp_server">atlas.mcp_server</option>
+      <option value="alexandra">alexandra</option>
+    </select>
+  </label>
+  <label>kind <input type="text" id="kind" placeholder="e.g. tool_call"></label>
+  <label>limit <input type="text" id="limit" value="50" style="width:60px"></label>
+  <button onclick="searchAudit()">Search</button>
+</div>
+<div id="status"></div>
+<div id="results"></div>
+
+<script>
+const statusEl = document.getElementById('status');
+function setStatus(msg, cls) { statusEl.className = cls || ''; statusEl.textContent = msg; }
+
+async function searchAudit() {
+  const body = {};
+  const src = document.getElementById('source').value;
+  if (src) body.source = src;
+  const kind = document.getElementById('kind').value.trim();
+  if (kind) body.kind = kind;
+  body.limit = parseInt(document.getElementById('limit').value, 10) || 50;
+  setStatus('Searching...');
+  try {
+    const r = await fetch('/dashboard/api/audit/search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(body)
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { setStatus('Error: ' + (j.detail || JSON.stringify(j)), 'error'); return; }
+    renderRows(j);
+    setStatus('Search complete.', 'ok');
+  } catch (e) { setStatus('Network error: ' + e.message, 'error'); }
+}
+
+function renderRows(j) {
+  const el = document.getElementById('results');
+  let rows = [];
+  try {
+    if (j.structured && j.structured.result) rows = JSON.parse(j.structured.result);
+    else if (j.text) rows = JSON.parse(j.text);
+  } catch (e) {
+    el.innerHTML = '<div class="panel">Could not parse results: ' + e.message + '</div>';
+    return;
+  }
+  if (!rows.length) { el.innerHTML = '<div class="panel"><em>No matching events.</em></div>'; return; }
+  let html = '<div class="panel"><table><thead><tr><th>ts</th><th>source</th><th>kind</th><th>endpoint</th><th>payload</th></tr></thead><tbody>';
+  for (const row of rows) {
+    const isErr = (row.kind || '').includes('error') || (row.kind || '').includes('denied');
+    const endpoint = (row.payload && row.payload.caller_endpoint) || '';
+    const payloadStr = JSON.stringify(row.payload || {}, null, 2).replace(/</g, '&lt;');
+    html += '<tr' + (isErr ? ' class="error"' : '') + '>' +
+      '<td class="ts">' + (row.ts || '') + '</td>' +
+      '<td class="source">' + (row.source || '') + '</td>' +
+      '<td>' + (row.kind || '') + '</td>' +
+      '<td class="endpoint">' + endpoint + '</td>' +
+      '<td><pre>' + payloadStr + '</pre></td>' +
+      '</tr>';
+  }
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+</script>
+</body>
+</html>"""
+
+
+HTML_TOKENS = """<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Token Usage \u2014 Alexandra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0d1117; color: #e6edf3; font-family: 'Courier New', monospace; padding: 20px; max-width: 1100px; margin: 0 auto; }
+h1 { color: #58a6ff; font-size: 1.4rem; margin-bottom: 6px; }
+h2 { color: #8b949e; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin: 24px 0 10px; }
+.meta { color: #8b949e; font-size: 0.78rem; margin-bottom: 22px; }
+.panel { background: #161b22; border: 1px solid #21262d; border-radius: 8px; padding: 16px; margin-bottom: 18px; }
+#summary { display: flex; gap: 24px; flex-wrap: wrap; }
+.metric { background: #0d1117; border: 1px solid #30363d; border-radius: 6px; padding: 12px 16px; min-width: 160px; }
+.metric-label { color: #8b949e; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
+.metric-value { color: #58a6ff; font-size: 1.6rem; font-weight: bold; margin-top: 4px; }
+table { width: 100%; border-collapse: collapse; font-size: 0.82rem; }
+th { text-align: left; padding: 8px; color: #8b949e; border-bottom: 1px solid #30363d; font-weight: bold; }
+td { padding: 8px; border-bottom: 1px solid #21262d; }
+td.right, th.right { text-align: right; }
+nav a { color: #58a6ff; text-decoration: none; font-size: 0.8rem; margin-right: 14px; }
+nav a:hover { text-decoration: underline; }
+#status { margin-top: 12px; color: #8b949e; font-size: 0.78rem; min-height: 1.2em; }
+#status.error { color: #f85149; }
+</style>
+</head>
+<body>
+<nav><a href="/dashboard">&larr; Dashboard</a><a href="/dashboard/memory">Memory</a><a href="/dashboard/audit">Audit</a><a href="/dashboard/tokens">Tokens</a></nav>
+<h1>Token Usage Dashboard</h1>
+<div class="meta">atlas.events source=atlas.inference &middot; default last 7 days</div>
+<div class="panel" id="summary"><em>Loading...</em></div>
+<h2>By model</h2>
+<div class="panel" id="by-model"></div>
+<div id="status"></div>
+
+<script>
+const statusEl = document.getElementById('status');
+function setStatus(msg, cls) { statusEl.className = cls || ''; statusEl.textContent = msg; }
+
+(async function load() {
+  try {
+    const r = await fetch('/dashboard/api/tokens/history', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({limit: 50})
+    });
+    const j = await r.json();
+    if (!r.ok || !j.ok) { setStatus('Error: ' + (j.detail || JSON.stringify(j)), 'error'); return; }
+    renderTokens(j);
+  } catch (e) { setStatus('Network error: ' + e.message, 'error'); }
+})();
+
+function renderTokens(j) {
+  const summaryEl = document.getElementById('summary');
+  const byModelEl = document.getElementById('by-model');
+  let rows = [];
+  try {
+    if (j.structured && j.structured.result) rows = JSON.parse(j.structured.result);
+    else if (j.text) rows = JSON.parse(j.text);
+  } catch (e) {
+    summaryEl.innerHTML = '<div class="metric">Could not parse: ' + e.message + '</div>';
+    return;
+  }
+  if (!rows.length) { summaryEl.innerHTML = '<div class="metric"><em>No inference events yet.</em></div>'; byModelEl.innerHTML = ''; return; }
+  const byModel = {};
+  let totalTok = 0, totalDur = 0;
+  for (const row of rows) {
+    const m = (row.payload && row.payload.model) || 'unknown';
+    const tok = (row.payload && row.payload.eval_count) || 0;
+    const dur = (row.payload && row.payload.eval_duration_ms) || 0;
+    if (!byModel[m]) byModel[m] = {count: 0, tokens: 0, duration_ms: 0};
+    byModel[m].count++;
+    byModel[m].tokens += tok;
+    byModel[m].duration_ms += dur;
+    totalTok += tok;
+    totalDur += dur;
+  }
+  summaryEl.innerHTML =
+    '<div class="metric"><div class="metric-label">Total inferences</div><div class="metric-value">' + rows.length + '</div></div>' +
+    '<div class="metric"><div class="metric-label">Total tokens</div><div class="metric-value">' + totalTok.toLocaleString() + '</div></div>' +
+    '<div class="metric"><div class="metric-label">Total eval duration</div><div class="metric-value">' + (totalDur/1000).toFixed(1) + 's</div></div>';
+  let tableHtml = '<table><thead><tr><th>Model</th><th class="right">Calls</th><th class="right">Tokens</th><th class="right">Total ms</th><th class="right">Avg tok/call</th></tr></thead><tbody>';
+  for (const m of Object.keys(byModel)) {
+    const s = byModel[m];
+    tableHtml += '<tr><td>' + m + '</td>' +
+      '<td class="right">' + s.count + '</td>' +
+      '<td class="right">' + s.tokens.toLocaleString() + '</td>' +
+      '<td class="right">' + s.duration_ms.toFixed(0) + '</td>' +
+      '<td class="right">' + (s.count > 0 ? (s.tokens/s.count).toFixed(0) : '0') + '</td></tr>';
+  }
+  tableHtml += '</tbody></table>';
+  byModelEl.innerHTML = tableHtml;
+}
+</script>
+</body>
+</html>"""
+
+
+@router.get("/dashboard/audit", response_class=HTMLResponse)
+async def dashboard_audit():
+    return HTML_AUDIT
+
+
+@router.post("/dashboard/api/audit/search")
+async def dashboard_api_audit_search(req: _AuditSearchRequest):
+    try:
+        async with AtlasBridge() as bridge:
+            result = await bridge.call(
+                "atlas_events_search",
+                req.model_dump(exclude_none=True),
+            )
+            return {"ok": True, **_result_to_dict(result)}
+    except AtlasBridgeError as e:
+        raise _HTTPException(status_code=503, detail=f"atlas-mcp unavailable: {e}")
+
+
+@router.get("/dashboard/tokens", response_class=HTMLResponse)
+async def dashboard_tokens():
+    return HTML_TOKENS
+
+
+@router.post("/dashboard/api/tokens/history")
+async def dashboard_api_tokens_history(req: _TokensHistoryRequest):
+    try:
+        async with AtlasBridge() as bridge:
+            result = await bridge.call(
+                "atlas_inference_history",
+                req.model_dump(exclude_none=True),
+            )
+            return {"ok": True, **_result_to_dict(result)}
+    except AtlasBridgeError as e:
+        raise _HTTPException(status_code=503, detail=f"atlas-mcp unavailable: {e}")
