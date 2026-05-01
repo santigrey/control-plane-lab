@@ -2073,3 +2073,95 @@ BIT-IDENTICAL nanosecond match. **96+ hours of operational time across the entir
 ### Anchor commit at close
 
 (pending) -- single git commit fold of: `mcp_server.py` (Step 2 patch deployed) + `mcp_server.py.bak.phase3` (rollback artifact) + `docs/paco_review_atlas_v0_1_cycle_1f_phase3_close.md` (new this turn) + `docs/feedback_paco_pre_directive_verification.md` (P6 #21-#26 appended) + this SESSION.md update + `paco_session_anchor.md` surgical edits + `CHECKLIST.md` audit entry. Atlas commit `5a9e458` referenced from close-out commit message.
+
+---
+
+# Day 76->77 boundary -- Cycle 1F SHIPPED + Cycle 1G entry
+
+**Anchor commit at section open:** `34838bd` (Cycle 1F CLOSE-OUT FOLD by PD)
+**Anchor commit at section close:** post this turn's commit (Cycle 1G TLS strategy paco_request gate dispatched)
+**Status:** Cycle 1F SHIPPED 5/5 PASS. Cycle 1G dispatched as paco_request gate (TLS strategy ratification BEFORE build). Atlas v0.1 progression: 1A-1F closed (6/9 of Cycle 1).
+
+## Cycle 1F close (PD execution under JesAir re-anchor handoff)
+
+PD executed full remaining Phase 3 cycle from JesAir-session re-anchor handoff (commit prior to `34838bd`):
+
+- Implemented Option B schema-aware auto-wrap with 3 refinements (cache schemas / ACL handles wrapped+unwrapped / caller_arg_keys captured BEFORE auto-wrap)
+- Step 11 retry SUCCESS: tool_call returned `{"stdout": "jes"}`; atlas.events row showed `arg_keys=["command", "host"]` (R3 working)
+- Step 12: 4 new mcp_client tests + 16 prior = 20/20 PASS in 8.68s
+- Step 13: atlas.events delta + secrets discipline audit (0 hits whoami + 0 hits ciscokid)
+- Step 14: Beast anchors bit-identical pre/post (96+ hours holding)
+- Step 15: Atlas commit `5a9e458` on santigrey/atlas + control-plane-lab close-out fold `34838bd`
+- Step 16: paco_review (19561 bytes; 11 sections + Verified live + 5-gate scorecard)
+- Step 17: P6 #21-#26 appended to `feedback_paco_pre_directive_verification.md`
+- Step Z: ephemeral cleanup
+
+## Paco close-confirm (this turn)
+
+Independently verified PD's 5/5 PASS scorecard (15-row Verified live block):
+
+| Gate | Result |
+|------|--------|
+| 1: mcp.ClientSession + streamablehttp + 2025-03-26 header | PASS |
+| 2: ACL allowlist + per-tool arg constraints (R2 wrapped+unwrapped) | PASS |
+| 3: atlas.events telemetry source=atlas.mcp_client (R3 caller_arg_keys preserved) | PASS |
+| 4: 20/20 pytest pass | PASS |
+| 5: Secrets discipline (0 hits whoami + 0 hits ciscokid) | PASS |
+
+## Rulings on PD's 5 asks
+
+- PO1 .bak.phase3 keep vs cleanup: RULED keep (canonical pattern; v0.2 P5 #14 cleanup)
+- 5/5 PASS scorecard: ACCEPTED
+- P6 #21-#26 banking: CONFIRMED canonical
+- Refinement 3 caller_arg_keys pattern: RULED canonical as **P6 #27 NEW** (telemetry intelligibility invariant)
+- Cycle 1G entry point: dispatched as paco_request gate (TLS strategy ratification first)
+
+## Process observations resolved
+
+- PO2 pytest count drift 19 expected vs 20 actual: NOT a halt-condition; root cause was Step 7 amendment based on flake-affected snapshot; with flake gone full count is 20; P6 #25 already covers count-discipline; future cycle close gates use --collect-only at close turn not escalation turn
+- PO3 DeprecationWarning streamablehttp_client -> streamable_http_client: BANKED v0.2 P5 #15 NEW
+
+## Cycle 1G entry-point dispatched
+
+Atlas v0.1 Cycle 1G per spec v3 section 8.1G: Atlas MCP server INBOUND on Beast. Architectural gate: TLS posture has 4 defensible options (mirror CK Tailscale FQDN+nginx / Beast self-signed + Tailscale ACL / plain HTTP over Tailscale / mTLS). Per measure-twice-cut-once standing rule, paco_request ratifies strategy BEFORE build directive dispatches.
+
+Handoff `docs/handoff_paco_to_pd.md` (gitignored) armed with:
+- Cycle 1F close acknowledgments
+- Cycle 1G TLS scope summary
+- Verified live PRE capture commands
+- 8-section paco_request structure with seed option enumeration + trade-off matrix
+- P6 #26 notification format
+- Commit/push instructions
+
+## Cumulative discipline metrics (post Cycle 1F close)
+
+- Cumulative findings caught at directive-authorship: 30
+- Cumulative findings caught at PD pre-execution review: 2 (handler count + pretest count)
+- Cumulative findings caught at PD execution failure: 1 (Step 11 args-wrapping)
+- Total Cycle 1F transport saga findings caught pre-failure-cascade: 33
+- Protocol slips caught + closed: 1 (P6 #26 first end-to-end use this close was clean)
+
+## P6 lessons banked from Cycle 1F transport saga + close
+
+Final tally: P6 #21 through #27 = 7 new lessons banked from Cycle 1F + close.
+
+#21 tcpdump-on-lo / #22 PD validate end-to-end / #23 verify launch mechanism / #24 recursive observer / #25 hedge propagation / #26 handoff notification protocol / **#27 NEW** telemetry intelligibility invariant (capture caller-provided form BEFORE internal transformations).
+
+Cumulative P6: **27**.
+
+## v0.2 P5 backlog
+
+#10-#13 from earlier Cycle 1F saga; #14 NEW (.bak.phase3 cleanup) + #15 NEW (streamablehttp_client rename) added this close. Total: **15**.
+
+## Substrate state (end of Cycle 1F close)
+
+- B2b anchor `2026-04-27T00:13:57.800746541Z` -- bit-identical 96+ hours
+- Garage anchor `2026-04-27T05:39:58.168067641Z` -- bit-identical 96+ hours
+- atlas.events: embeddings=12, inference=14, mcp_client=6 (NEW source from Cycle 1F)
+- mcp_server.py on CK: 388 lines (was 357 pre-Phase-3-patch); committed at `34838bd`
+- uvicorn PID 3333714 running asyncio.to_thread-wrapped code since 03:11:03 UTC
+- Atlas package: HEAD `5a9e458` on santigrey/atlas; mcp_client/ shipped
+
+## Resume phrase for next session anchor
+
+"Day 77 entering: Atlas Cycle 1F SHIPPED 5/5 PASS (control-plane-lab `34838bd` + santigrey/atlas `5a9e458`). Cycle 1G entry-point dispatched as TLS strategy paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request, CEO triggers Paco: 'Paco, PD escalated, check handoff.'"

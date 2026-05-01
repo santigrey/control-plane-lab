@@ -1,102 +1,110 @@
 # Paco Session Anchor
 
-**Last updated:** 2026-05-01 UTC (Day 76 night) -- Atlas Cycle 1F Phase 3 CLOSE
-**Anchor commit:** Cycle 1F Phase 3 CLOSE close-out (see git log for SHA) on santigrey/control-plane-lab `main`. Atlas commit `5a9e458` on santigrey/atlas main.
-**Resume Phrase:** "Day 76 night: Atlas Cycle 1F SHIPPED 5/5 PASS. atlas commit `5a9e458` (mcp_client gateway + Option B schema-aware auto-wrap). Server-side asyncio.to_thread fix deployed (uvicorn PID 3333714). Beast anchors bit-identical 96+ hours. P6 lessons banked = 26. control-plane-lab close-out commit pending PD push this turn. Awaiting Paco fidelity confirm + Cycle 1F CLOSE ratification + next cycle GO."
+**Last updated:** 2026-05-01 UTC (Day 76 / Day 77 boundary)
+**Anchor commit:** post-Cycle-1F-close on santigrey/control-plane-lab `main` (commit pending this turn's push)
+**Resume Phrase:** "Day 77 entering: Atlas Cycle 1F SHIPPED 5/5 PASS (control-plane-lab `34838bd` + santigrey/atlas `5a9e458`). Cycle 1G entry-point dispatched as TLS strategy paco_request gate at /home/jes/control-plane/docs/handoff_paco_to_pd.md. Awaiting CEO trigger to PD: 'Read docs/handoff_paco_to_pd.md and execute.' After PD writes paco_request, CEO triggers Paco: 'Paco, PD escalated, check handoff.'"
 
 ---
 
-## Atlas v0.1 progression
+## Atlas v0.1 progression (post Cycle 1F close)
 
 - **Cycle 1A** package skeleton: CLOSED (atlas commit `3e50a13`)
 - **Cycle 1B** Postgres connection layer + atlas schema: CLOSED (atlas commit `42e41b7`)
 - **Cycle 1C** Garage S3 client + bucket adoption: CLOSED (atlas commit `81de0b2`)
 - **Cycle 1D** Goliath inference RPC + token telemetry: CLOSED (atlas commit `752134f`)
-- **Cycle 1E** Embedding service mxbai-embed-large: CLOSED 5/5 PASS Day 75 (atlas commit `6c0b8d6`)
-- **Cycle 1F** MCP client gateway: Phase 3 GO dispatched (Day 76); BUILD pending PD execution
-- **Cycles 1G-1H + 2 + 3 + 4:** ahead per spec v3
+- **Cycle 1E** Embedding service mxbai-embed-large: CLOSED (atlas commit `6c0b8d6`)
+- **Cycle 1F** MCP client gateway: **CLOSED 5/5 PASS** (atlas commit `5a9e458`; control-plane-lab `34838bd`)
+- **Cycle 1G** Atlas MCP server INBOUND on Beast: **NEXT (TLS strategy paco_request gate dispatched)**
+- **Cycles 1H + 2 + 3 + 4:** ahead per spec v3
 
-## Cycle 1F transport saga (Day 76, in chronological order)
+## Cycle 1F transport saga -- final tally
 
-1. **BLOCK at Step 3** (commit `1550eb2`): connectivity smoke from Beast hung; PD filed paco_request_transport_hang.md with 4 candidate paths (A install Tailscale / B new nginx vhost / C diagnostic / D stdio).
-2. **Path C verdict** (commit `560fb77`): Paco selected diagnostic-first; Verified live disproved 5.A (uvicorn binds 0.0.0.0); Phase C.1 dispatched.
-3. **Phase C.1 diagnostic complete** (commit `1f6896c`): PD identified MCP-Protocol-Version: 2025-03-26 header missing in python SDK 1.27.0 vs FastMCP 1.26.0 server. Recommended single-line atlas.mcp_client header fix.
-4. **Phase C.1 verdict revision** (commit `61b663b`): Paco's counter-probes (CP1-CP5) caught the gap -- header alone insufficient. Python SDK still hangs even with header on direct uvicorn HTTP; HTTPS+nginx still fails for Beast LAN source. Phase C.2 attach diagnostic dispatched.
-5. **Phase C.2.0 root cause PROVEN** (commit `3bb9517`): PD's py-spy stack on uvicorn PID 3631249 showed event loop parked in subprocess.run inside async homelab_ssh_run handler with NO asyncio.to_thread wrapper. Recv-Q=450 on uvicorn loopback socket = POST body queued unread because event loop blocked. Mechanism: event-loop blocking, not init-handler malfunction. Hypothesis 5.E PROVEN.
-6. **Phase 3 GO** (commit `f998883`, this anchor commit): combined fix dispatched -- (a) server patch mcp_server.py adds `import asyncio` + wraps 14 @mcp.tool handlers' sync helper calls in asyncio.to_thread; (b) atlas client patch adds MCP-Protocol-Version header; (c) deploy-restart via `sudo systemctl restart homelab-mcp.service` (CEO trigger == single-confirm); (d) end-to-end Beast smoke; (e) full Cycle 1F build per original handoff (4 tests + 5 acceptance gates + token logging + ACL + secrets discipline audit); (f) commits to santigrey/atlas + control-plane-lab close-out fold.
+Multi-phase diagnostic saga that proved discipline architecture works:
+- BLOCK at Step 3 connectivity smoke -> Path C verdict (5.A disproven) -> PD Phase C.1 incomplete fix -> Paco CP1-CP5 counter-probes caught gap -> Phase C.2.0 root cause PROVEN (event-loop blocking) -> Phase 3 GO -> 3 PD pre-execution catches (handler count 14->13, pretest count 16->15, args-wrapping mismatch) -> Step 11 retry post-Option B -> Cycle SHIPPED.
+- 7 paco_requests + 7 paco_responses + 1 protocol ruling + 1 close ruling
+- 33 findings caught pre-failure-cascade (30 directive-author + 2 PD pre-execution + 1 PD execution-failure)
+- Anchors held bit-identical 96+ hours through entire saga
+- Cycle SHIPPED 5/5 PASS with no rework
 
-## Pre-directive verification catches (5th standing rule)
+## Cycle 1G entry-point
 
-This cycle, the 5th rule earned its keep at every directive turn:
+Atlas v0.1 Cycle 1G per spec v3 section 8.1G: Atlas MCP server INBOUND on Beast. Atlas exposes its own tools to external MCP clients.
 
-- **Path C verdict:** Paco caught `host='0.0.0.0'` in mcp_http.py -> disproved 5.A before authoring directive
-- **Phase C.1 review:** Paco's CP1-CP5 (4 counter-probes from Beast) revealed PD's recommended Phase 3 fix was incomplete -- would have caused BLOCK #2
-- **Phase C.2.0 confirm:** Paco's Verified live caught (a) `asyncio` not yet imported in mcp_server.py; (b) PD's recommended `nohup` relaunch would orphan the systemd-managed process (PPID=1, unit at /etc/systemd/system/homelab-mcp.service) -- correct restart is `sudo systemctl restart homelab-mcp.service`
+**Architectural gate before implementation:** TLS posture has 4 defensible options (mirror CK Tailscale FQDN+nginx / Beast self-signed + Tailscale ACL / plain HTTP over Tailscale / mTLS). Per measure-twice-cut-once standing rule, paco_request ratifies strategy BEFORE build directive dispatches.
 
-Cumulative findings caught at directive-authorship across all 10 directive verifications: **30**.
+Handoff at `/home/jes/control-plane/docs/handoff_paco_to_pd.md` (gitignored, this turn) contains:
+- Cycle 1F close acknowledgments (rulings on PD's 5 asks)
+- Cycle 1G TLS scope summary
+- Verified live PRE capture commands
+- 8-section paco_request structure with seed option enumeration + trade-off matrix
+- Step 3 P6 #26 notification format
+- Step 4 commit/push
 
-## P6 lessons banked from Cycle 1F transport saga
+## P6 #21-#27 banked (Cycle 1F + close)
 
-- **#21** tcpdump-on-lo for client-server impedance pattern (PD-side discipline)
-- **#22** PD diagnostic verdicts on transport/protocol issues MUST be validated end-to-end against actual runtime path before issuing build directive (PD-side discipline)
-- **#23** Verify launch mechanism (systemd vs nohup vs screen vs supervisord) BEFORE authoring restart commands -- PPID=1 + systemd unit existence is a 10-second probe (Paco-side discipline)
-- **#24** Account for recursive observer effect when attaching diagnostic tools (py-spy/strace/tcpdump) to long-running production server -- Paco's homelab_ssh_run calls during Phase C.1 diagnostic were themselves the in-flight blockers (Paco-side discipline)
+- #21 tcpdump-on-lo for client-server impedance (PD discipline)
+- #22 PD diagnostic verdicts validate end-to-end against runtime path (PD discipline)
+- #23 Verify launch mechanism (systemd vs nohup) before authoring restart commands (Paco discipline)
+- #24 Recursive observer effect during long-running diagnostics (both sides)
+- #25 Hedge propagation discipline (Paco discipline)
+- #26 All Paco<->PD events write notification line in handoff_pd_to_paco.md (protocol)
+- #27 NEW (Cycle 1F close): Telemetry intelligibility invariant -- capture caller-provided form BEFORE internal transformations
 
-Cumulative P6 lessons banked: **24**. PD will append #21-#24 to canonical `docs/feedback_paco_pre_directive_verification.md` in Phase 3 Step 17.
+Cumulative P6 banked: **27**. PD will append #27 to canonical feedback file in next close-out fold.
 
 ## v0.2 P5 backlog
 
-- #1-#9: unchanged from Day 75 close
-- **#10** (NEW Day 76): file upstream issue/PR with mcp python SDK 1.27.0 to default `MCP-Protocol-Version: 2025-03-26` header on initialize when not user-overridden (match node-MCP and JS SDK behavior)
+1-#9: from prior cycles (unchanged)
+#10: file upstream PR with mcp Python SDK 1.27.0 to default MCP-Protocol-Version header
+#11: add beast SSH alias on CK ssh config
+#12: pytest async test isolation race in atlas.inference + atlas.embeddings token_logging
+#13: telemetry status field should reflect MCP CallToolResult isError, not just protocol-level success
+#14 NEW: remove .bak.phase3 rollback artifacts (mcp_server.py.bak.phase3 on CK + client.py.bak.phase3 + acl.py.bak.phase3 on Beast atlas) at v0.2 hardening close
+#15 NEW: rename streamablehttp_client to streamable_http_client per upstream MCP SDK convention (or filter DeprecationWarning if upstream lag persists)
 
-Total: **10**.
+Total: **15**.
 
 ## Substrate state
 
-- B2b anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical for ~76+ hours
-- Garage anchor: `2026-04-27T05:39:58.168067641Z` -- bit-identical for ~76+ hours
-- atlas.events: 6 rows (atlas.embeddings=2, atlas.inference=4) -- unchanged since Cycle 1E close
-- uvicorn PID 3631249: alive, ELAPSED 3-04+ hours (will restart in Phase 3 Step 9)
-- Atlas commit: `6c0b8d6` on santigrey/atlas (unchanged; Cycle 1F build pending Phase 3 execution)
+- B2b anchor: `2026-04-27T00:13:57.800746541Z` -- bit-identical 96+ hours through Cycles 1A-1F + Phase 3 deploy-restart
+- Garage anchor: `2026-04-27T05:39:58.168067641Z` -- bit-identical 96+ hours
+- mcp_server.py on CK: 388 lines (was 357 pre-Phase-3-patch); committed in fold at `34838bd`; new uvicorn PID 3333714 running asyncio.to_thread-wrapped code since 03:11:03 UTC
+- mcp_server.py.bak.phase3 on CK: preserved 18431 bytes (rollback artifact; v0.2 P5 #14 cleanup)
+- atlas.events: embeddings=12, inference=14, **mcp_client=6** (NEW source from Cycle 1F)
+- atlas package on Beast: HEAD `5a9e458`; mcp_client/ shipped (10 files / 771 insertions); .bak.phase3 files retained per ruling
+- Standing rules: 5 (unchanged)
 
 ## Standing rules
 
 5 memory files (unchanged):
 1. one-step-at-a-time / one-command-per-message / explicit acknowledgment
-2. measure-twice-cut-once for structural decisions
+2. measure-twice-cut-once for structural decisions (Cycle 1G TLS gate is direct application)
 3. canon location: control-plane-lab on CK + GitHub origin/main
 4. Paco-PD correspondence flows through /home/jes/control-plane/docs/
-5. **Paco pre-directive verification (mandatory Verified live block on every directive)**
+5. Paco pre-directive verification (mandatory Verified live block on every directive)
 
-## Active correspondence files (control-plane/docs/)
+## Active correspondence files at HEAD
 
-All committed to origin/main except handoff_*:
-- `paco_request_atlas_v0_1_cycle_1f_transport_hang.md` (commit `1550eb2`)
-- `paco_response_atlas_v0_1_cycle_1f_transport_resolved.md` (commit `560fb77`, Path C verdict)
-- `paco_review_atlas_v0_1_cycle_1f_phase_c1_diagnostic.md` (commit `1f6896c`, PD's Phase C.1)
-- `paco_response_atlas_v0_1_cycle_1f_phase_c1_review.md` (commit `61b663b`, Paco verdict revision)
-- `paco_review_atlas_v0_1_cycle_1f_phase_c20_attach.md` (commit `3bb9517`, PD's Phase C.2.0 root cause)
-- `paco_response_atlas_v0_1_cycle_1f_phase_c20_confirm_phase3_go.md` (commit `f998883`, Phase 3 GO)
-- `handoff_paco_to_pd.md` (gitignored; Phase 3 directive armed on CK -- 492 lines, 17 steps)
-- `handoff_pd_to_paco.md` (gitignored; placeholder, awaiting PD's Phase 3 close notification)
+In `/home/jes/control-plane/docs/`:
+- Cycle 1F close trail: 7 paco_requests + 7 paco_responses + 1 protocol ruling + 1 close confirm + paco_review (all committed, see git log)
+- `handoff_paco_to_pd.md` (gitignored, this turn) -- TLS strategy paco_request directive armed for PD
+- `handoff_pd_to_paco.md` (gitignored, placeholder)
+- `feedback_paco_pre_directive_verification.md` (committed; #21-#26 banked; #27 to land in next close-out fold)
 
-## Phase 3 directive scope (in handoff_paco_to_pd.md)
+## Key learnings -- Cycle 1F retrospective
 
-17 steps: anchors PRE -> server patch (asyncio.to_thread for 14 handlers + .bak.phase3 backup) -> syntax validation -> Atlas client patch + module + 4 tests -> 16 prior tests sanity -> pre-deploy paco_request checkpoint -> **deploy-restart via systemctl** (CEO trigger == single-confirm) -> Mac mini reconnect verify -> end-to-end Beast smoke (`tools_count >= 14`, homelab_ssh_run whoami -> 'jes') -> 20 pytest pass -> atlas.events delta + secrets discipline audit (0 hits on 'whoami'/'ciscokid') -> anchor POST diff bit-identical -> commits to santigrey/atlas + close-out fold to control-plane-lab -> paco_review with Verified live block + 12 sections -> append P6 #21-#24 to feedback file -> cleanup.
+- 5th standing rule earned its keep at every directive turn (cumulative 33 findings caught pre-failure)
+- P6 #26 notification protocol works end-to-end (first close-out use was clean)
+- P6 #25 (hedge propagation) caught 2 directive-author count errors at PD pre-execution review
+- P6 #24 (recursive observer) manifested in 2 layers (Phase C.1 diagnostic blocking + Step 7 pretest flake)
+- P6 #27 (telemetry intelligibility) generalizes Refinement 3 for all future schema-aware wrappers
 
-CEO trigger to PD: `Read docs/handoff_paco_to_pd.md and execute.`
-When PD finishes, CEO trigger to Paco: `Paco, PD finished Cycle 1F, check handoff.`
+## CEO startup sequence (next turn)
 
-## Brief unavailability window during Phase 3 deploy-restart (~30s)
-
-- Mac mini Claude Desktop drops; auto-reconnects via mcp-remote
-- This conversation's homelab-mcp tooling drops; auto-reconnects
-- Any other tail1216a3 mcp clients drop; auto-reconnect
-
-## On the horizon (post Cycle 1F close)
-
-- Cycle 1G: Atlas MCP server INBOUND on Beast (Atlas exposes its own tools to Sloan-as-MCP-client via TLS strategy paco_request before implementation)
-- Cycle 1H + 2 + 3 + 4: per spec v3
-- v0.2 P5 hardening pass
-- Per Scholas IBM AI Solutions Developer (separate thread, M/W/F 6-9 PM ET)
-- Job search ongoing (Applied AI / AI Platform Engineer roles, target placement May/June 2026)
+1. CEO trigger to PD: `Read docs/handoff_paco_to_pd.md and execute.`
+2. PD writes paco_request_atlas_v0_1_cycle_1g_tls_strategy.md + commits + writes notification
+3. CEO trigger to Paco: `Paco, PD escalated, check handoff.`
+4. Paco rules on TLS option ratification
+5. Paco dispatches Cycle 1G build directive
+6. PD executes
+7. Cycle 1G close: same flow as Cycle 1F
