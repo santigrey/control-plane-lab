@@ -19,8 +19,8 @@ Past sessions (Day 30, 51, 60, 65, 78) each shipped a "permanent" SSH fix that d
 | TheBeast | 192.168.1.152 | sloan2.tail1216a3.ts.net | jes | atlas-mcp + atlas Postgres replica + Garage anchor |
 | SlimJim | 192.168.1.40 | sloan1.tail1216a3.ts.net | jes | edge / MQTT broker |
 | Goliath | 192.168.1.20 | 100.112.126.63 (sloan4) | jes | GPU inference (Ollama) |
-| KaliPi | 192.168.1.254 | (TBD) | sloan | pentesting (isolated) |
-| Pi3 | 192.168.1.139 | 100.71.159.102 | sloanzj | DNS gateway (role TBD) |
+| KaliPi | 192.168.1.254 | (TBD) | jes (post Step 3.5) | pentesting (isolated). Was `sloan` until Day 78 Option A consolidation. |
+| Pi3 | 192.168.1.139 | 100.71.159.102 | jes (post Step 3.5) | DNS gateway (role TBD). Was `sloanzj` until Day 78 Option A consolidation. |
 | Mac mini | 192.168.1.13 | (TBD) | jes | MCP bridge host for Claude Desktop |
 
 **Class B -- endpoints; SSH out only (no inbound expected):**
@@ -28,7 +28,7 @@ Past sessions (Day 30, 51, 60, 65, 78) each shipped a "permanent" SSH fix that d
 | Device | LAN IP | Tailscale | User | Role |
 |---|---|---|---|---|
 | JesAir | 192.168.1.155 | (TBD) | jes | macOS laptop -- CEO ops |
-| Cortez | (LAN n/a) | 100.70.77.115 | sloan | Windows -- CEO ops + Cowork PD home |
+| Cortez | (LAN n/a) | 100.70.77.115 | sloan | Windows -- CEO ops + Cowork PD home. **Option A exception:** Windows local account fixed at OS install; consolidating to `jes` would require full reinstall. Stays `sloan`. |
 
 ## Required reachability
 
@@ -49,7 +49,12 @@ Three organic identities exist: `jes` (most nodes), `sloan` (KaliPi + Cortez), `
 
 **Paco recommendation: B.** The fragmentation is organic, fixing it has no operational benefit, ssh config makes it transparent. Document and move on.
 
-**CEO decision:** ___________ (fill in before Step 4)
+**CEO decision (Day 78 mid-day):** **OPTION A** -- consolidate to `jes` user across the fleet.
+
+- **KaliPi:** add `jes` user with sudo + ssh keys (Step 3.5 below). Old `sloan` user stays available; not removed.
+- **Pi3:** add `jes` user with sudo + ssh keys (Step 3.5 below). Old `sloanzj` user stays available; not removed.
+- **Cortez exception:** Windows local account is fixed at OS install time; consolidating to `jes` would require full reinstall + reconfigure of Tailscale + Cowork + all CEO tooling under that user. Cost-benefit ratio inverted; **Cortez stays `sloan`** as a documented exception, not a regression.
+- All canonical ssh config / authorized_keys / probe matrix below assume `jes@kalipi` and `jes@pi3` post-3.5; Cortez probes use `sloan@cortez` indefinitely.
 
 ## Canonical `/etc/hosts` (push to all Class A Linux nodes; Step 3)
 
@@ -93,12 +98,12 @@ Host goliath sloan4
 
 Host kalipi
     HostName 192.168.1.254
-    User sloan
+    User jes
     IdentityFile ~/.ssh/id_ed25519
 
 Host pi3
     HostName 192.168.1.139
-    User sloanzj
+    User jes
     IdentityFile ~/.ssh/id_ed25519
 
 Host macmini

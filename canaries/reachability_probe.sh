@@ -32,8 +32,8 @@ NODES_A=(
   "beast:192.168.1.152:jes"
   "slimjim:192.168.1.40:jes"
   "goliath:192.168.1.20:jes"
-  "kalipi:192.168.1.254:sloan"
-  "pi3:192.168.1.139:sloanzj"
+  "kalipi:192.168.1.254:jes"
+  "pi3:192.168.1.139:jes"
   "macmini:192.168.1.13:jes"
 )
 
