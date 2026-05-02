@@ -88,7 +88,7 @@ Before writing any code, PD verifies live state:
   - postgres: `2026-04-27T00:13:57.800746541Z`
   - garage: `2026-04-27T05:39:58.168067641Z`
 
-0.7 atlas package venv exists at `/home/jes/atlas/.venv` and has the existing dependencies (asyncpg, httpx, etc).
+0.7 atlas package venv exists at `/home/jes/atlas/.venv` and has the existing dependencies (psycopg[binary,pool], httpx, mcp, structlog, pydantic). [Day 78 amended per paco_response_atlas_v0_1_phase0_unblock.md; verified live: pyproject uses psycopg, NOT asyncpg.]
 
 **Pre-flight failure:** if any 0.x check fails, PD writes `paco_request_atlas_v0_1_phase0_blocker.md` and stops. Do NOT proceed to Phase 1.
 

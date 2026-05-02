@@ -3,7 +3,7 @@
 **Owner:** Paco (COO)
 **Source of truth:** This file. All other docs feed it; it feeds none.
 **Location:** Primary on CiscoKid `/home/jes/control-plane/CHECKLIST.md` + GitHub origin/main (canonical via git push). iCloud `/AI/Santigrey/CHECKLIST.md` is a CEO-convenience read-only copy, no longer Paco-managed (canon-flip 2026-04-26 Day 72).
-**Last updated:** 2026-05-01 (Day 77) -- Day 76-77 Atlas track: v0.1 Cycle 1 COMPLETE (1A-1I; 10 atlas-mcp tools live on Beast :8443); v0.2 Cycles 2A+2B+2C CLOSED (Path A Alexandra integration + Memory Browser + Audit Log Viewer + Token Usage Dashboard live on sloan3.tail1216a3.ts.net/dashboard/{memory,audit,tokens}). Substrate B2b+Garage anchors bit-identical 96+ hours through 9 Atlas cycles. SEQUENCING NOTE: Atlas v0.1 shipped ahead of canon order; H1 (SlimJim observability) still DRAFT awaiting CEO ratification per CHECKLIST P3.
+**Last updated:** 2026-05-02 (Day 78 morning) -- Day 77 evening Track 1 charter completion shipped (Charter 7 Security/Mr Robot + Charter 8 Family Office + Sub-agent Definitions + Atlas SOP v1.0 corrected + Mr Robot SOP v1.0 + inter-dept SOPs v1.0 + PD title memo + DATA_MAP naming clarification; commit `4df6831`). Day 77 evening Mercury sub-agent slot closure + 8 Atlas v0.1 agent loop picks RATIFIED by CEO (commit `c5b08c2`). Day 77 late Atlas v0.1 agent loop build spec authored (10 phases / 12 gates / 600 lines; commit `23ab09f`). Day 78 morning PD escalated Phase 0 blocker (paco_request_atlas_v0_1_phase0_blocker.md; 4 PASS / 2 real-fail Beast SSH key gap / 1 false-fail spec wording asyncpg->psycopg). Alexandra smoke test issues surfaced: Google OAuth refresh expired (3 fails: get_emails / get_calendar / get_upcoming_calendar); SESSION.md grew past 50KB read_file limit (191KB); get_system_status schema issue. Mercury still failing DB connection (localhost vs LAN IP). All rolled into Day 78 morning section below.
 **Update rule:** Paco updates after every closed task or every CEO direction change. Status legend: `[ ]` open, `[~]` in progress, `[x]` done, `[!]` blocked, `[-]` deferred.
 
 ---
@@ -33,7 +33,7 @@
 ## P3 -- HARDWARE ORG REDISTRIBUTION (CAPACITY_v1.1 ratified; redistribution unblocked)
 
 - [ ] **SlimJim** -- add Prometheus + Grafana, deploy node_exporter on every node. **Owner: Paco spec, PD execute.**
-- [~] **Beast** -- Atlas v0.1 SHIPPED 2026-05-01 Day 77 (10-tool atlas-mcp at https://sloan2.tail1216a3.ts.net:8443/mcp; substrate-only / not-yet-agent). Atlas-as-Operations-agent per Charter 5 (talent ops + vendor admin + monitoring) is the remaining work. **Owner: Paco architect agent capability spec, PD execute.**
+- [~] **Beast** -- Atlas v0.1 substrate SHIPPED Day 77 (10-tool atlas-mcp at https://sloan2.tail1216a3.ts.net:8443/mcp). 8 architectural picks RATIFIED Day 77 evening (commit `c5b08c2`). Build spec authored Day 77 late (commit `23ab09f`; 600 lines; 10 phases; 12 gates). PD Phase 0 pre-flight ESCALATED Day 78 morning (4 PASS / 2 real-fail / 1 false-fail). Phase 0 unblock issued Day 78 (`docs/paco_response_atlas_v0_1_phase0_unblock.md`); SSH key deployment procedure provided to PD; spec line 92 amended (asyncpg->psycopg). Cycle resumes after Beast ed25519 deployed to fleet authorized_keys. **Owner: PD execute Phase 0 retry.**
 - [-] **SlimJim** -- Wazuh/Suricata security monitoring. Deferred (needs careful tuning).
 - [ ] **Pi3** -- assign role. Currently registered (192.168.1.139, sloanzj) but unprobed and unassigned. **Owner: CEO direction needed.**
 - [ ] **JesAir** -- evaluate beyond thin client (Apple Silicon, capable of more). **Owner: CEO direction needed.**
@@ -43,10 +43,10 @@
 ## P4 -- ORG CHARTERS
 
 - [x] **CHARTERS_v0.1.md ratification** -- six role charters + Alexandra platform charter. RATIFIED 2026-04-26 Day 72 by CEO. Atlas-on-Beast revision applied at ratification per CAPACITY_v1.1 (Atlas builds on Beast for Postgres replica + MinIO + embeddings + tool execution; inference offloaded to Goliath Qwen 2.5 72B over LAN). Pulled from iCloud to CiscoKid as part of iCloud canon-flip; now canonical at `/home/jes/control-plane/CHARTERS_v0.1.md` on CiscoKid + GitHub. 11074 bytes, 7 charters + Platform charter + Ratification audit section.
-- [ ] **PD title communication** -- announce Head of Engineering scope to PD. Deferred until charter ratification. **Owner: CEO + Paco.**
-- [ ] **Family Office charter** -- explicitly drafted or explicitly kept informal. **Owner: CEO direction.**
-- [ ] **Sub-agent definitions** inside each department (Mr Robot, Mercury, future agents). **Owner: Paco draft.**
-- [ ] **Inter-department SOPs** -- how Engineering hands work to Operations, etc. **Owner: Paco draft.**
+- [x] **PD title communication** -- DRAFTED Day 77 at `docs/pd_title_communication_memo.md`. CEO sends to PD when ready (recommended via direct chat paste rather than canon-doc routing). **Owner: CEO send.**
+- [x] **Family Office charter** -- Charter 8 added Day 77 (CEO-Direct, kept lightweight v0.2; CHARTERS_v0.1.md amended). May be formalized further as life-stage warrants.
+- [x] **Sub-agent definitions** -- Mr Robot promoted to Charter 7 Day 77 (Security/SlimJim home). Mercury sub-agent slot CLOSED Day 77 evening (Kalshi paper-trading bot under Operations/Atlas; mercury-scanner.service systemd-active; paper-trade-only v0.1; real-money requires explicit CEO ratification + Mercury v2). Future agent slots (recruiter / marketing / customer support / finance) enumerated in CHARTERS Sub-agent Definitions section.
+- [x] **Inter-department SOPs** -- 7 handoff patterns RATIFIED Day 77 at `docs/inter_department_sops_v1_0.md` (PD->Atlas / Atlas->Mr Robot / Mr Robot->Atlas / PD->Mr Robot / Mr Robot->PD / Axiom->PD-or-Atlas / any->CEO Tier 3). Transport substrate documented (atlas.events stream + atlas.tasks queue + handoff_*.md correspondence).
 - [ ] **Brand & Market quarterly plan** -- separate strategy document. **Owner: CEO + Paco.**
 
 ## P5 -- DAY 69 CARRYOVERS (still pending)
@@ -66,6 +66,11 @@
 ---
 
 ## Closed (audit trail)
+
+- **#107 -- Day 78 morning Atlas v0.1 Phase 0 unblock + Day 78 rollup CHECKLIST update** (commit Day 78 morning). PD escalated Phase 0 pre-flight blocker (3/7 fail: 0.3 + 0.5 Beast no outbound SSH key, 0.7 spec wording asyncpg->psycopg). Paco issued 5 rulings: ratify Phase 0 result; Option A SSH key strategy with deployment procedure (no CEO ssh-copy-id needed; PD deploys via existing CK->fleet SSH); spec line 92 amended (shipped this commit); P6 #31 banked (third-instance confirmation of directive-author hedge propagation pattern); halt acknowledged. Alexandra smoke test rolled up: Google OAuth expired (3 fails), SESSION.md too large for read_file, get_system_status schema, memory_save classifier ergonomics. Mercury DB conn fix surfaced. Phase 0 retry GO once SSH key deployed.
+- **#106 -- Day 77 late Atlas v0.1 agent loop build spec authored** (commit `23ab09f`). 600 lines / 10 phases / 6 acceptance gates + 6 standing gates. Operates on 8 ratified picks. Phase 0 mandatory pre-flight (no code; verify 7 live state checks). Phases 1-2: systemd unit + asyncio loop skeleton. Phases 3-6: 4 domains. Phase 7: communication helper. Phases 8-10: tests + deploy + ship report.
+- **#105 -- Day 77 evening Mercury sub-agent slot CLOSURE + 8 picks RATIFIED** (commit `c5b08c2`). Mercury TBD slot resolved: defined as Kalshi paper-trading bot at /home/jes/polymarket-ai-trader/ on CK; mercury-scanner.service systemd-active; supervised by Atlas under Operations Charter 5; paper-trade-only v0.1; real-money flip explicitly gated. 8 architectural picks RATIFIED for Atlas v0.1 agent loop (`docs/paco_request_atlas_v0_1_agent_loop_picks.md`). 6-condition real-money trigger gate canonical.
+- **#104 -- Day 77 Track 1 charter completion** (commit `4df6831`). Six files: CHARTERS_v0.1.md v0.2 amendment 173->257 lines (Charter 7 Security/Mr Robot home=SlimJim per defense-in-depth + Day 77 hardware probe; Charter 8 Family Office CEO-Direct kept lightweight; Sub-agent Definitions section; Org chart v0.4->v0.5; 4 ops depts + 2 CEO-direct + Platform). DATA_MAP.md +12 lines naming convention note (Control Plane vs Data Plane vs lowercase controlplane DB name). Atlas SOP v1.0 corrected from Claude-in-Chrome draft (security-domain bleed removed; vendors itemized; tier model aligned). Mr Robot SOP v1.0 NEW. Inter-department SOPs v1.0 NEW. PD title communication memo NEW.
 
 - [x] **2026-04-25 Day 70 AM** -- Org chart locked v0.4 (3 departments + 2 CEO-direct + Alexandra platform).
 - [x] **2026-04-25 Day 70 AM** -- CHARTERS_v0.1.md drafted (164 lines, 7 charters).
@@ -226,6 +231,40 @@ Wait -- correction: H1 actually CLOSED Day 74 per audit trail (entry above on 20
 Next canon-prioritized item per Charter 5: **Atlas-as-Operations-agent** -- the 10 atlas-mcp tools shipped are substrate, not the operational agent the charter describes (talent ops + vendor admin + monitoring). That is the remaining P3 work.
 
 ---
+
+
+
+---
+
+## DAY 78 MORNING ROLLUP -- Atlas v0.1 Phase 0 unblock + Alexandra ops issues + Mercury fix
+
+Three concurrent issues surfaced Day 78 morning. Tracking together as a cohesive operational snapshot.
+
+### Atlas v0.1 cycle continuation
+
+- [~] **Phase 0 retry after Beast SSH key deployment** -- PD has procedure (paco_response_atlas_v0_1_phase0_unblock.md Ruling 2). Generates ed25519 on Beast; deploys pubkey to fleet authorized_keys via existing CK->fleet SSH path. NO CEO ssh-copy-id required. Idempotent grep-then-append pattern. Re-verify Phase 0 checks 0.3 + 0.5 + 0.7. Write paco_review for Phase 0 close. **Owner: PD execute.**
+- [x] **Spec line 92 amendment asyncpg -> psycopg** -- shipped Day 78 morning in `tasks/atlas_v0_1_agent_loop.md`.
+- [x] **P6 #31 banking** -- third-instance confirmation of directive-author hedge propagation pattern. Banked Day 78 in `docs/feedback_paco_pre_directive_verification.md`.
+
+### Alexandra ops issues (smoke test 2026-05-02 03:30 UTC: 10 PASS / 5 FAIL / 1 SCHEMA_ISSUE)
+
+- [ ] **Google OAuth refresh expired** -- root cause for 3 of 5 smoke test failures (get_emails / get_calendar / get_upcoming_calendar). Error: `RefreshError: invalid_grant: Token has been expired or revoked.` Fix path: re-auth Google credentials via OAuth flow; refresh `google_token.json` and `google_credentials.json` per existing wiring in `google_readers.py`. **Owner: CEO re-auth + PD verify smoke pass.**
+- [ ] **read_file SESSION.md too large** -- 191KB > 50KB threshold. Two paths: (a) truncate SESSION.md to ~40KB keeping recent + summary of older; (b) bump read_file size limit (defense-in-depth concern; 50KB is intentional). Recommended path (a) -- SESSION.md should be a current-session summary, not a perpetually-growing log. **Owner: CEO trim OR Paco trim with CEO ratification.**
+- [ ] **get_system_status schema issue** -- needs investigation of what the smoke test expected vs what the tool returned. May be benign drift; may be real schema regression. **Owner: PD investigate at convenience.**
+- [ ] **memory_save smoke test classifier** -- intentionally-disabled-by-default tool flagged as FAIL. False positive in classifier; smoke test should distinguish "intentionally disabled" (PASS-with-note) from "runtime error" (FAIL). Small ergonomic fix to `tool_smoke_test.py`. **Owner: PD when convenient.**
+
+### Mercury operational fix
+
+- [ ] **Mercury .env DATABASE_URL fix** -- mercury-scanner.service has been failing `Connection refused` to localhost:5432 since Day 72 (when B2b dataplane work changed Postgres bind from localhost-only to LAN-IP-only at 192.168.1.10:5432). Mercury .env has stale `localhost` URL; orchestrator .env has correct `192.168.1.10`. Fix: edit `/home/jes/polymarket-ai-trader/.env` line `DATABASE_URL=postgresql://admin:adminpass@localhost:5432/controlplane` -> `DATABASE_URL=postgresql://admin:adminpass@192.168.1.10:5432/controlplane`. Then `sudo systemctl restart mercury-scanner.service`. Verify with `journalctl -u mercury-scanner.service -n 5` -- should show successful scans, not connection-refused errors. **Owner: CEO single-line edit + restart, OR Paco surgical edit on CEO authorization.**
+- [-] **Mercury repo + dir rename polymarket-ai-trader -> mercury** -- DEFERRED. Atlas v0.1 build spec Domain 6 path references `/home/jes/polymarket-ai-trader/`. Rename can wait until after Atlas v0.1 ships; bank as Atlas v0.1.1 cycle scope OR standalone P5 cycle. Cosmetic; not operational.
+
+### Cumulative metrics this rollup
+
+- Standing rules: 6 (unchanged)
+- P6 lessons banked: 31 (+1 #31 Day 78 morning)
+- v0.2 P5 backlog: 42 (unchanged; Day 78 issues tracked in this section, not P5 EXTENSION which is v0.2 architectural backlog)
+- Atlas v0.1 cycle paco_request count: 4 (handler-count / pretest-flake / args-wrapping / Phase 0 blocker -- all caught at PD pre-execution review)
+- Pre-failure-cascade catches: 39 (+1 Day 78 Phase 0 SSH gap)
 
 ## WORKFLOW TIGHTENING -- Day 77 ratifications (CEO-directed)
 

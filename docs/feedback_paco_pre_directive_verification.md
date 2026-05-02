@@ -263,3 +263,36 @@ All three fail the same way -- assertion from memory when verification is cheap 
 All P6 #21 through #29 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 29** (was 28 at end of Cycle 1G; +1 #29 API symbol verification before reference).
 
 Standing rules: **6** (was 5; +1 SR #6 self-state verification before conclusion-drawing).
+
+
+---
+
+## P6 #31 -- Recurring third-instance confirmation of P6 #25 (directive-author hedge propagation): count/name claims from memory persist into specs (Day 78 morning bank)
+
+**Banked:** 2026-05-02 UTC (Day 78 morning) per Paco's response `docs/paco_response_atlas_v0_1_phase0_unblock.md` Ruling 4.
+
+**Statement:** When the directive author writes counts ("14 handlers", "16 tests") or names ("asyncpg", "the foo helper") from memory rather than verifying against the actual repo state, those claims propagate into the canonical spec and become PD's pre-execution verification load. Three confirmed instances Day 76-78 establishes this is a recurring pattern, not an isolated error.
+
+**Three confirmed instances:**
+1. Cycle 1F Phase 3 -- handler count claimed 14, actual 13 (paco_response `77759f8`)
+2. Cycle 1F Phase 3 Step 7 -- prior-test count claimed 16, actual 15 (paco_response part of `eadc2e7`)
+3. Atlas v0.1 Phase 0 spec -- dependency name claimed `asyncpg`, actual `psycopg[binary,pool]` (paco_response `docs/paco_response_atlas_v0_1_phase0_unblock.md`)
+
+**Distinction from P6 #25:** P6 #25 named the pattern at first instance. P6 #31 confirms the pattern is recurring -- not a one-off Cycle 1F anomaly. The distinction matters because recurring patterns warrant standing-rule reinforcement, not just a flagged note.
+
+**Mitigation pattern (becomes standing practice for spec authors):** Before claiming any count or name in a build spec, run the actual probe:
+- Counts: `grep -c '^def ' <module>` for handler counts; `find <dir> -name 'test_*.py' | wc -l` for test counts
+- Names: `cat pyproject.toml | grep -A 20 dependencies` for dep names; `psql \du` for role names; `\dn` for schema names; `systemctl list-units` for unit names
+- File-existence claims: `ls -la <path>` BEFORE writing "the file at <path> contains..."
+
+The probe takes 5 seconds. The error costs PD a paco_request escalation and one round-trip.
+
+**Standing rule reinforcement:** PD's pre-execution verification under 5-guardrail rule + SR #6 catches every instance. The rule is the safety net; PD performing the safety net's job is correct discipline. Spec authors should not lean on PD as the verification layer -- spec authors should pre-verify so PD's verification is a confirmation, not a correction.
+
+**Cross-reference:** P6 #25 (original instance), P6 #20 (deployed-state names), P6 #28 (behavioral patterns), P6 #29 (API symbols). All four are surface-specific applications of the same root rule: do not assert from memory when verification is one tool call away.
+
+## Cumulative (Day 78 morning)
+
+All P6 #21 through #31 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 31** (was 29 in this file at end of Cycle 1H; +1 #30 in CHECKLIST P6 EXTENSION; +1 #31 here Day 78).
+
+Standing rules: **6** (unchanged; SR #6 self-state verification before conclusion-drawing covers Day 78 PD-trigger arrival pattern; held).
