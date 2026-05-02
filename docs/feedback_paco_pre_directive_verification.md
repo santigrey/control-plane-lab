@@ -291,8 +291,51 @@ The probe takes 5 seconds. The error costs PD a paco_request escalation and one 
 
 **Cross-reference:** P6 #25 (original instance), P6 #20 (deployed-state names), P6 #28 (behavioral patterns), P6 #29 (API symbols). All four are surface-specific applications of the same root rule: do not assert from memory when verification is one tool call away.
 
-## Cumulative (Day 78 morning)
+---
 
-All P6 #21 through #31 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 31** (was 29 in this file at end of Cycle 1H; +1 #30 in CHECKLIST P6 EXTENSION; +1 #31 here Day 78).
+## P6 #32 -- Directive-author entire-API-mental-model from memory: spec code blocks need canonical-reference impl as source, not memory (Day 78 morning bank, 4th-instance escalation)
 
-Standing rules: **6** (unchanged; SR #6 self-state verification before conclusion-drawing covers Day 78 PD-trigger arrival pattern; held).
+**Banked:** 2026-05-02 UTC (Day 78 morning) per Paco's response `docs/paco_response_atlas_v0_1_phase2_db_api_amendment.md` Ruling 3.
+
+**Statement:** P6 #25/#31 named the count/name-from-memory pattern (single-symbol, mechanical fix). P6 #29 named the API-symbol-from-memory pattern (one symbol, one verification). P6 #32 names a deeper surface: when a directive author writes a complete code block in a build spec from a remembered API mental model, the result contains MULTIPLE distinct errors (API style + column names + type model + return shape) that compound. The mitigation cannot be "verify each symbol" (that scales linearly with the block); the mitigation must be "copy from canonical reference impl and adapt."
+
+**Originating context (Atlas v0.1 Phase 2 spec):** Paco authored `tasks/atlas_v0_1_agent_loop.md` lines 195-230 (poller.py skeleton) using an asyncpg-style API mental model. Reality: atlas.db is psycopg-based per P6 #29 + Cycle 1I canonical at `atlas.mcp_server.tasks.claim_task` (commit `d383fe0`). PD pre-execution review caught FIVE distinct errors:
+1. `from atlas.db import get_pool` -- atlas.db has no `get_pool`; canonical export is `Database`
+2. `pool.acquire() + conn.fetchrow()` -- canonical is `db.connection() + cursor() + cur.execute() + cur.fetchone()`
+3. `started_at=now()` -- column does not exist; canonical is `updated_at`
+4. `completed_at=now()` -- column does not exist; canonical is `updated_at`
+5. `RETURNING id, kind, payload, assigned_to` -- columns `kind` and `assigned_to` do not exist; `kind` lives inside payload jsonb (`payload->>'kind'`)
+
+Cost of skipping verification: would have been 5 errors compounding into a stack trace at first `python -m atlas.agent` smoke test, requiring sequential debug + multiple retry cycles.
+
+**Distinction from P6 #29 + #31:**
+- P6 #29: single API symbol from memory (e.g. `embed_single` vs `get_embedder().embed`). Mitigation: grep one symbol.
+- P6 #31: count or single name from memory (e.g. `14 handlers` vs 13; `asyncpg` vs `psycopg[pool]`). Mitigation: run the count/grep.
+- P6 #32 (NEW): entire code-block API mental model from memory (multi-symbol + multi-column + multi-pattern compound). Mitigation: copy from canonical reference impl. The P6 #29 grep does not scale; the canonical-copy approach does.
+
+**Originating context detail:** The Cycle 1I canonical pattern was already documented in `atlas.mcp_server.tasks` module docstring with exact P6 #29 reference: "DB API: uses atlas.db.Database psycopg-style API verified live per P6 #29: async with db.connection() as conn: async with conn.cursor() as cur: await cur.execute(sql, args) with %s placeholders, await cur.fetchall() / await cur.fetchone() returns tuples". The Phase 2 spec was authored without consulting this canonical pattern. The canonical reference EXISTED; the spec author simply did not reach for it.
+
+**Mitigation pattern (becomes standing practice for spec authors writing code blocks):** Before authoring a code block in a build spec that interacts with an internal subsystem (atlas.db, atlas.embeddings, atlas.events, etc.), the spec author:
+1. Identifies the canonical reference impl (the most recent, most-tested, P6-documented usage of that subsystem in atlas.* source)
+2. Copies that impl verbatim into a scratch buffer
+3. Adapts the SQL / business logic for the new context, keeping the API surface bit-identical to the canonical
+4. Pastes the adapted result into the build spec
+
+The probe takes 30 seconds (find the canonical impl + copy/adapt). The error costs PD a paco_request escalation + Paco a spec amendment + 5-error compound debug if not caught.
+
+**Standing rule reinforcement:** PD's pre-execution verification under 5-guardrail rule + SR #6 catches every instance, INCLUDING this 4th instance. The rule is the safety net; PD performing the safety net's job is correct discipline. P6 #32 specifically applies to spec authors and asks them to pre-emptively close the gap before PD has to escalate.
+
+**Cross-reference:** P6 #25 (original count/name memory pattern), P6 #20 (deployed-state names), P6 #28 (behavioral patterns), P6 #29 (API symbols), P6 #31 (recurring confirmation of P6 #25). All five are surface-specific applications of the same root rule: do not assert from memory when verification is one tool call away. P6 #32 is the most expensive surface (5-error compound) and warrants the most rigorous mitigation (canonical-copy, not symbol-grep).
+
+## Cumulative (Day 78 morning, post-P6 #32)
+
+All P6 #21 through #32 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 32** (was 31 at start of Day 78 morning; +1 #32 here Day 78 morning Phase 2 escalation).
+
+Standing rules: **6** (unchanged; SR #6 self-state verification before conclusion-drawing held through Day 78 morning).
+
+Distribution by surface:
+- Counts/names from memory: P6 #25 + #31 (4 instances total)
+- Single API symbols from memory: P6 #29 (1 instance Cycle 1H)
+- Deployed-state names from memory: P6 #20 (1 instance)
+- Behavioral patterns from memory: P6 #28 (1 instance)
+- **Entire API mental model from memory: P6 #32 (1 instance Day 78 morning Phase 2)** -- newest surface, highest cost-per-instance, requires canonical-copy mitigation
