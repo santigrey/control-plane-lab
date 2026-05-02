@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day (post Step 4 close-confirm; reachability cycle Steps 1-4 + 3.5 all closed)
+**Last updated:** 2026-05-02 Day 78 mid-day (post Step 5 close-confirm; reachability cycle Steps 1-5 + 3.5 all closed; only Step 6 remaining)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -49,7 +49,7 @@ Three active queues, executed in order:
 - [x] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath. CLOSE-CONFIRM 4/4 PASS first-try; standing gates 5/5 bit-identical (PD review HEAD `b421e05`; close-confirm `docs/paco_response_reachability_step3_close_confirm.md`)
 - [x] Step 3.5 -- KaliPi+Pi3 onboarding CLOSE-CONFIRM 6/6 phases PASS; standing gates 5/5 bit-identical; jes user with NOPASSWD sudo + canonical ssh keys + canonical /etc/hosts on both nodes; MCP HOST_USERS mapped to jes (commit `5517775`); homelab-mcp.service restarted (MainPID 1640430). Patch-cycle Step 1 banked. Close-confirm `docs/paco_response_reachability_step35_close_confirm.md`.
 - [x] Step 4 -- CLOSE-CONFIRM 5/5 sub-steps PASS; N×N matrix 31/31 cells PASS (30 cross-node + 1 self-loop, 5 n/a); standing gates 5/5 bit-identical; CEO "no SSH issues" priority discharged via per-node post-install verification + destructive-safe install order. Close-confirm `docs/paco_response_reachability_step4_close_confirm.md`. New canon `docs/fleet_reachability_matrix_canon.md`.
-- [ ] Step 5 -- Mac mini sshd persistence + watchdog
+- [x] Step 5 -- Mac mini onboarding CLOSE-CONFIRM (sshd already persistent; pre-directive verification caught .13->.194 IP drift; canonical /etc/hosts + ~/.ssh/config + 9-key authorized_keys installed on 6 fleet nodes + Mac mini; MCP ALLOWED_HOSTS macmini IP corrected to .194; full 7x7 NxN matrix 42/42 cross-node PASS; standing gates 5/5 bit-identical). Close-confirm `docs/paco_response_reachability_step5_close_confirm.md`.
 - [ ] Step 6 -- Probe full N×N PASS; commit canon baseline
 - [ ] Step 7 -- Atlas Domain 1 integration (deferred; not blocking)
 
