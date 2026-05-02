@@ -1,9 +1,21 @@
 # Santigrey Data Map
 
-**Updated:** 2026-04-27 (Day 72/73)
+**Updated:** 2026-05-01 (Day 77) -- Naming convention note added (controlplane DB vs Control Plane role).
 **Purpose:** Where every piece of data lives, why it lives there, and how it moves.
 **Canonical:** `/home/jes/control-plane/DATA_MAP.md` on CiscoKid
 **iCloud copy:** `~/iCloud/AI/Santigrey/DATA_MAP.md` (read-only convenience)
+
+---
+
+## Naming convention note
+
+Three distinct things share the word "control" in this stack. They are NOT the same:
+
+- **Control Plane** (capitalized concept, per CAPACITY_v1.1) -- the *role* CiscoKid plays in the architecture: receives traffic, dispatches work, runs MCP server, hosts dashboard, primary Postgres listener.
+- **Data Plane** (capitalized concept, per CAPACITY_v1.1) -- the *role* Beast plays in the architecture: Postgres replica, Garage S3, agent substrate, embeddings, fine-tuning.
+- **`controlplane`** (lowercase, the literal Postgres database name) -- a string. The DB is hosted on CiscoKid (primary, Control Plane role) and replicated to Beast (replica, Data Plane role) via B2b logical replication. Agent-native schemas (`atlas`, future `mr_robot`, future `security`) live in the `controlplane` DB *on Beast* but are NOT replicated -- they are Beast-local writes. The DB name predates the formal Control/Data Plane terminology and is retained for substrate stability per Standing Rule #1 (do not break working substrate for cosmetic naming).
+
+When a charter or SOP says "writes to atlas.* in controlplane on Beast," that is a Data Plane operation against a Beast-local schema. The `controlplane` string is just historical. Do not confuse it with CiscoKid's Control Plane role.
 
 ---
 
