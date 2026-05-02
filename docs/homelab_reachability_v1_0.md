@@ -81,11 +81,11 @@ CEO performs at each node's terminal (or via existing-user SSH session). Bundled
 
 1. **Create `jes` user** with NOPASSWD sudo (`useradd -m -s /bin/bash jes` + `usermod -aG sudo jes` + sudoers.d drop-in for `jes ALL=(ALL) NOPASSWD:ALL` mode 0440).
 2. **Bootstrap ssh-key access** — install at minimum CK's canonical outbound key in `/home/jes/.ssh/authorized_keys` (mode 0600; parent dir mode 0700; owner `jes:jes`) so PD can reach the new user at Step 4. Full per-node authorized_keys policy applies at Step 4.
-3. **Disable cloud-init `manage_etc_hosts`** — edit `/etc/cloud/cloud.cfg` to set `manage_etc_hosts: False`. KaliPi confirmed cloud-init managed (Day 78 verification); Pi3 verify before patching (`grep manage_etc_hosts /etc/cloud/cloud.cfg`).
+3. **Cloud-init `manage_etc_hosts` defensive drop-in** — write `/etc/cloud/cloud.cfg.d/99-disable-managed-hosts.cfg` containing `manage_etc_hosts: false`. Note (per Day 78 mid-day verification): KaliPi cloud-init services are inactive and `/etc/hosts` mtime is 5+ months old despite many boots — cloud-init is NOT actively re-rendering `/etc/hosts`. Drop-in is belt-and-suspenders against future cloud-init reset/clean, not a real necessity for current behavior. Pi3 verify cloud-init status first (`systemctl is-active cloud-init.service`); apply drop-in for canon parity if cloud-init is present.
 4. **Install canonical `/etc/hosts`** using the Step 3 marker-block pattern (same Python heredoc).
-5. **Wire Pi3 into PD's `homelab_ssh_run` allowed-host list** — MCP server-side config update (out-of-band of node config; reachability cycle prerequisite for Step 4 PD execution against Pi3).
+5. **Update MCP server `HOST_USERS` mapping** — edit `/home/jes/control-plane/mcp_server.py` `HOST_USERS` dict: `kalipi: sloan` → `kalipi: jes`; `pi3: sloanzj` → `pi3: jes`. Restart `homelab-mcp.service`. Note (per Day 78 mid-day verification): both KaliPi and Pi3 are already present in `ALLOWED_HOSTS` (lines 34 + 38 of mcp_server.py); the wiring task is the user-mapping update, not the host-allowlist add. The Step 3.5 directive `docs/paco_directive_reachability_step35_kalipi_pi3_onboarding.md` Phase C captures this in detail.
 
-Detailed CEO-terminal procedure documented as a separate Paco directive when Step 3 closes and 3.5 becomes active. Per-step CEO authorization remains the rule.
+Detailed CEO-terminal procedure: `docs/paco_directive_reachability_step35_kalipi_pi3_onboarding.md` (authored Day 78 mid-day post-Step-3 close). Per-step CEO authorization remains the rule.
 
 ## Canonical `~/.ssh/config` (push to each device; Step 4)
 

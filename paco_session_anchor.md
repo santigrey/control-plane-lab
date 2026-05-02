@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day (post Step 3 close-confirm)
+**Last updated:** 2026-05-02 Day 78 mid-day (post Step 3.5 dispatch)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -47,7 +47,7 @@ Three active queues, executed in order:
 - [x] Step 2 -- CEO user policy: Option A consolidate to `jes` (HEAD 1cfced4)
 - [x] Cortez sub-decision: Y1 ratified (Day 78 mid-day; canon already encodes `sloan@cortez-canonical`)
 - [x] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath. CLOSE-CONFIRM 4/4 PASS first-try; standing gates 5/5 bit-identical (PD review HEAD `b421e05`; close-confirm `docs/paco_response_reachability_step3_close_confirm.md`)
-- [ ] Step 3.5 -- CEO at KaliPi+Pi3 terminal: create `jes` user with NOPASSWD sudo + bootstrap ssh-keys + disable cloud-init `manage_etc_hosts` + install canonical /etc/hosts + wire Pi3 into PD `homelab_ssh_run` allowed-host list
+- [~] Step 3.5 -- CEO playbook IN FLIGHT: jes user creation on KaliPi+Pi3 + NOPASSWD sudo + ssh-key bootstrap + cloud-init defensive drop-in + canonical /etc/hosts + MCP `HOST_USERS` user-mapping update kalipi/pi3 → jes + service restart (directive `docs/paco_directive_reachability_step35_kalipi_pi3_onboarding.md` dispatched Day 78 mid-day)
 - [ ] Step 4 -- Push ~/.ssh/config + authorized_keys to all 9 devices
 - [ ] Step 5 -- Mac mini sshd persistence + watchdog
 - [ ] Step 6 -- Probe full N×N PASS; commit canon baseline
@@ -75,7 +75,7 @@ Three active queues, executed in order:
 ### Discipline metrics
 - 34 P6 lessons banked (last: #34 Day 78 morning)
 - 6 standing rules
-- 17 known canon-hygiene exposures pending P5 v0.1.1 (16 adminpass + 1 phone literal)
+- 18 known canon-hygiene exposures pending P5 v0.1.1 (17 P5-class weak-credential + 1 phone literal; +1 mcp_server.py line 25 found Day 78 mid-day, P6 #34 forward-redaction applied to new artifacts this cycle)
 - 5 paco_requests / 5 caught at PD pre-execution
 - Paco-side error rate this session: high; correlated with conversation depth; fresh session expected to reduce
 
