@@ -15,7 +15,7 @@ Paco re-verified all 3 PD findings against live canon.
 | F1 line-citation | Phase 7 actual = 427-451; my docs cited 449-487 | `grep -n '^## Phase'`: Phase 7 = line 427; Phase 8 = line 452. PD correct. |
 | F2 scope divergence | Spec lines 427-451 = 7.1 only (no 7.2); directive added 7.2 cancel-window wire-up | `sed -n '427,451p'`: spec ends at acceptance line for emit_event + dispatch_telegram + Twilio mock. NO 7.2. NO mercury wire-up. PD correct. |
 | F2 deferred-deferred pattern | Phase 6 mercury.py lines 345/347/357/359 explicit `TODO(Phase 7)` markers | grep on Beast: 4 matches at exact lines PD cited. PD correct. |
-| F3 phone literal | Spec line 437 contains literal denver phone number | `sed -n '437p'`: literal `+1 720 902 7314` present in Twilio dispatch instruction. PD correct (and PD did NOT reproduce literal in paco_request -- P6 #34 standing practice held). |
+| F3 phone literal | Spec line 437 contains literal denver phone number | `sed -n '437p'`: literal Sloan-mobile present in Twilio dispatch instruction (literal value not reproduced here per P6 #34 standing practice). PD correct (and PD also did NOT reproduce literal in paco_request). |
 | In-flight P6 #34 self-catch | PD first-draft reproduced both phone + adminpass literals while documenting F3; caught pre-commit; atomic-rewrote | Cannot re-verify since rewrite was atomic in working tree pre-commit. Trust PD self-report; consistent with discipline pattern. |
 
 No discrepancies. PD's analysis is precise across all 3 findings.
@@ -49,7 +49,7 @@ Phone literal at spec line 437 confirmed. Per P6 #34: rotation + audit, not just
 **Forward-redaction this commit:** Spec line 437 amended -- literal phone number replaced with generic reference ("the SLOAN_PHONE_NUMBER env var"). History at HEAD `22e10ec` retains the literal as known-exposure-pre-rotation per P6 #34 forward-redaction discipline (history-rewrite for internal personal phone is theater; same as adminpass case).
 
 **Audit task added:** P5 v0.1.1 canon-hygiene audit task ratified. Scope:
-- grep all canon for literal phone number `+1 720 902 7314` and other PII (full address; full DOB; etc.)
+- grep all canon for literal Sloan-mobile (10-digit pattern) and other PII (full address; full DOB; etc.) -- specific value not reproduced here per P6 #34
 - Forward-redact in working tree where found
 - Add findings to known-exposure inventory in CHECKLIST
 - Track adjacent to Mercury weak-credential rotation candidate

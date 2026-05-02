@@ -624,7 +624,7 @@ Keep Phase 6's TODO markers redacted in mercury.py once 7.2 lands (no more TODO(
 
 - Phase 0 pre-flight: PD writes paco_review; CEO routes to Paco
 - Phase 5 vendor seed: PD inserts placeholder rows; CEO action ITEM (post-ship): fill renewal_date values via dashboard or SQL
-- Phase 7 Telegram wiring: CEO confirms +1 720 902 7314 is correct destination; provides Twilio creds for .env if not already
+- Phase 7 Telegram wiring: CEO confirms `SLOAN_PHONE_NUMBER` env value is correct destination; provides Twilio creds for .env if not already
 - Phase 9 deployment: PD enables service; CEO acknowledgment of go-live; observes first Tier 3 alert if/when it fires
 - Phase 10 ship report: PD writes; CEO routes to Paco for close-confirm
 
