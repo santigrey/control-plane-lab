@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day (post Step 3 dispatch)
+**Last updated:** 2026-05-02 Day 78 mid-day (post Step 3 close-confirm)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -46,7 +46,7 @@ Three active queues, executed in order:
 - [x] Step 1 -- Canon doc + probe script (HEAD 38b0c46)
 - [x] Step 2 -- CEO user policy: Option A consolidate to `jes` (HEAD 1cfced4)
 - [x] Cortez sub-decision: Y1 ratified (Day 78 mid-day; canon already encodes `sloan@cortez-canonical`)
-- [~] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath (PD; directive `docs/paco_directive_reachability_step3_etc_hosts.md` dispatched Day 78 mid-day)
+- [x] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath. CLOSE-CONFIRM 4/4 PASS first-try; standing gates 5/5 bit-identical (PD review HEAD `b421e05`; close-confirm `docs/paco_response_reachability_step3_close_confirm.md`)
 - [ ] Step 3.5 -- CEO at KaliPi+Pi3 terminal: create `jes` user with NOPASSWD sudo + bootstrap ssh-keys + disable cloud-init `manage_etc_hosts` + install canonical /etc/hosts + wire Pi3 into PD `homelab_ssh_run` allowed-host list
 - [ ] Step 4 -- Push ~/.ssh/config + authorized_keys to all 9 devices
 - [ ] Step 5 -- Mac mini sshd persistence + watchdog
