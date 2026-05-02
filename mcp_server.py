@@ -38,9 +38,9 @@ ALLOWED_HOSTS = {
     "pi3":      "192.168.1.139",
 }
 HOST_USERS = {
-    "kalipi": "sloan",
+    "kalipi": "jes",
     "cortez": "sloan",
-    "pi3": "sloanzj",
+    "pi3": "jes",
 }
 
 mcp = FastMCP("homelab_mcp", host="0.0.0.0")
