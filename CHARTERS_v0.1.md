@@ -217,7 +217,7 @@ Sub-agents inhabit individual departments and execute sub-domains of their paren
 
 | Sub-agent | Parent dept | Scope | Status |
 |---|---|---|---|
-| Mercury | (TBD) | Originally mentioned in Charter 5 deferred list; scope undefined | TBD pending CEO direction |
+| Mercury | Operations (Charter 5) | Kalshi paper-trading bot at `/home/jes/polymarket-ai-trader/` on CK; runs as `mercury-scanner.service` systemd unit; supervised by Atlas; trade/P&L communication to Sloan via Alexandra dashboard (Tier-2) + Telegram (Tier 3); paper-trade-only at v0.1; real-money flip requires explicit CEO ratification + Mercury v2 build (trade-event subscription wiring) | Active (paper-trade); 142 trades to date; supervised by Atlas as of Day 77 evening canon update |
 
 **Sub-agent slots reserved for future definition (when needed):**
 
@@ -242,7 +242,6 @@ Sub-agents inhabit individual departments and execute sub-domains of their paren
 - Build spec for Atlas v0.2+ as agent loop (separate technical document; current Atlas v0.1 substrate is shipped at Day 77; agent loop spec is the next architectural draft)
 - Shared-state layer architecture (separate technical document)
 - Brand & Market quarterly plan (separate strategy document; CEO+Paco; deferred until product clarity per CEO Day 77 direction)
-- Mercury sub-agent scope and parent charter assignment (CEO direction needed)
 
 ---
 
@@ -250,6 +249,7 @@ Sub-agents inhabit individual departments and execute sub-domains of their paren
 
 - **2026-04-25 (Day 70 AM)** -- v0.1 drafted by Paco (COO). 164 lines, 7 charters. iCloud-only at draft time.
 - **2026-04-26 (Day 72 PM)** -- Atlas-on-Beast revision applied per CAPACITY_v1.1 ratification. Pulled from iCloud to CiscoKid as part of iCloud canon-flip ratification. Status: RATIFIED by CEO as-is with the Atlas Build status revision. Now lives canonically at `/home/jes/control-plane/CHARTERS_v0.1.md` on CiscoKid + GitHub origin/main.
+- **2026-05-01 (Day 77 evening)** -- Mercury sub-agent TBD slot RESOLVED. Mercury defined as Kalshi paper-trading bot at `/home/jes/polymarket-ai-trader/` on CK, supervised by Atlas under Operations Charter 5. Live state at definition: `mercury-scanner.service` already systemd-active-running; mercury.trades schema already has 142 trade rows (latest 2026-04-26); paper_trade flag default true. Real-money flip explicitly gated behind separate CEO ratification + Mercury v2 build cycle. Mercury TBD slot in Sub-agent Definitions table updated; Mercury entry removed from Deferred section. Companion to Atlas v0.1 agent loop architectural ratification gate at `docs/paco_request_atlas_v0_1_agent_loop_picks.md` (same commit).
 - **2026-05-01 (Day 77)** -- v0.2 amendment RATIFIED by CEO. Charter 7 (Security; Head: Mr Robot; home: SlimJim per defense-in-depth principle + Day 77 hardware probe showing 26GB free RAM on Xeon E-2176G). Charter 8 (Family Office, CEO-direct, kept lightweight v0.2). Sub-agent Definitions section added. Org chart v0.4 -> v0.5 (4 operational departments under COO + 2 CEO-direct + Platform). Three deferred items resolved (Family Office charter, Mr Robot sub-agent definition, inter-dept SOPs). Inter-dept SOPs land in companion canon doc `docs/inter_department_sops_v1_0.md`. Atlas SOP v1.0 + Mr Robot SOP v1.0 ratified as companion docs in same commit. PD title communication memo drafted at `docs/pd_title_communication_memo.md` for CEO to send.
 
 ---
