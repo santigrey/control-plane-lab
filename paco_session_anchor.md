@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day (post Step 4.3 close)
+**Last updated:** 2026-05-02 Day 78 mid-day (post Step 4 close-confirm; reachability cycle Steps 1-4 + 3.5 all closed)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -48,12 +48,7 @@ Three active queues, executed in order:
 - [x] Cortez sub-decision: Y1 ratified (Day 78 mid-day; canon already encodes `sloan@cortez-canonical`)
 - [x] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath. CLOSE-CONFIRM 4/4 PASS first-try; standing gates 5/5 bit-identical (PD review HEAD `b421e05`; close-confirm `docs/paco_response_reachability_step3_close_confirm.md`)
 - [x] Step 3.5 -- KaliPi+Pi3 onboarding CLOSE-CONFIRM 6/6 phases PASS; standing gates 5/5 bit-identical; jes user with NOPASSWD sudo + canonical ssh keys + canonical /etc/hosts on both nodes; MCP HOST_USERS mapped to jes (commit `5517775`); homelab-mcp.service restarted (MainPID 1640430). Patch-cycle Step 1 banked. Close-confirm `docs/paco_response_reachability_step35_close_confirm.md`.
-- [~] Step 4 -- IN FLIGHT (sub-cycle structure ratified Day 78 mid-day):
-  - [x] Step 4.1 -- Generate canonical id_ed25519 on Goliath, KaliPi, Pi3 (`docs/fleet_outbound_keys_canon.md`)
-  - [x] Step 4.2 -- CEO supplied Cortez + JesAir public keys; cross-ref shows both already present in fleet authorized_keys with non-canonical comments (RESOLVED Day 78 mid-day; canon updated)
-  - [x] Step 4.3 -- Canonical authorized_keys marker block (8 keys) installed on 6 Class A Linux nodes (Beast/SlimJim/Goliath/KaliPi/Pi3/CK in destructive-safe order); per-node SSH verification PASS after each install; CK→all-6 post-install sweep 6/6 PASS
-  - [ ] Step 4.4 -- Push canonical ~/.ssh/config (Linux nodes via PD; Cortez + JesAir via CEO)
-  - [ ] Step 4.5 -- Run reachability_probe.sh; capture N×N matrix; canon baseline; close-confirm
+- [x] Step 4 -- CLOSE-CONFIRM 5/5 sub-steps PASS; N×N matrix 31/31 cells PASS (30 cross-node + 1 self-loop, 5 n/a); standing gates 5/5 bit-identical; CEO "no SSH issues" priority discharged via per-node post-install verification + destructive-safe install order. Close-confirm `docs/paco_response_reachability_step4_close_confirm.md`. New canon `docs/fleet_reachability_matrix_canon.md`.
 - [ ] Step 5 -- Mac mini sshd persistence + watchdog
 - [ ] Step 6 -- Probe full N×N PASS; commit canon baseline
 - [ ] Step 7 -- Atlas Domain 1 integration (deferred; not blocking)
