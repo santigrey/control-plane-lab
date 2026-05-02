@@ -354,7 +354,7 @@ Responsibilities:
 
 ## Phase 5 -- Domain 3: Vendor & admin
 
-**5.1** Migration `migrations/0006_atlas_vendors.sql`:
+**5.1** Migration `src/atlas/db/migrations/0006_atlas_vendors.sql` (path corrected Day 78 morning post-Phase 4; existing migrations 0001-0005 live in `src/atlas/db/migrations/` per Beast atlas repo verified live):
 
 ```sql
 -- Atlas v0.1 Phase 5: vendor & admin tracking
