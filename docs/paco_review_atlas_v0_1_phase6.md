@@ -37,8 +37,8 @@ P6 #32 reuse pattern carried forward: `_create_monitoring_task` + `_ssh_run` fro
 | 18 | scheduler.py wiring | `python -c 'inspect.getsource(scheduler.scheduler)'` | All 3 mercury dispatch blocks present; `last_run` dict has 11 keys total; `CADENCE_MERCURY_S=300` + `MERCURY_TRADE_HOUR_UTC=8` exposed |
 | 19 | 9/9 smoke assertions PASS end-to-end | `/tmp/atlas_phase6_smoke.py` | A: real liveness (mercury active) -> 0 alerts; B: real trade_activity (recent_count > 0) -> 0 alerts; C: real real_money_failclosed (real_count=0) -> 0 alerts; D: synthetic mercury_is_active=False -> 1 critical liveness; D2: D rerun -> dedup held; E: synthetic 8d-gap -> 1 warn trade_activity; F: synthetic real_count=5 + doc absent -> 1 critical unauthorized; G: real_count=5 + doc PRESENT -> 0 new (gate satisfied); H: synthetic check error -> 1 critical check_error (fail-closed bias) |
 | 20 | atlas commit + push | `git log + git push` | `10adf9f feat: Cycle Atlas v0.1 Phase 6 Domain 4 Mercury supervision`; pushed `af8768d..10adf9f` to santigrey/atlas main |
-| 21 | Pre-commit secrets scan (broad) -- CAUGHT real credential exposure | `git diff --staged \| grep -iE 'key\|token\|secret\|password\|api'` | Initial scan caught literal Mercury credential (`'adminpass'`) embedded in mercury.py module docstring (P5 finding I had documented WITH the value). REDACTED via sed to generic phrasing ('a weak password embedded inline'). Re-scan: count=0. |
-| 22 | Pre-commit secrets scan (tightened) | `grep -iE 'api[_-]?key\|secret[_-]?key\|access[_-]?token\|bearer\\s+\|authorization:'` | `TIGHTENED_GREP_CLEAN` -- would have missed the `adminpass` literal; broad scan was the catch layer |
+| 21 | Pre-commit secrets scan (broad) -- CAUGHT real credential exposure | `git diff --staged \| grep -iE 'key\|token\|secret\|password\|api'` | Initial scan caught literal Mercury credential (`'<REDACTED>'`) embedded in mercury.py module docstring (P5 finding I had documented WITH the value). REDACTED via sed to generic phrasing ('a weak password embedded inline'). Re-scan: count=0. |
+| 22 | Pre-commit secrets scan (tightened) | `grep -iE 'api[_-]?key\|secret[_-]?key\|access[_-]?token\|bearer\\s+\|authorization:'` | `TIGHTENED_GREP_CLEAN` -- would have missed the literal credential; broad scan was the catch layer |
 | 23 | Beast Postgres anchor POST | `docker inspect` post-smoke + post-commit | `2026-04-27T00:13:57.800746541Z` -- bit-identical |
 | 24 | Beast Garage anchor POST | `docker inspect` post-smoke + post-commit | `2026-04-27T05:39:58.168067641Z` -- bit-identical |
 | 25 | atlas-mcp.service POST (Standing Gate #4) | `systemctl show` | `active running`; MainPID 2173807 -- UNCHANGED |
@@ -180,11 +180,11 @@ Substrate anchors held bit-identical for ~96+ hours through 9 Atlas cycles + Pha
 
 ## 5. Pre-commit security catch (notable mid-phase event)
 
-**What happened:** While authoring mercury.py, I included a docstring "P5 candidate weak credential note" that quoted the literal Mercury password (`'adminpass'`) as part of the security observation. This embedded the credential in the about-to-be-committed source.
+**What happened:** While authoring mercury.py, I included a docstring "P5 candidate weak credential note" that quoted the literal Mercury password (`'<REDACTED>'`) as part of the security observation. This embedded the credential in the about-to-be-committed source.
 
-**How caught:** Pre-commit broad-grep secrets scan (`grep -iE 'key|token|secret|password|api'`) flagged the line. The tightened scan (`api[_-]?key|secret[_-]?key|access[_-]?token|bearer\s+|authorization:`) **would have missed** the `adminpass` literal -- it doesn't match any of those patterns. The broad scan was the catch layer.
+**How caught:** Pre-commit broad-grep secrets scan (`grep -iE 'key|token|secret|password|api'`) flagged the line. The tightened scan (`api[_-]?key|secret[_-]?key|access[_-]?token|bearer\s+|authorization:`) **would have missed** the literal credential -- it doesn't match any of those patterns. The broad scan was the catch layer.
 
-**Resolution:** STOPPED before commit. `sed -i` redacted to generic phrasing ('a weak password embedded inline'). Verified `grep -c 'adminpass' = 0`. Re-staged. Both broad + tightened scans clean. Proceeded with commit at SHA `10adf9f`.
+**Resolution:** STOPPED before commit. `sed -i` redacted to generic phrasing ('a weak password embedded inline'). Verified `grep -c '<REDACTED>' = 0`. Re-staged. Both broad + tightened scans clean. Proceeded with commit at SHA `10adf9f`.
 
 **Commit message includes a transparency line:** "Pre-commit security note: broad secrets-scan caught a literal credential in docstring (P5 finding documentation cited the actual password value); redacted to generic language before commit."
 
@@ -206,7 +206,7 @@ Substrate anchors held bit-identical for ~96+ hours through 9 Atlas cycles + Pha
 
 **Distinction from P6 #20-32:** prior P6 entries cover authoring errors where the author was wrong about state (deployed-state names, API symbols, behavioral patterns, entire mental models). P6 #34 covers a different failure mode: the author is RIGHT about state (the credential really is weak) but documents it WITH the credential value, propagating exposure to a new location even though the original exposure already exists elsewhere.
 
-**Originating context (Phase 6 mercury.py docstring):** Authored "Weak credential note (P5 candidate): Mercury .env on CK contains DATABASE_URL with literal 'adminpass' password" -- the literal value 'adminpass' is the actual production credential. Pre-commit broad-grep secrets-scan caught it. Tightened scan would have missed it. Redacted to 'a weak password embedded inline' before commit.
+**Originating context (Phase 6 mercury.py docstring):** Authored "Weak credential note (P5 candidate): Mercury .env on CK contains DATABASE_URL with literal '<REDACTED>' password" -- the literal value '<REDACTED>' is the actual production credential. Pre-commit broad-grep secrets-scan caught it. Tightened scan would have missed it. Redacted to 'a weak password embedded inline' before commit.
 
 **Mitigation pattern:**
 1. When flagging a credential issue in code: describe what's wrong (length, weakness, exposure path, expiry) without the value
