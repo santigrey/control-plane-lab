@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day (REACHABILITY CYCLE COMPLETE — all 7 steps closed; fleet 100% canonical)
+**Last updated:** 2026-05-02 Day 78 mid-day (Atlas v0.1 Phase 7 directive dispatched post-reachability-cycle close)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -96,3 +96,5 @@ Paco updates this anchor when ANY of:
 Updates are SURGICAL (no sweeping rewrites). Anchor is a pointer to canon, not a restatement. Canon files (CHECKLIST, paco_response, handoffs, feedback ledger, directive docs) are authoritative.
 
 If this anchor and a canon file disagree, canon wins; anchor is stale and gets fixed at the next update.
+
+- [~] Atlas v0.1 Phase 7 -- IN FLIGHT: directive `docs/paco_directive_atlas_v0_1_phase7.md` dispatched Day 78 mid-day; PD-executable; combined 7.1+7.2 (communication.py emit_event + mercury cancel-window); 5 spec corrections handled per directive section 0; awaiting CEO Cowork dispatch.
