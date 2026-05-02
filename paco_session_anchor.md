@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day
+**Last updated:** 2026-05-02 Day 78 mid-day (post Step 3 dispatch)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -45,9 +45,9 @@ Three active queues, executed in order:
 **Queue 1 -- Reachability cycle (in flight)**
 - [x] Step 1 -- Canon doc + probe script (HEAD 38b0c46)
 - [x] Step 2 -- CEO user policy: Option A consolidate to `jes` (HEAD 1cfced4)
-- [PENDING] Cortez sub-decision: Y1 SSH key rename / Y2 parallel Windows user / Y3 full migration -- CEO open question
-- [ ] Step 3 -- Push canonical /etc/hosts to 5 always-on Linux nodes (PD)
-- [ ] Step 3.5 -- CEO creates `jes` user on KaliPi + Pi3 with sudo
+- [x] Cortez sub-decision: Y1 ratified (Day 78 mid-day; canon already encodes `sloan@cortez-canonical`)
+- [~] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath (PD; directive `docs/paco_directive_reachability_step3_etc_hosts.md` dispatched Day 78 mid-day)
+- [ ] Step 3.5 -- CEO at KaliPi+Pi3 terminal: create `jes` user with NOPASSWD sudo + bootstrap ssh-keys + disable cloud-init `manage_etc_hosts` + install canonical /etc/hosts + wire Pi3 into PD `homelab_ssh_run` allowed-host list
 - [ ] Step 4 -- Push ~/.ssh/config + authorized_keys to all 9 devices
 - [ ] Step 5 -- Mac mini sshd persistence + watchdog
 - [ ] Step 6 -- Probe full N×N PASS; commit canon baseline
@@ -79,9 +79,8 @@ Three active queues, executed in order:
 - 5 paco_requests / 5 caught at PD pre-execution
 - Paco-side error rate this session: high; correlated with conversation depth; fresh session expected to reduce
 
-### Open CEO questions (resolve in fresh session)
-1. Cortez username path: Y1 / Y2 / Y3 (cost: 5 min / 30 min / 2-4 hr)
-2. (none others currently)
+### Open CEO questions
+(none currently — Cortez sub-decision Y1 ratified Day 78 mid-day)
 
 ---
 

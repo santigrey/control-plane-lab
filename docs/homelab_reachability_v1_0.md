@@ -56,7 +56,7 @@ Three organic identities exist: `jes` (most nodes), `sloan` (KaliPi + Cortez), `
 - **Cortez exception:** Windows local account is fixed at OS install time; consolidating to `jes` would require full reinstall + reconfigure of Tailscale + Cowork + all CEO tooling under that user. Cost-benefit ratio inverted; **Cortez stays `sloan`** as a documented exception, not a regression.
 - All canonical ssh config / authorized_keys / probe matrix below assume `jes@kalipi` and `jes@pi3` post-3.5; Cortez probes use `sloan@cortez` indefinitely.
 
-## Canonical `/etc/hosts` (push to all Class A Linux nodes; Step 3)
+## Canonical `/etc/hosts` (Step 3 — PD-executable Linux nodes; KaliPi+Pi3 deferred to Step 3.5)
 
 ```
 192.168.1.10    ciscokid sloan3
@@ -70,6 +70,22 @@ Three organic identities exist: `jes` (most nodes), `sloan` (KaliPi + Cortez), `
 ```
 
 This is the DNS regression layer until Pi3 takes over local DNS.
+
+**Step 3 PD-executable scope:** CiscoKid, TheBeast, SlimJim, Goliath (4 nodes; all reachable as `jes` with NOPASSWD sudo). Mac mini deferred to Step 5 (sshd unreachable per Day 78 verification). Pi3 deferred until added to PD's `homelab_ssh_run` allowed-host list.
+
+**KaliPi deferred to Step 3.5** because the live system has cloud-init `manage_etc_hosts: True` (regenerates `/etc/hosts` from `/etc/cloud/templates/hosts.debian.tmpl` on every boot, defeating direct writes) AND the `sloan` user requires sudo password (blocks PD non-interactive `homelab_ssh_run`). Both blockers resolve at the same CEO terminal session that creates the jes user; bundle in 3.5.
+
+## Step 3.5 — KaliPi + Pi3 onboarding (CEO at terminal)
+
+CEO performs at each node's terminal (or via existing-user SSH session). Bundled scope:
+
+1. **Create `jes` user** with NOPASSWD sudo (`useradd -m -s /bin/bash jes` + `usermod -aG sudo jes` + sudoers.d drop-in for `jes ALL=(ALL) NOPASSWD:ALL` mode 0440).
+2. **Bootstrap ssh-key access** — install at minimum CK's canonical outbound key in `/home/jes/.ssh/authorized_keys` (mode 0600; parent dir mode 0700; owner `jes:jes`) so PD can reach the new user at Step 4. Full per-node authorized_keys policy applies at Step 4.
+3. **Disable cloud-init `manage_etc_hosts`** — edit `/etc/cloud/cloud.cfg` to set `manage_etc_hosts: False`. KaliPi confirmed cloud-init managed (Day 78 verification); Pi3 verify before patching (`grep manage_etc_hosts /etc/cloud/cloud.cfg`).
+4. **Install canonical `/etc/hosts`** using the Step 3 marker-block pattern (same Python heredoc).
+5. **Wire Pi3 into PD's `homelab_ssh_run` allowed-host list** — MCP server-side config update (out-of-band of node config; reachability cycle prerequisite for Step 4 PD execution against Pi3).
+
+Detailed CEO-terminal procedure documented as a separate Paco directive when Step 3 closes and 3.5 becomes active. Per-step CEO authorization remains the rule.
 
 ## Canonical `~/.ssh/config` (push to each device; Step 4)
 
