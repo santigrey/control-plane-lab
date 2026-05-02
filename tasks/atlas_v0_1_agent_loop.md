@@ -23,6 +23,21 @@
 
 Atlas v0.1 substrate (Cycles 1A-1I, ratified Day 76) shipped 10 atlas-mcp tools + atlas.tasks/atlas.events/atlas.memory schemas. What this cycle adds: the **always-on agent loop** that consumes atlas.tasks, runs scheduled domain work, and writes atlas.events. After this cycle, Atlas transitions from "substrate available" to "working employee."
 
+---
+
+## v0.1 SUBSTRATE GAP NOTE (added Day 78 morning post-Phase 3, per docs/paco_response_atlas_v0_1_phase3_confirm_phase4_go.md Ruling 6)
+
+**Constraint:** atlas.events MCP write helper is deferred to v0.2 / Mr Robot build per v0.2 P5 #42. No canonical `create_event` reference impl exists in atlas.* source at v0.1 build time. The only canonical-reference write path is `atlas.mcp_server.tasks.create_task` (Cycle 1I commit `d383fe0`), which writes to `atlas.tasks`.
+
+**v0.1 resolution:** All Domain 1-4 telemetry/event writes go to `atlas.tasks` (with `status='done'` so the poller does not re-claim them) using the canonical `_create_monitoring_task` helper pattern adapted from Phase 3 (`src/atlas/agent/domains/infrastructure.py`). The 5 canonical payload.kind values from Phase 3 set the precedent: Domains 2-4 follow the same `payload.kind = <domain>_<event>` convention.
+
+**Aspirational architecture:** All references to `atlas.events` in this spec (Phases 3-9) describe the **v0.1.1 target architecture** -- not v0.1 implementation. v0.1.1 will introduce the canonical `create_event` helper (likely in same cycle as Mr Robot build) and migrate Domain 1-4 writes from `atlas.tasks` to `atlas.events`, preserving the tier-stratified severity model.
+
+**Impact on this spec:** Phase 3 acceptance gate amended below to reflect atlas.tasks. Phase 4-7 spec sections continue to reference atlas.events as the architectural target; PD applies the atlas.tasks-as-proxy pattern from Phase 3 precedent at implementation time (no spec re-amendment needed for each phase since the pattern is named here). Phase 9 acceptance gates 503/471/479 amend by reference: "atlas.events" reads as "atlas.tasks for v0.1; atlas.events for v0.1.1."
+
+**Why this matters:** Silently overriding spec-canonical text via handoff/directive is canon hygiene failure. The v0.1 substrate gap should have been surfaced in this spec at original authoring time; it was not. P6 #33 (Day 78 morning) banks the lesson + mitigation pattern.
+
+
 **Scope (per CEO Day 77 ratification: Option A + Mercury):**
 - All three Charter 5 domains at minimum-viable depth:
   - Domain 1: Infrastructure monitoring (host vitals, service uptime, substrate anchors)
@@ -309,9 +324,9 @@ Nodes monitored: ck, beast, goliath, slimjim, kalipi (NOT macmini -- DNS intermi
 - `docker inspect control-postgres-beast --format '{{.State.StartedAt}}'` matches `2026-04-27T00:13:57.800746541Z`
 - `docker inspect control-garage-beast --format '{{.State.StartedAt}}'` matches `2026-04-27T05:39:58.168067641Z`
 
-Write events with `source='atlas.operations'`, `kind='system_vitals'` / `'service_uptime'` / `'substrate_anchor_drift'`.
+Write monitoring rows to `atlas.tasks` per v0.1 SUBSTRATE GAP NOTE (above) using canonical `_create_monitoring_task` helper. Five payload.kind values: `monitoring_cpu` / `monitoring_ram` / `monitoring_disk` / `service_uptime` / `substrate_check`. Rows status=`done` so poller does not re-claim. v0.1.1 migrates to atlas.events with kind={system_vitals/service_uptime/substrate_anchor_drift} when canonical create_event helper exists.
 
-**Acceptance Phase 3:** Prometheus query test returns 200; SSH fallback works on at least one node; substrate anchor check matches canonical values; one synthetic threshold-breach test (mock CPU 95%) writes correct atlas.events row.
+**Acceptance Phase 3:** Prometheus query returns 200; SSH fallback works on at least one node; substrate anchor check matches canonical values; 22 atlas.tasks rows per cycle (5 cpu + 5 ram + 5 disk + 6 service_uptime + 1 substrate_check) with all 5 directive-specified payload.kind values present and correctly keyed (no dict-spread shadowing per Phase 3 bug-fix discipline).
 
 ---
 

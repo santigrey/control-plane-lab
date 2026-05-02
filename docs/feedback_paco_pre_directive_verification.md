@@ -338,4 +338,43 @@ Distribution by surface:
 - Single API symbols from memory: P6 #29 (1 instance Cycle 1H)
 - Deployed-state names from memory: P6 #20 (1 instance)
 - Behavioral patterns from memory: P6 #28 (1 instance)
-- **Entire API mental model from memory: P6 #32 (1 instance Day 78 morning Phase 2)** -- newest surface, highest cost-per-instance, requires canonical-copy mitigation
+- Entire API mental model from memory: P6 #32 (1 instance Day 78 morning Phase 2) -- requires canonical-copy mitigation
+- **Directive-spec drift via silent handoff override: P6 #33 (1 instance Day 78 morning Phase 3)** -- requires cross-check + simultaneous spec amendment
+
+---
+
+## P6 #33 -- Directive-spec drift via silent handoff override (Day 78 morning bank, Phase 3 close)
+
+**Banked:** 2026-05-02 UTC (Day 78 morning) per Paco's response `docs/paco_response_atlas_v0_1_phase3_confirm_phase4_go.md` Ruling 4.
+
+**Statement:** When a directive author writes a handoff or cowork prompt that diverges from the canonical spec text, the divergence must be either (a) surfaced explicitly with rationale at the top of the directive AND amended in the spec same commit, or (b) escalated to CEO for explicit ratification BEFORE PD executes. Silently substituting directive text for spec text is a canon hygiene failure even when the override is substantively correct, because it shifts verification burden onto PD and leaves the canonical spec out of sync with PD's actual implementation until close-out cleanup.
+
+**Originating context (Atlas v0.1 Phase 3 GO directive):** Paco authored `docs/handoff_paco_to_pd.md` (Phase 3 GO) saying monitoring writes go to `atlas.tasks` with 5 specific payload.kind values. Spec line 312 (committed at HEAD `7f50db8`) said monitoring writes go to `atlas.events` with 3 different kind values. The override was substantively correct (substrate gap: atlas.events MCP write helper deferred to v0.2/Mr Robot per P5 #42; canonical create_event helper does not yet exist; only canonical-reference write path is atlas.tasks via Cycle 1I claim_task pattern), but Paco did not surface the divergence in the directive or amend the spec in the same commit.
+
+**Detection:** PD pre-execution review caught the spec/directive divergence, escalated to CEO mid-execution. CEO ratified atlas.tasks. PD's review attributed the override to "Sloan directive" because that was the chain-of-arrival (Sloan pasted Paco's authored handoff into PD's chat). Attribution correction: the override was Paco-authored, not CEO-authored; CEO ratified during execution but did not originate the deviation.
+
+**Cost of skipping mitigation:** PD must escalate mid-cycle for CEO ratification (extra round-trip). Worse, the canon stays out of sync with PD's actual implementation until close-out. In this case, spec amendment shipped at Phase 3 close (this paco_response), but the gap window was the entire Phase 3 execution period. If multiple downstream phases use the same divergent pattern (Phases 4-7 in this cycle), the gap compounds.
+
+**Distinction from prior P6 entries:**
+- P6 #20/25/29/31/32 cover memory-based authorship errors (counts/names/symbols/patterns). The mitigation is verification.
+- P6 #33 covers DIVERGENCE between two canonical sources (spec vs directive) authored by the same author at different times. The mitigation is cross-check + simultaneous amendment.
+
+P6 #33 is upstream of the others: it is about *consistency between canon artifacts* rather than *correctness of single canon artifact*. A spec can be correct AND a directive can be correct while still being divergent if they describe different choices.
+
+**Mitigation pattern (becomes standing practice for handoff/directive authors):**
+1. Before writing any handoff or cowork prompt, open the canonical spec for the relevant phase
+2. Cross-check directive against spec sentence-by-sentence on key axes: file paths, table names, schema names, kind names, acceptance criteria, dependency names, cadence values
+3. If directive matches spec verbatim: no further action
+4. If directive diverges from spec: choose ONE of the resolution paths:
+   - (a) Note the divergence + rationale at the top of the directive AND amend spec in same commit (preferred for substantively-correct overrides like substrate gaps)
+   - (b) Escalate the divergence to CEO for explicit ratification BEFORE PD executes (preferred for novel decisions where Paco wants CEO judgment)
+   - (c) Revise the directive to match the spec (preferred when the directive divergence was unintentional)
+5. NEVER silently substitute directive text for spec text
+
+**Cross-reference:** P6 #20-32 cover authorship correctness (memory-based errors). P6 #33 covers authorship consistency (divergence between canon artifacts by same author at different times). All are surface-specific applications of the same root principle: canon must be self-consistent and verifiable.
+
+## Cumulative (Day 78 morning, post-P6 #33)
+
+All P6 #21 through #33 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 33** (was 32 earlier Day 78 morning Phase 2; +1 #33 here Day 78 morning Phase 3 close).
+
+Standing rules: **6** (unchanged through Day 78 morning).
