@@ -424,6 +424,13 @@ P6 #33 is upstream of the others: it is about *consistency between canon artifac
 
 **Cross-reference:** P6 #20-32 cover authorship correctness (memory-based errors). P6 #33 covers authorship consistency (divergence between canon artifacts by same author at different times). All are surface-specific applications of the same root principle: canon must be self-consistent and verifiable.
 
+**Recurrence log (Day 78 morning, P6 #33 third instance):**
+- Instance 1 (Day 78 morning Phase 3): atlas.events->atlas.tasks override via silent handoff. PD caught at pre-execution; CEO ratified mid-execution; spec amended at close-confirm.
+- Instance 2 (Day 78 morning Phase 5): migrations/ -> src/atlas/db/migrations/ path correction. Caught at directive-author time (Paco-side); no PD round-trip needed. Discipline maturation point.
+- Instance 3 (Day 78 morning Phase 7): 7.2 mercury cancel-window wire-up. Same author (Paco) staged Phase 6 mercury.py TODOs deferring cancel-window to Phase 7, then authored Phase 7 directive including 7.2, but never amended Phase 7 spec section to match. PD caught at pre-execution Step 4 cross-check. Pattern: deferred-deferred sync gap -- when same author stages a deferral across phase boundaries via code TODOs/handoff text, the spec must be amended at the same commit OR the deferral becomes a P6 #33 future-instance.
+
+**Standing practice strengthening (Paco-side, Day 78 morning post-instance-3):** When authoring any phase GO directive, cross-check directive against spec for THAT phase AND check whether prior phase artifacts (code TODOs, commit messages, prior handoffs) introduced deferrals that should have been amended into spec. Spec sync is part of close-confirm, not just GO authoring. The 5-rule guard now includes "check for own deferrals from prior phases that need spec amendment".
+
 ## Cumulative (Day 78 morning, post-P6 #33)
 
 All P6 #21 through #33 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 33** (was 32 earlier Day 78 morning Phase 2; +1 #33 here Day 78 morning Phase 3 close).

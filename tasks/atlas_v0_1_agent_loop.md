@@ -426,6 +426,8 @@ Responsibilities:
 
 ## Phase 7 -- Communication helper
 
+**Spec amended Day 78 morning** per `docs/paco_response_atlas_v0_1_phase7_directive_spec_divergence.md` Rulings 2 + 3: 7.2 mercury cancel-window wire-up added (deferred-deferred sync from Phase 6 mercury.py TODOs); phone literal redacted to env-var reference per P6 #34 forward-redaction discipline.
+
 **7.1** `src/atlas/agent/communication.py`:
 
 Responsibilities:
@@ -437,7 +439,7 @@ Responsibilities:
 - severity='warn' -> Tier 2: atlas.events + dashboard banner (Alexandra reads kind allowlist)
 - severity='critical' -> Tier 3: atlas.events + Telegram + dashboard banner
 
-**Telegram dispatch:** Use the Twilio Programmable Messaging API (denver number +1 720 902 7314 per memory). Endpoint + auth from `.env`:
+**Telegram dispatch:** Use the Twilio Programmable Messaging API (Denver number from `SLOAN_PHONE_NUMBER` env per P6 #34 standing practice). Endpoint + auth from `.env`:
   - `TWILIO_ACCOUNT_SID`
   - `TWILIO_AUTH_TOKEN`
   - `TWILIO_FROM_NUMBER`
@@ -445,7 +447,23 @@ Responsibilities:
 
 If .env doesn't have these, log warning + skip Telegram; do not crash. (Wiring Twilio bot into atlas package is a first-time integration; mock initially with `if TWILIO_ENABLED:` guard.)
 
-**Acceptance Phase 7:** emit_event writes correctly for all 3 tiers; dispatch_telegram works in mock mode (logs intended message); when .env has Twilio creds, real test message arrives at Sloan's phone.
+**7.2** Mercury cancel-window wire-up (NEW; spec amended Day 78 morning to honor Phase 6 mercury.py TODOs at lines 345/347/357/359):
+
+Replace `mercury_start()` and `mercury_stop()` v0.1 stubs (Phase 6 commit `10adf9f`) with real implementations that use Phase 7's `emit_event` for Tier 2 cancel-window enforcement:
+- 15-second pre-execute window
+- During window: Tier 2 atlas.events row + dashboard banner notify; user can cancel by writing a `mercury_control_cancel` task to atlas.tasks before window expires
+- After window if not cancelled: invoke real systemctl start/stop on CK via `_ssh_run`
+- All actions logged to atlas.events with payload.action=`mercury_start` or `mercury_stop` + payload.outcome=`executed`/`cancelled`
+
+Keep Phase 6's TODO markers redacted in mercury.py once 7.2 lands (no more TODO(Phase 7); replace with reference to Phase 7 commit hash).
+
+**Acceptance Phase 7 (amended):**
+- emit_event writes correctly for all 3 tiers (info/warn/critical -> Tier 1/2/3)
+- atlas.events row appears with correct severity + payload + tier metadata
+- dispatch_telegram works in mock mode (logs intended message when TWILIO_ENABLED=false; when .env has Twilio creds, real test message arrives at Sloan phone via SLOAN_PHONE_NUMBER env)
+- mercury_start/mercury_stop cancel-window wired (15s pre-execute window with task-status recheck via emit_event Tier 2; cancel path via mercury_control_cancel task)
+- standing gates 6/6 preserved
+- pre-commit BOTH broad-grep AND tightened-regex secrets-scan clean (P6 #34 standing practice)
 
 ---
 

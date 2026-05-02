@@ -94,7 +94,7 @@ Caught at the right time -- before Phase 9 acceptance gate. If we'd reached Phas
 
 ## Ruling 7 -- Phase 7 GO AUTHORIZED
 
-PD proceeds to Phase 7 (Communication helper) per build spec lines 449-487.
+PD proceeds to Phase 7 (Communication helper) per build spec lines 427-451 (cosmetic line-citation corrected Day 78 morning per F1 ratification in phase7 directive_spec_divergence response).
 
 **Phase 7 scope (per spec):**
 - 7.1 `src/atlas/agent/communication.py` -- 2 functions:
