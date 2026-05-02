@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-02 Day 78 mid-day (post Step 4.1 close)
+**Last updated:** 2026-05-02 Day 78 mid-day (post Step 4.3 close)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -50,8 +50,8 @@ Three active queues, executed in order:
 - [x] Step 3.5 -- KaliPi+Pi3 onboarding CLOSE-CONFIRM 6/6 phases PASS; standing gates 5/5 bit-identical; jes user with NOPASSWD sudo + canonical ssh keys + canonical /etc/hosts on both nodes; MCP HOST_USERS mapped to jes (commit `5517775`); homelab-mcp.service restarted (MainPID 1640430). Patch-cycle Step 1 banked. Close-confirm `docs/paco_response_reachability_step35_close_confirm.md`.
 - [~] Step 4 -- IN FLIGHT (sub-cycle structure ratified Day 78 mid-day):
   - [x] Step 4.1 -- Generate canonical id_ed25519 on Goliath, KaliPi, Pi3 (`docs/fleet_outbound_keys_canon.md`)
-  - [ ] Step 4.2 -- CEO supplies Cortez + JesAir public keys (paste from each device)
-  - [ ] Step 4.3 -- Push canonical authorized_keys (marker block; union of fleet outbound keys) to 6 Class A Linux nodes
+  - [x] Step 4.2 -- CEO supplied Cortez + JesAir public keys; cross-ref shows both already present in fleet authorized_keys with non-canonical comments (RESOLVED Day 78 mid-day; canon updated)
+  - [x] Step 4.3 -- Canonical authorized_keys marker block (8 keys) installed on 6 Class A Linux nodes (Beast/SlimJim/Goliath/KaliPi/Pi3/CK in destructive-safe order); per-node SSH verification PASS after each install; CK→all-6 post-install sweep 6/6 PASS
   - [ ] Step 4.4 -- Push canonical ~/.ssh/config (Linux nodes via PD; Cortez + JesAir via CEO)
   - [ ] Step 4.5 -- Run reachability_probe.sh; capture N×N matrix; canon baseline; close-confirm
 - [ ] Step 5 -- Mac mini sshd persistence + watchdog

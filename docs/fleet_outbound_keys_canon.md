@@ -1,6 +1,6 @@
 # fleet_outbound_keys_canon
 
-**Maintained by:** Paco | **Status:** ACTIVE | **Last updated:** 2026-05-02 Day 78 mid-day (Step 4.1 close)
+**Maintained by:** Paco | **Status:** ACTIVE | **Last updated:** 2026-05-02 Day 78 mid-day (Step 4.2 close)
 **Tracks:** `docs/homelab_reachability_v1_0.md` reachability cycle Step 4.1 (outbound key generation on Goliath, KaliPi, Pi3) and Step 4.3 (canonical authorized_keys aggregation).
 
 ---
@@ -33,15 +33,17 @@ CEO-supplied keys (Cortez, JesAir) may retain their organic comments; the commen
 
 | Device | Comment (organic) | Public key | Status |
 |---|---|---|---|
-| Cortez (Windows; user `sloan` per Y1 carve-out) | TBD | TBD | CEO supplies in Step 4.2 |
-| JesAir (macOS; user `jes`) | TBD | TBD | CEO supplies in Step 4.2 |
+| Cortez (Windows; user `sloan` per Y1 carve-out) | `sloan@cortez-canonical` (file-on-disk says `sloan@Cortez`; comment-canonicalized at Step 4.3 in authorized_keys block) | `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAINUzV2aS51hKWDNIFkFoZ3KWyxMskcIw0OBGNB2NaXiq` | collected Day 78 mid-day |
+| JesAir (macOS; user `jes`) | `jes@jesair-canonical` (file-on-disk says `jesair->macmini`; comment-canonicalized at Step 4.3 in authorized_keys block) | `ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAILgFiPCnSH6mEBYd9FeR4xcsoeZV1JMI1AKYWfq2ZPcK` | collected Day 78 mid-day |
 
 ## Fingerprints (SHA256, for at-a-glance verification)
 
 - Goliath: `SHA256:v9d2E2fR7AHFbfKwE61C0y4JGDrYFaDvvvsgr+NsZSY`
 - KaliPi: `SHA256:TjP4XSsohcqXf6MZjr2vHOI5+lyhyNhj4MkXjqQntss`
 - Pi3: `SHA256:Xil+H0/6Dqui0E+XNUgrMuqAXpT5SrcddxldoOwCnuk`
-- (CK/Beast/SlimJim/Cortez/JesAir: backfill at Step 6)
+- Cortez: backfill at Step 6
+- JesAir: backfill at Step 6
+- (CK/Beast/SlimJim: backfill at Step 6)
 
 ## Canonical authorized_keys construction (preview — Step 4.3)
 
@@ -76,8 +78,9 @@ Idempotent install pattern (parallel to Step 3 Python heredoc): replace marker b
 Keys discovered in existing authorized_keys files Day 78 mid-day verification, NOT in canonical inventory above:
 
 - `macmini->github` (Beast, SlimJim, Goliath) — Mac mini key for GitHub deploy access; verify at Step 5 if still active; remove if unused
-- `jesair->macmini` (Beast, SlimJim) — JesAir key for Mac mini access; should resolve via Step 4.2 JesAir key collection
-- `sloan@Cortez` (Beast, SlimJim, Goliath) and `sloan@cortez` (Beast) — two Cortez keys with different capitalization; resolve to single canonical key in Step 4.2
+- ~~`jesair->macmini`~~ (Beast, SlimJim) — RESOLVED Day 78 mid-day Step 4.2: this IS JesAir canonical outbound key; only the comment differs from `jes@jesair-canonical`. Step 4.3 push will use canonical comment; pre-existing entries left untouched at 4.3 (Step 6 may consolidate).
+- ~~`sloan@Cortez`~~ (Beast, SlimJim, Goliath) — RESOLVED Day 78 mid-day Step 4.2: this IS Cortez canonical outbound key; Cortez file-on-disk uses capital-C `Cortez`; canon comment will be `sloan@cortez-canonical`. Step 4.3 push will use canonical comment.
+- `sloan@cortez` (Beast only, lowercase) — verify at Step 6: same key material as `sloan@Cortez`? If so, dedupe; if different, investigate provenance.
 - `macmini-aioperator` (Goliath only) — Mac mini AI Operator runtime key; verify at Step 5
 
 Resolution at Step 6: confirm each is either (a) replaced by a canonical entry collected via Step 4.2/Step 5, OR (b) explicitly purposed (additional grant) and kept with a comment update.
