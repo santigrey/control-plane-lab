@@ -339,7 +339,58 @@ Distribution by surface:
 - Deployed-state names from memory: P6 #20 (1 instance)
 - Behavioral patterns from memory: P6 #28 (1 instance)
 - Entire API mental model from memory: P6 #32 (1 instance Day 78 morning Phase 2) -- requires canonical-copy mitigation
-- **Directive-spec drift via silent handoff override: P6 #33 (1 instance Day 78 morning Phase 3)** -- requires cross-check + simultaneous spec amendment
+- Directive-spec drift via silent handoff override: P6 #33 (1 instance Day 78 morning Phase 3) -- requires cross-check + simultaneous spec amendment
+- **Author-RIGHT-about-state-but-quotes-credential-VALUE: P6 #34 (1 instance Day 78 morning Phase 6)** -- requires rotation + audit, not just redaction
+
+---
+
+## P6 #34 -- Documentation references credential VALUE; mitigation is rotation + audit, not redaction (Day 78 morning bank, Phase 6 close)
+
+**Banked:** 2026-05-02 UTC (Day 78 morning) per Paco's response `docs/paco_response_atlas_v0_1_phase6_confirm_phase7_go.md` Ruling 4. PD-proposed in Phase 6 review section 7; Paco-ratified with broader framing per CEO direction.
+
+**Statement:** When canon documentation references a credential, the response is rotation + remediation across ALL canon, not just this-doc redaction. If you find a credential in canon, that's a sign the credential was already exposed somewhere; redacting one doc creates the illusion of safety without addressing the actual exposure surface. The mitigation is multi-layer:
+
+1. **At write time:** never quote credential values in any new doc/code/comment. Use generic phrasing ("the database password", "the API token", "a weak password embedded inline"). The author may be RIGHT about state -- the credential really is weak, the exposure really exists -- but documenting it WITH the literal value propagates the exposure to a new location.
+
+2. **On detection:** treat as a rotation trigger, not just a redaction trigger. Audit ALL canon for the value (`grep -rn '<value>' --include='*.py' --include='*.md' --include='*.sql'` across all repos). Plan rotation cycle.
+
+3. **Pre-commit catch:** broad-grep secrets-scan covering common credential names is the catch layer. Patterns: `key|token|secret|password|api|auth`. The tightened-regex (`api[_-]?key|secret[_-]?key|access[_-]?token|bearer\s+|authorization:`) catches structured patterns but MISSES literal-value exposures by definition. Always run BOTH; broad first, tightened second.
+
+4. **Forward-redaction vs history-rewrite:** forward-redaction (commit redacted version going forward) is acceptable when the credential is already exposed in prior canon. History-rewrite is theater. The cure is rotation.
+
+**Originating context (Atlas v0.1 Phase 6 mercury.py docstring):** PD authored a P5 weak credential note in mercury.py docstring quoting the literal Mercury password `'adminpass'`. Pre-commit broad-grep secrets-scan caught it. PD redacted to generic phrasing (`'a weak password embedded inline'`) -- but only in working tree, NOT staged + committed. The atlas commit `10adf9f` shipped to origin/main with the literal still in source. PD self-violated again in the Phase 6 review file (commit `f55f99e` to control-plane-lab) which quoted `adminpass` in 5 places to document the catch -- that review committed-then-redacted at `9ec9f9c`, but the literal is in `f55f99e` patch payload permanently.
+
+Paco discovered both gaps at Phase 6 close-confirm verification. CEO ruled forward-redaction (option A:3 + B:3) -- accept history exposure, redact going forward, treat as P5 rotation gate.
+
+**Real exposure inventory (Day 78 morning):** `adminpass` lives in:
+- 11 prior canon docs in `santigrey/control-plane-lab` going back to Cycle 1A `paco_response_atlas_v0_1_cycle_1a_preflight_resolved.md`
+- `canaries/run_phase23.py` line 4 (live working tree)
+- `paco_review_atlas_v0_1_phase6.md` commit `f55f99e` history (working tree clean at `9ec9f9c`)
+- `mercury.py` commit `10adf9f` history (working tree clean at `147f13c`)
+- Mercury .env on CK at `/home/jes/polymarket-ai-trader/.env` (live working credential)
+- atlas's CK Postgres `admin` role / B2b admin role in `pg_authid` (live working credential)
+
+16 known exposures total. PD's Phase 6 catch did not introduce the exposure; it surfaced longstanding canon hygiene. Real fix = rotation cycle.
+
+**Distinction from prior P6 entries:**
+- P6 #20-32 cover memory-based authoring errors (deployed-state names, API symbols, behavioral patterns, entire mental models). The author was wrong about state. Mitigation = verification.
+- P6 #33 covers divergence between canonical sources by same author at different times. The author was right about each individual artifact but inconsistent across artifacts. Mitigation = cross-check + simultaneous amendment.
+- P6 #34 covers a different failure mode: the author is RIGHT about state (the credential really is weak), but documents it WITH the credential value, propagating exposure. Mitigation = rotation + audit.
+
+**Mitigation pattern (becomes standing practice for all spec/doc/code authors):**
+1. Never quote credential values in new artifacts (docs/code/comments/commit-messages/test-fixtures). Generic phrasing only.
+2. Pre-commit secrets-scan: BOTH broad-grep AND tightened-regex. Broad catches literal exposures; tightened catches structured patterns.
+3. On any credential reference detection (in own work or others'): trigger audit + rotation, not just local redaction.
+4. Forward-redaction is acceptable when prior canon already exposes; history-rewrite for internal-homelab credentials is theater. Rotate the credential instead.
+5. Maintain credential exposure inventory in CHECKLIST as known-exposures-pending-rotation; mark when rotation closes the inventory.
+
+**Cross-reference:** P6 #20-33 cover authorship correctness/consistency. P6 #34 covers authorship security (credential propagation). All are surface-specific applications of the root principle: canon must be self-consistent, verifiable, AND non-leaking.
+
+## Cumulative (Day 78 morning, post-P6 #34)
+
+All P6 #21 through #34 are direct applications of 5th standing rule's principles. Cumulative count: **P6 lessons banked = 34** (was 33 at start of this turn; +1 #34 here Day 78 morning Phase 6 close).
+
+Standing rules: **6** (unchanged through Day 78 morning).
 
 ---
 
