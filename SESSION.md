@@ -2673,3 +2673,103 @@ No new files; no other modifications.
 Polish + demo video + capstone slides + architecture diagram. No code work needed for v0.2.0 demo readiness on Atlas-integration axis. Per Cycle 2A roadmap.
 
 Resume phrase: "Day 77 close: Atlas Cycle 2C 5/5 PASS panels-only, capstone-demo readiness achieved (Memory + Audit + Tokens dashboards live), telemetry deferred v0.2 P5 #42, P6=30, ready for Cycle 2D (polish + demo video + slides)."
+
+
+---
+
+## Day 78 evening -- Atlas v0.1 Phase 9 IN-FLIGHT (paused at Step 5; PD on Cortez handing off to JesAir)
+
+**Status:** Phase 9 (state-transition: enable + start atlas-agent.service) Steps 0-4 COMPLETE; Steps 5-10 PENDING. atlas-agent.service is LIVE in production on Beast as MainPID 2872599 (started 2026-05-03 03:57:17 UTC).
+
+### Completed Steps 0-4 (Phase 9)
+
+- **Step 0 pre-flight:** atlas HEAD `c28310b`; atlas-mcp active; atlas-agent disabled+inactive (PRE-flip baseline); mercury-scanner @ CK active MainPID 643409; substrate anchors bit-identical to Phase 8 (postgres `2026-04-27T00:13:57.800746541Z` restarts=0; garage `2026-04-27T05:39:58.168067641Z` restarts=0); Beast NOPASSWD sudo OK.
+- **Step 1 foreground smoke (120s):** clean log at /tmp/atlas_phase9_foreground.log (48 lines); first scheduler tick within 3s; 22 atlas.tasks rows created (5 cpu + 5 ram + 5 disk + 6 uptime + 1 substrate); 0 tracebacks; process exited via SIGKILL on timeout (clean).
+- **Step 2 baseline:** atlas.tasks count = 173.
+- **Step 3 SG5 FLIP:** `sudo systemctl enable + start atlas-agent.service` -> active enabled MainPID 2872599 ActiveEnterTimestamp `Sun 2026-05-03 03:57:17 UTC`. Symlink created `/etc/systemd/system/multi-user.target.wants/atlas-agent.service`.
+- **Step 4 5-min observation:** at +310s; is-active=active; MainPID=2872599 UNCHANGED (NRestarts=0); journalctl 93 lines clean (NO_ERRORS_FOUND); 2 scheduler ticks observed (5min cadence); post_5min_count=216 (delta +43 rows = 2x 15-vitals + 2x 6-uptime + 1 substrate; matches expected math). All 4 acceptance criteria met.
+
+### Pending Steps 5-10
+
+- **Step 5:** per-domain row verification (`SELECT kind, count FROM atlas.tasks WHERE created_at > now() - interval '6 minutes' GROUP BY kind`). Expect >=4 of 5 Domain 1 kinds (monitoring_cpu/ram/disk + service_uptime; substrate_check optional in 5min window per hourly cadence).
+- **Step 6:** standing gates POST. SG2/SG3/SG4/SG6 must be bit-identical to PRE; SG5 INTENTIONALLY FLIPPED to active+enabled MainPID=2872599.
+- **Step 7:** domain-row leak check on Phase-8 residue kinds (test_integration_marker / noop / race_test / wo_test / rt_success / rt_fail). Document for ship-report cleanup; not a Phase 9 issue.
+- **Step 8:** pre-commit secrets-scan BOTH layers + P6 #34 literal sweep on the review file written at Step 9.
+- **Step 9:** write `docs/paco_review_atlas_v0_1_phase9.md` following Phase 8 template (10 sections). Commit + push to control-plane.
+- **Step 10:** notification line in `docs/handoff_pd_to_paco.md` per P6 #26.
+
+### Resume context
+
+- Directive: `/home/jes/control-plane/docs/paco_directive_atlas_v0_1_phase9.md` (PD authority; supersedes spec for 4 corrections in section 0)
+- Standing rules file: `/home/jes/control-plane/docs/feedback_paco_pre_directive_verification.md` (P6 #21-#34, SR #1-#6)
+- Predecessor: `/home/jes/control-plane/docs/paco_review_atlas_v0_1_phase8.md` (PD-authored 26.4KB; established Path B adaptation precedent)
+- Foreground smoke log: `/tmp/atlas_phase9_foreground.log` on Beast (48 lines)
+- 5-min journalctl log: `/tmp/atlas_phase9_first5min.log` on Beast (93 lines; expand window if needed)
+- Phase 9 atlas commit: NONE (state-transition phase; zero source code changes)
+- Phase 9 control-plane commit pending: paco_review file at Step 9
+
+### Key reference data
+
+- atlas-agent.service MainPID = `2872599` (capture for Step 6 SG5 verification; this is what "UNCHANGED" means after restart-loop check)
+- atlas-agent.service ActiveEnterTimestamp = `Sun 2026-05-03 03:57:17 UTC`
+- baseline_count (Step 2) = 173
+- post_5min_count (Step 4) = 216
+- Row delta = +43 in ~5min (2 scheduler ticks: 30 vitals + 12 uptime + 1 substrate)
+
+### Standing gates state (mid-Phase-9; SG5 flipped intentionally)
+
+- SG2 postgres anchor: `2026-04-27T00:13:57.800746541Z` restarts=0 (UNCHANGED bit-identical ~125+h)
+- SG3 garage anchor: `2026-04-27T05:39:58.168067641Z` restarts=0 (UNCHANGED bit-identical)
+- SG4 atlas-mcp.service: MainPID 2173807 active enabled (UNCHANGED)
+- **SG5 atlas-agent.service: MainPID 2872599 active enabled (FLIPPED from inactive disabled MainPID 0 -- INTENTIONAL Phase 9 deliverable)**
+- SG6 mercury-scanner.service @ CK: MainPID 643409 active (UNCHANGED)
+
+### Discipline state
+
+- P6 lessons banked: 34 (per standing rules file)
+- Standing rules: 6 (SR #6 self-state verification before conclusion-drawing held; SR #7 first-applied informally by Paco for this directive's preflight; not yet formally banked)
+- Path B adaptation pattern: 5 instances in Phase 8 (homelab mark scope, infra threshold semantics, talent JSON+set-diff, vendor tailscale Self, mercury kind names, integration atlas.tasks); zero divergences expected in Phase 9 (state-transition only).
+
+### Cross-machine continuity
+
+PD session paused on Cortez (Cowork scheduled tasks remain on Cortez machine-local). Resuming on JesAir requires:
+1. Read this SESSION.md section
+2. Read the 3 reference files above
+3. Resume at Phase 9 Step 5 verification
+
+atlas-agent.service runs INDEPENDENTLY of any Cowork session -- it is now production. Will continue producing rows in atlas.tasks at 5min cadence regardless of which desktop has Cowork open.
+
+Resume phrase: "Day 78 evening: Atlas v0.1 Phase 9 mid-flight; Steps 0-4 PASS; atlas-agent.service LIVE MainPID 2872599; resume at Step 5 per-domain row verification; baseline=173 post_5min=216 delta=+43."
+
+
+## Day 79 early UTC -- Atlas v0.1 Phase 9 CLOSED
+
+**Status:** Phase 9 (state-transition: enable + start atlas-agent.service) **all 10 steps PASS first-try.** atlas-agent.service is now PRODUCTION on Beast.
+
+### Completed Steps 5-10 (JesAir resume; Cortez did Steps 0-4)
+
+- **Step 5 per-domain row verification:** monitoring_cpu=5, monitoring_ram=5, monitoring_disk=5, service_uptime=6 (4 of 4 mandatory Domain 1 kinds, >=1 each in 6-min window). substrate_check ABSENT (hourly cadence, acceptable). mercury_liveness_warning ABSENT (correct: SG6 active, fail-closed inverse).
+- **Step 6 standing gates POST:** SG2/SG3/SG4/SG6 bit-identical to PRE; SG5 INTENTIONALLY FLIPPED to active+enabled MainPID 2872599 (Phase 9 deliverable).
+- **Step 7 leak check:** 6 Phase 8 residue rows (race_test=3, wo_test=1, rt_success=1, rt_fail=1) documented for Phase 10 ship-report cleanup; not Phase 9 scope.
+- **Step 8 secrets-scan:** broad-grep + tightened-regex + P6 #34 literal sweep on review file all CLEAN. 11 broad-grep hits all benign (narrative + Prometheus URL paths).
+- **Step 9 review file written + committed + pushed:** `docs/paco_review_atlas_v0_1_phase9.md` 283 lines, 26914 bytes; control-plane commit `62fd76f` (parent `74faaf4`); pushed to origin/main.
+- **Step 10 handoff notification:** `docs/handoff_pd_to_paco.md` overwritten with Phase 9 close-confirm (1024 bytes; .gitignored, local-only by design).
+
+### State at close
+
+- atlas-agent.service: **active enabled MainPID 2872599 NRestarts=0 ActiveEnterTimestamp `Sun 2026-05-03 03:57:17 UTC`** -- reverified at +2h31m JesAir resume; production-stable.
+- atlas commit: `c28310b` UNCHANGED (state-transition phase, zero source code changes).
+- control-plane commit chain: `74faaf4` -> `62fd76f` (paco_review for Phase 9).
+- Standing Gates 6/6: SG5 NEW invariant (active enabled MainPID stable NRestarts=0); SG2/SG3/SG4/SG6 bit-identical (~145h+ on substrate anchors).
+- atlas.tasks: 173 baseline -> 216 at +5min -> 806 at +2h31m JesAir resume; sustained ~4 rows/min cadence; production observation data accumulating cleanly.
+
+### Notable
+
+- 7/7 acceptance criteria PASS first-try; zero paco_request escalations; sixth consecutive first-try acceptance phase (Phases 4-9).
+- 0 Path B adaptations (state-transition phase eliminated divergence opportunities; Paco's SR #7 first-application preflight in directive section 0 absorbed all spec-vs-runtime divergences upstream).
+- One quantitative observation (scheduler cadence ~60s under systemd vs directive's "5min" characterization) flagged for Phase 10 ship-report reconciliation.
+- First cross-machine PD session split in cycle (Cortez Steps 0-4 -> JesAir Steps 5-10); SR #6 self-state re-verification at resume confirmed bit-identical match.
+
+### Next planned
+
+Phase 10 (ship report -- final cycle phase) pending Paco close-confirm + Phase 10 GO ratification. Atlas v0.1 cycle progress: **10 of 11 phases complete.**
