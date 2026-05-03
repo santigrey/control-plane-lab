@@ -1,7 +1,7 @@
 # feedback_paco_pre_directive_verification
 
 **Banked:** 2026-04-30 / Day 75
-**Last canon update:** 2026-05-03 / Day 79 early morning (Phase 9 close-confirm propagation)
+**Last canon update:** 2026-05-03 / Day 79 evening (Patch Cycle 1 close-confirm propagation; +P6 #37)
 **Originated:** Atlas v0.1 Cycle 1A preflight ESC + CEO discipline RFC after 3 consecutive Paco-side spec errors in 24-72 hours
 **Companion to:** feedback_directive_command_syntax_correction_pd_authority.md, feedback_paco_review_doc_per_step.md, feedback_paco_pd_handoff_protocol.md, feedback_phase_closure_literal_vs_spirit.md
 
@@ -9,7 +9,7 @@
 
 ## Cumulative state
 
-**P6 lessons banked: 36** (last update Day 79 early morning; +P6 #34 #35 #36 since prior ledger refresh)
+**P6 lessons banked: 37** (last update Day 79 evening; +P6 #37 banked at Patch Cycle 1 close)
 **Standing rules: 7** (last update Day 79 early morning; +SR #7 since prior ledger refresh)
 
 **Critical for new Cowork sessions:** This ledger is the source of truth for cumulative count. PD-side must reconcile against THIS file's cumulative section, not against memory-of-prior-cycles. PD's Phase 9 review correctly flagged a propagation gap (ledger said 34/6; close-confirm canon said 35/7); the gap is closed in this Day 79 early morning update.
@@ -45,6 +45,8 @@ P6 #1-32: see prior ledger entries; mostly authorship correctness lessons (memor
 **P6 #35** (Day 78 evening Phase 8 close-confirm): Test-directive source-surface verification cluster — when a directive contains 5+ source-surface assertions caught by PD pre-execution as Path B adaptations in single phase, that's a cluster signal not a one-off. Root cause: Paco-side authoring discipline lagging PD-side execution discipline. Mitigation: SR #7 (above).
 
 **P6 #36** (Day 79 early morning Phase 9 close-confirm; PD-proposed, Paco-ratified): Journalctl capture races journald buffer-flush — `journalctl -n N | tee` captures fewer lines than the same time-window query rerun later, because journald's emit-to-storage flush has latency. Step 4 captured 44 lines at write-time; +2.5h rerun showed 93 lines for same window. Mitigation paths: prefer `journalctl --since '<TS>' --until '<TS>' --no-pager` (no `-n` cap) for full-window capture, OR add `sleep 5` between observation-window-end and journalctl invocation to allow buffer-flush settle. Standardize for Phase 10 ship-report procedures.
+
+**P6 #37** (Day 79 evening Patch Cycle 1 close-confirm; PD-proposed, Paco-ratified): Blast-radius categorization in package-upgrade directives — when directive enumerates package upgrade count without bundle-content inventory, high-blast-radius categories (kernel + GPU driver + container runtime + database + critical service binaries) must be called out so PD can pre-stage Path B verifications. Natural extension of SR #7. Catalyzed by Patch Cycle 1 Stage B Beast: directive said "45 packages upgraded" but missed that the bundle included NVIDIA driver 595.58.03->595.71.05 (dkms rebuild required + Tesla T4 health verification needed) and that Ollama runtime needed liveness re-check post-driver-rebuild. PD ratified both as Path B (B1) but should have been pre-staged in directive. Mitigation: when Paco-side preflight returns a kernel-or-driver-bumping package set, directive Verified-live block must include per-package category inventory + pre-staged Path B verifications for each high-blast-radius category. Applied retroactively from Patch Cycle 2 (Goliath) onward.
 
 ---
 
