@@ -2773,3 +2773,54 @@ Resume phrase: "Day 78 evening: Atlas v0.1 Phase 9 mid-flight; Steps 0-4 PASS; a
 ### Next planned
 
 Phase 10 (ship report -- final cycle phase) pending Paco close-confirm + Phase 10 GO ratification. Atlas v0.1 cycle progress: **10 of 11 phases complete.**
+
+
+## Day 79 late evening UTC -- Patch Cycle 2 Goliath Stage B ABORT
+
+**Status:** BLOCKED. Stage B `apt-get -y dist-upgrade` aborted pre-unpack on PPA fetch failures. paco_request committed at `0d3bf8c`; PD idle pending Paco direction.
+
+### Pre-flight + Stage A -- PASS
+
+- 25/25 verified-live rows bit-identical to directive section 1 baseline.
+- Cross-host SGs: Beast SG2 postgres `2026-05-03T18:38:24.910689151Z`, SG3 garage `2026-05-03T18:38:24.493238903Z`, SG4 atlas-mcp PID 1212, SG5 atlas-agent PID 4753 NRestarts=0 active enabled, CK SG6 mercury PID 7800. atlas.tasks 1h cadence 253 (vs ~258 baseline; within 2%).
+- Stage A.1 (Decision B3): `apt-mark hold docker-compose-plugin` applied; `apt-mark showhold` returns `docker-compose-plugin`.
+- Stage A.2 (Decision D2): `systemctl stop ollama.service` clean. OLLAMA_STOP_EPOCH=1777846316 (2026-05-03T22:11:56Z).
+- Path B B2 extension applied at pre-flight: directive's `apt-get update | tail -10` exceeded MCP 30s tool-call timeout due to 3 unreachable canonical-nvidia PPAs each carrying multi-min TCP timeouts; index integrity verified independently via upgradable count + pending-version probe (584 + correct kernel/driver/containerd bumps confirmed).
+
+### Stage B -- ABORT per directive section 2.2 Stage B.3
+
+- nohup launched `apt-get -y dist-upgrade` (PID 177636); ~2965 MB fetched in ~57s.
+- 5 `E:` lines at log lines 822-826: 4x `Failed to fetch` from `ppa.launchpadcontent.net` + 1x `Unable to fetch some archives` summary.
+- 4 unfetchable packages (PPA-binary-only, no alternate noble-updates mirror):
+  - `linux-modules-nvidia-580-open-nvidia-hwe-24.04_6.17.0-1014.14+1000` (**Stage C.1 critical meta**)
+  - `linux-modules-nvidia-580-open-6.17.0-1014-nvidia_6.17.0-1014.14+1000` (**Stage C.1 critical version-pinned; provides .ko files for C.2**)
+  - `libvulkan1_1.4.328.1-1~1` (non-critical)
+  - `wpasupplicant_2.11-0ubuntu5~24.04.1` (non-critical; Goliath is wired)
+- Cross-host PPA reachability probe: `ppa.launchpadcontent.net` (185.125.190.80) DNS resolves OK from both Goliath AND CK; TCP/443 unreachable from both. Confirms upstream Canonical/Launchpad infra outage; not a Goliath-network-specific issue.
+
+### State at abort
+
+- `dpkg --audit` + `dpkg -C` exit 0 (clean pre-unpack abort; no half-installed packages).
+- Goliath kernel `6.11.0-1016-nvidia` (UNCHANGED); driver `580.95.05` (UNCHANGED); modules `6.11.0-1016.16+1000` (UNCHANGED).
+- compose-plugin hold preserved per PD recommendation (harmless; saves a step on retry).
+- ollama.service restored 2026-05-03T22:56:21Z after CEO authorization. Stop-to-restore = 2665s ~= 44m25s. New MainPID 185171; is-enabled `enabled`; 3 models intact (qwen2.5:72b `424bad2cc13f`, deepseek-r1:70b `d37b54d01a76`, llama3.1:70b `711a9e8463af`) -- same IDs as preflight row 13.
+
+### Directive-level finding
+
+- Decision A3 / section 0.2(b) characterized PPA timeouts as cosmetic. Held for the **index** path (`Ign:` = OK) but did NOT extend to **binary fetch** (`E:` = ABORT). Apt-simulation row 5 succeeded on cached metadata, didn't expose PPA-binary-only packages.
+- **PD-proposed P6 #38:** binary-fetch reachability probe required when upgrade scope includes PPA-only packages (`apt-get download --print-uris <pkg> | head -1 | xargs curl --max-time 5 -sI`). Natural extension of P6 #37 (blast-radius categorization).
+
+### Repo state
+
+- control-plane HEAD: `0d3bf8c` (paco_request commit on top of `2cee5ac`).
+- paco_request: `docs/paco_request_homelab_patch_cycle2_ppa_unreachable_blocks_kernel_modules.md` (101 lines, 7748 bytes; both secrets-scan layers CLEAN per P6 #34; staged-diff scan CLEAN).
+- atlas-agent observation continuity: not re-probed since pre-flight; expected uninterrupted (no Beast/CK touched; no Goliath reboot).
+
+### Next planned
+
+PD idle pending Paco confirmation on:
+1. Path forward (Options 1-5 in paco_request section 4; PD recommends Option 1: hold + wait for PPA recovery).
+2. P6 #38 banking ratification.
+3. Hourly PPA TCP probe loop start authorization (PD will NOT auto-start per Sloan's direction).
+
+No cross-host SG drift expected during the block window (cycle is a no-op at this point; nothing on Beast/CK/SlimJim has been touched).
