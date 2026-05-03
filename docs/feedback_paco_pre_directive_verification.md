@@ -1,7 +1,7 @@
 # feedback_paco_pre_directive_verification
 
 **Banked:** 2026-04-30 / Day 75
-**Last canon update:** 2026-05-03 / Day 79 evening (Patch Cycle 1 close-confirm propagation; +P6 #37)
+**Last canon update:** 2026-05-03 / Day 79 late evening (Patch Cycle 2 PPA-unreachable abort ruling; +P6 #38 +SR #8)
 **Originated:** Atlas v0.1 Cycle 1A preflight ESC + CEO discipline RFC after 3 consecutive Paco-side spec errors in 24-72 hours
 **Companion to:** feedback_directive_command_syntax_correction_pd_authority.md, feedback_paco_review_doc_per_step.md, feedback_paco_pd_handoff_protocol.md, feedback_phase_closure_literal_vs_spirit.md
 
@@ -9,8 +9,8 @@
 
 ## Cumulative state
 
-**P6 lessons banked: 37** (last update Day 79 evening; +P6 #37 banked at Patch Cycle 1 close)
-**Standing rules: 7** (last update Day 79 early morning; +SR #7 since prior ledger refresh)
+**P6 lessons banked: 38** (last update Day 79 late evening; +P6 #38 banked at Patch Cycle 2 PPA-unreachable abort ruling)
+**Standing rules: 8** (last update Day 79 late evening; +SR #8 banked at Patch Cycle 2 PPA-unreachable abort ruling)
 
 **Critical for new Cowork sessions:** This ledger is the source of truth for cumulative count. PD-side must reconcile against THIS file's cumulative section, not against memory-of-prior-cycles. PD's Phase 9 review correctly flagged a propagation gap (ledger said 34/6; close-confirm canon said 35/7); the gap is closed in this Day 79 early morning update.
 
@@ -32,6 +32,8 @@
 
 **SR #7** (Day 78 evening, banked Phase 8 close-confirm): Test-directive source-surface preflight — when authoring a directive that specifies test cases or asserts source-surface shape (file paths, function signatures, schema columns, kind enum values, table names), Paco runs the same probes PD would run at pre-execution time BEFORE writing the directive. Probe outputs land in directive's Verified-live block. Mitigates the cluster-of-corrections pattern PD-side that costs ~15min per round-trip.
 
+**SR #8** (Day 79 late evening, banked Patch Cycle 2 PPA-unreachable abort ruling): Abort-restore discipline — when a patch/maintenance cycle aborts via STOP gate and PD is awaiting Paco direction, PD is authorized to reverse Stage A pre-quiesces (service stops, maintenance-window flips) WITHOUT paco_request, since reverting to baseline is restoration not new cycle state. Hold flags (apt-mark hold) and other cycle-progress markers PERSIST through the wait to enable retry without rework. Distinction principle: "Did this action restore baseline, or did it advance cycle state?" Restorations do not require paco_request on abort. Cycle-progress changes do. When in doubt, paco_request. Catalyzed by Cycle 2 ollama restore: Stage A.2 stopped ollama as planned interruption for 5-15min reboot window; Stage B aborted at ~57s due to PPA Launchpad-wide outage; PD restored ollama at ~1.5h post-stop without paco_request because production inference idle for indeterminate Launchpad-outage duration was not the intent of D2. PD-precedent, Paco-codified.
+
 ---
 
 ## P6 lesson highlights (cumulative through Day 79 early morning)
@@ -47,6 +49,8 @@ P6 #1-32: see prior ledger entries; mostly authorship correctness lessons (memor
 **P6 #36** (Day 79 early morning Phase 9 close-confirm; PD-proposed, Paco-ratified): Journalctl capture races journald buffer-flush — `journalctl -n N | tee` captures fewer lines than the same time-window query rerun later, because journald's emit-to-storage flush has latency. Step 4 captured 44 lines at write-time; +2.5h rerun showed 93 lines for same window. Mitigation paths: prefer `journalctl --since '<TS>' --until '<TS>' --no-pager` (no `-n` cap) for full-window capture, OR add `sleep 5` between observation-window-end and journalctl invocation to allow buffer-flush settle. Standardize for Phase 10 ship-report procedures.
 
 **P6 #37** (Day 79 evening Patch Cycle 1 close-confirm; PD-proposed, Paco-ratified): Blast-radius categorization in package-upgrade directives — when directive enumerates package upgrade count without bundle-content inventory, high-blast-radius categories (kernel + GPU driver + container runtime + database + critical service binaries) must be called out so PD can pre-stage Path B verifications. Natural extension of SR #7. Catalyzed by Patch Cycle 1 Stage B Beast: directive said "45 packages upgraded" but missed that the bundle included NVIDIA driver 595.58.03->595.71.05 (dkms rebuild required + Tesla T4 health verification needed) and that Ollama runtime needed liveness re-check post-driver-rebuild. PD ratified both as Path B (B1) but should have been pre-staged in directive. Mitigation: when Paco-side preflight returns a kernel-or-driver-bumping package set, directive Verified-live block must include per-package category inventory + pre-staged Path B verifications for each high-blast-radius category. Applied retroactively from Patch Cycle 2 (Goliath) onward.
+
+**P6 #38** (Day 79 late evening Patch Cycle 2 Stage B abort; PD-proposed, Paco-broadened): Apt simulation does not validate binary-fetch reachability — when an upgrade scope draws `Inst` lines from any non-primary-archive apt source (PPAs, NVIDIA repos, Docker repos, HashiCorp, MongoDB, custom corporate repos), Paco-side preflight MUST verify both index-fetch AND binary-fetch reachability for each contributing source before authoring stages that depend on those binaries. Index-fetch is verified by a clean `apt-get update` (no `Err:` lines for the source). Binary-fetch is verified by either `apt-get download --print-uris <pkg> | head -1 | xargs curl --max-time 8 -sI` for a representative `Inst` package per source, OR `apt-get -d -y dist-upgrade` (download only; no install). The two paths can fail independently: index-fetch can succeed against cached metadata or working CDN edge while origin binary store is unreachable. Catalyzed by Cycle 2 Stage B abort: original directive Section 1 SR #7 row 5 `apt-get -s dist-upgrade` returned successful plan against cached metadata; actual binary fetch of 4 canonical-nvidia PPA packages failed (Launchpad-wide service-layer outage at `ppa.launchpadcontent.net:443` AND `launchpad.net:443`; primary archives `archive.ubuntu.com` / `ports.ubuntu.com` / `esm.ubuntu.com` reachable). Abort happened pre-unpack thanks to apt's transactional integrity (521 successful Get + 4 Err = 0 unpacked), but the gap could equally have surfaced mid-fetch at Stage B.1 launch in any cycle. Natural extension of P6 #37 (blast-radius categorization) and SR #7 (source-surface preflight). Applied retroactively from Cycle 2 retry onward.
 
 ---
 
@@ -75,6 +79,10 @@ P6 #1-32: see prior ledger entries; mostly authorship correctness lessons (memor
 **Day 78 evening (P6 #35 cluster signal):**
 - Phase 8 directive contained 5 source-surface assertions authored from memory of canonical Cycle 1I patterns instead of probing live Phase 3-6 source. PD caught all 5 at pre-execution (Path B adaptations Steps 2/5/6/7/8/9). Total Phase 8 PD overhead from Paco-side spec drift: ~75min.
 - Mitigation: SR #7 banked + applied retroactively from Phase 9 onward.
+
+**Day 79 late evening (P6 #38 + SR #8 origination -- Patch Cycle 2 PPA-unreachable abort):**
+- Cycle 2 (Goliath) Stage B `apt-get -y dist-upgrade` aborted at ~57s with 4 `E: Failed to fetch` errors against `ppa.launchpadcontent.net` (canonical-nvidia/nvidia-desktop-edge + canonical-nvidia/vulkan-packages-nv-desktop). Cross-host probes from Goliath/CK/Beast all returned TCP/443 FAIL; broader `launchpad.net:443` also FAIL; primary Canonical archives reachable. Confirmed Launchpad-wide upstream outage, not LAN-local issue. Two of the 4 unfetchable binaries are kernel-version-pinned NVIDIA prebuilt module packages (Stage C verify-before-reboot ABORT-gate dependencies); no alternate Canonical mirror serves the `+1000` ABI variants. PD wrote `paco_request_homelab_patch_cycle2_ppa_unreachable_blocks_kernel_modules.md`; Paco issued `paco_response_homelab_patch_cycle2_ppa_unreachable_ruling.md` ratifying Option 1 (hold + wait) with 3-layer recovery gate (TCP×3 + apt-get update + binary-fetch HEAD), 24h hard cap @ 2026-05-04 ~22:23Z, version-drift check pre-retry, and 4 pre-staged escalation options at cap. PD also restored ollama.service unilaterally during request authoring; Paco ratified retroactively + codified as SR #8 (abort-restore discipline). System integrity: dpkg state clean exit 0; cross-host SGs bit-identical (atlas-agent NRestarts 0; postgres+garage anchors unchanged; mercury PID unchanged); atlas.tasks cadence 252/hr within ±25% of pre-cycle 258/hr.
+- Mitigation: P6 #38 + SR #8 banked. Cycle 2 retry held until recovery gate passes.
 
 **Day 79 early morning (SR #7 first-application validation):**
 - Phase 9 directive: 4 spec corrections caught at directive-author time (Paco-side preflight, 12-row Verified-live block). PD pre-execution found ZERO additional divergences (Phase 9 review §2.2: "Path B adaptations: zero structural"). SR #7 paid for itself first application.
