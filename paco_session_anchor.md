@@ -1,6 +1,6 @@
 # Paco Session Anchor (canonical on-disk source of truth)
 
-**Last updated:** 2026-05-03 Day 79 late evening (Patch Cycle 2 Goliath anchor committed for fresh-session resume; decisions A3/B3/C2/D2/E2 pre-ratified; preflight + categorization pre-staged)
+**Last updated:** 2026-05-04 Day 80 (Alexandra hygiene cycle close; Patches 1-4 applied in working tree pending Paco close-confirm; Cycle 2 Goliath PPA hold continues independently)
 **Updated by:** Paco at every cycle close or major decision
 **Used by:** CEO at session start to boot a fresh Paco context
 
@@ -12,12 +12,12 @@
 You are Paco -- COO + systems architect for Santigrey Enterprises. CEO is Sloan. PD is Cowork. Operating mode: anchor-as-pointer (canon is source of truth, not anchor restatement).
 
 Boot probe via homelab MCP:
-- ssh ciscokid 'cd /home/jes/control-plane && git log --oneline -1' -> expect HEAD 1cfced4
+- ssh ciscokid 'cd /home/jes/control-plane && git log --oneline -1' -> expect HEAD c5010cd
 - ssh beast 'cd /home/jes/atlas && git log --oneline -1' -> expect 147f13c
-- ssh ciscokid 'systemctl show -p MainPID mercury-scanner.service' -> expect 643409
-- ssh beast 'systemctl show -p MainPID atlas-mcp.service' -> expect 2173807
-- ssh beast 'docker inspect control-postgres-beast --format "{{.State.StartedAt}}"' -> expect 2026-04-27T00:13:57.800746541Z
-- ssh beast 'docker inspect control-garage-beast --format "{{.State.StartedAt}}"' -> expect 2026-04-27T05:39:58.168067641Z
+- ssh ciscokid 'systemctl show -p MainPID mercury-scanner.service' -> expect 7800
+- ssh beast 'systemctl show -p MainPID atlas-mcp.service' -> expect 1212
+- ssh beast 'docker inspect control-postgres-beast --format "{{.State.StartedAt}}"' -> expect 2026-05-03T18:38:24.910689151Z
+- ssh beast 'docker inspect control-garage-beast --format "{{.State.StartedAt}}"' -> expect 2026-05-03T18:38:24.493238903Z
 
 Read on boot (in order):
 1. paco_session_anchor.md (this file -- queue + open questions)
@@ -34,10 +34,10 @@ Three active queues, executed in order:
 
 ---
 
-## CURRENT STATE (2026-05-02 Day 78 mid-day)
+## CURRENT STATE (2026-05-04 Day 80 mid-day)
 
 ### HEADs
-- control-plane-lab: `1cfced4` (Step 2 close: CEO Option A ratified)
+- control-plane-lab: `c5010cd` (Alexandra hygiene cycle close-confirm; Patches 1-4 in working tree pending Paco close-confirm)
 - atlas: `147f13c` (Phase 6 forward-redaction)
 
 ### Active queues
@@ -108,3 +108,5 @@ If this anchor and a canon file disagree, canon wins; anchor is stale and gets f
 - [x] Patch cycle 3 (Pi3+KaliPi) -- CLOSE-CONFIRM-READY 2026-05-04 Day 80 early UTC; 12/12 acceptance criteria PASS first-try; 1 Path B B3 adaptation (Pi3 ImageMagick CLI absence; lib-version verify stand-in via dpkg-query on 4 in-scope packages at `8:7.1.1.43+dfsg1-1+deb13u8`; submitted for SR #4 ratification); cross-host SGs bit-identical pre/mid/post (5 sentinel probes during cycle); atlas.tasks cadence 506/2h = ~253/hr matches pre-cycle exactly (observation continuity preserved through 38min KaliPi rolling upgrade + 75s reboot); Pi3 24+4-1 packages clean ~3min wall time NO_REBOOT_NEEDED per K1; KaliPi 1559+69-9 packages clean ~38min install + ~75s reboot offline window REBOOT_NEEDED per K1 (`dbus`+`polkitd` flagged); P6 #38 first-proper-application validation CLEAN (zero binary-fetch failures across 5 apt sources spanning both nodes: debian primary + debian-security + RPi Foundation + Tailscale + kali-rolling); Cycle 2 hourly PPA probe loop continued in parallel with 3 ticks all `lpc=FAIL lp=FAIL` and cross-host SG no-drift preserved every probe (DDoS-since-2026-04-30 context per CEO); fleet patch sweep status post-cycle: 6 of 7 fleet nodes current (Mac mini outside CVE-2026-31431 scope; Goliath remains via Cycle 2 retry pending Launchpad recovery); control-plane HEAD `79da3cc`; paco_review `docs/paco_review_homelab_patch_cycle3_cve_2026_31431.md` (217 lines; both secrets-scan layers + literal-sweep CLEAN). Cumulative state remains P6=38, SR=8 (no new lesson banked this cycle). PD recommendation: at 24h cap (2026-05-04 ~22:23Z) tilt toward Option A (extend cap) given structural-outage DDoS signal.
 - [x] Alexandra nightly smoke test hygiene + Google OAuth root-cause fix -- CLOSED 2026-05-04 Day 80 early UTC; 5 nightly errors triaged + resolved end-to-end. (1) `tool_smoke_test.py` 4 surgical patches at commit `24b4349`: classify() recognizes `disabled:True` envelope as SKIP not FAIL (memory_save defense-in-depth gate); read_file target SESSION.md->paco_session_anchor.md (SESSION.md grew past 50KB cap to 209KB); counts/summary/JSON schema all carry SKIP through; memory row Postgres conn 127.0.0.1:5432->192.168.1.10:5432 (closed 12-day silent observability gap from Day 78 substrate LAN-only rebind; last successful row 2026-04-26 -> tonight 2026-05-04T04:10:58Z). (2) Google OAuth root-cause fix: Cloud Console OAuth consent screen flipped Testing->In production via Claude-for-Chrome walkthrough, eliminates 7-day refresh-token TTL recurrence. PRIVACY.md + TERMS.md created at commit `6da1976` (single-user personal-use boilerplate; 3374 + 1948 bytes; both HTTP 200 from GitHub) to satisfy Branding-page Production publish requirement. URLs entered in Branding: home=https://github.com/santigrey/control-plane-lab privacy=blob/main/PRIVACY.md terms=blob/main/TERMS.md authorized-domain=github.com. Post-publish state: Publishing status=In production / User type=External / Test users section GONE / no verification banner / no quota errors / Back-to-testing button replaces Publish-app button. Fresh refresh token minted post-publish via reauth_gmail.py with all 3 scopes (gmail.send + gmail.readonly + calendar.events; Refresh token present:True). Post-fix smoke test: 14 PASS / 0 FAIL / 0 EXCEPTION / 1 SCHEMA_ISSUE / 1 SKIP (was 10 PASS / 5 FAIL / 0 EXCEPTION / 1 SCHEMA_ISSUE pre-fix). All 3 Google tools PASS (get_emails 2669ms / get_calendar 696ms / get_upcoming_calendar 673ms). Memory row landed in pgvector with new SKIP counter visible in summary text. 1 remaining SCHEMA_ISSUE on get_system_status pre-existing handler returns None (not introduced by this work; banked as low-priority registry.py follow-up ~5min fix). Cumulative state P6=39 SR=8 unchanged. Telegram alert no longer fires nightly (exit 0 since 0 FAIL). Recurrence safety net deferred to Atlas Phase 9 territory: add atlas.vendors row + daily token-health check; defer to next session.
 
+
+- [x] Alexandra hygiene -- pollution cleanup + grounding hardening -- CLOSED 2026-05-04 Day 80 mid-UTC; combined cycle (original directive + Path R2 amendment); 22/22 pre-flight + 24/24 MUST AC PASS across both directives (orig PF.1-14 + AC.1-8; amendment APF.1-8 + AR.1-16; AR.12 SHOULD-fail informational ~25-50s due to cold KV cache after 7h gap); original Step 5 cold test 1 FAILED on AC.10 grep `giving you trouble` -> PD halt + escalation `docs/paco_request_alexandra_pollution_cleanup_post_test_1_failed.md` (commit `54066f7`); CEO selected Path R2 (deterministic post-processing guard); amendment Patch 4 added to app.py (`_GUARD_FORBIDDEN` 32-phrase filter + canned safe greeting substitution + provenance flow-through); cold test 1 retry produced Form A (clean qwen, guard inert -- R2.B5 best outcome); cold test 2 produced explicit `[CHAT-LOCAL] tool=home_control args={'action': 'turn_on', 'entity_id': 'light.wiz_rgbw_tunable_eda510'}` (DISPROVES 2-week tool-calling regression Sloan flagged) + guard fired correctly on `'wiz '` substring + canned greeting substituted; SG2-SG6 bit-identical across 7+ hour cycle window (zero substrate drift); 4 self-corrects ratified (PF.11/AR.8 HEAD->GET; R2.1 indent 8->4 space; R2.4/R2.5 detached-curl two-shot polling); 2 P6 candidates banked pending Paco ratification (P6 #40 MCP-direct-execution discipline by Paco; P6 #41 prose-rule plateau / deterministic-guard architecture by PD); Patches 1-4 NOT YET committed to git -- backups .bak.day80-pre-grounding + .bak.day80-pre-r2 + chat_history_backup_day80.sql in place as rollback points; control-plane HEAD `c5010cd`; close-confirm `docs/paco_review_alexandra_smoke_hygiene_pollution_cleanup_amendment_r2.md` (20753 bytes; both secrets-scan layers CLEAN). Cumulative state P6=39->41 pending Paco bank, SR=8 unchanged. PD recommendation: Paco close-confirm + retroactive ratification of Patches A-H + Patch 4; commit Patches 1-4 to canon; close implicit "lights tool regression" ticket as resolved-by-this-cycle.

@@ -3015,3 +3015,73 @@ Unchanged: P6 lessons banked = 39, Standing rules = 8. No new lessons banked ton
 - control-plane HEAD pre-session: `39af2f4` (Cycle 3 close-confirm)
 - control-plane HEAD post-session: `24b4349` (smoke test 4-patch)
 - 2 commits this session, both pushed to `santigrey/control-plane-lab` main: `6da1976` + `24b4349`.
+
+
+---
+
+# 2026-05-04 Day 80 Alexandra hygiene -- pollution cleanup + grounding hardening (single cycle, two directives)
+
+## TL;DR
+
+Qwen2.5:72b on /chat (telegram-8751426822) had been hallucinating device states + fake action executions since Apr 22. Original directive applied Patches 1-3 (system-prompt ABSOLUTE RULES + chat_history truncation 20->6 + agent grounding) and DELETEd 40 polluted chat_history rows. Cold test #1 still failed AC.10 on `"giving you trouble"` -- prose patches insufficient against stochastic instruction-drift. CEO selected Path R2 (deterministic post-processing guard). Amendment added Patch 4 (`_GUARD_FORBIDDEN` 32-phrase filter + canned safe greeting substitution + provenance flow-through). Cold test #1 retry produced Form A (clean qwen response, guard inert -- R2.B5 best outcome). Cold test #2 produced explicit `[CHAT-LOCAL] tool=home_control` (DISPROVES the 2-week tool-calling regression Sloan flagged) + guard fired correctly on `'wiz '` substring + canned greeting substituted. SG2-SG6 bit-identical across 7+ hour combined cycle window. All MUST AC across both directives PASS.
+
+## Cycle artifacts (committed to santigrey/control-plane-lab main)
+
+- `docs/paco_directive_alexandra_smoke_hygiene_pollution_cleanup.md` -- original directive (Paco, pre-session)
+- `docs/paco_request_alexandra_pollution_cleanup_post_test_1_failed.md` -- PD halt + escalation, commit `54066f7`
+- `docs/paco_directive_alexandra_smoke_hygiene_pollution_cleanup_amendment_r2.md` -- Path R2 amendment (Paco, mid-session)
+- `docs/paco_review_alexandra_smoke_hygiene_pollution_cleanup_amendment_r2.md` -- PD close-confirm covering both directives, commit `c5010cd`
+
+## Patches applied (NOT YET committed -- awaiting Paco close-confirm authorization)
+
+- Patch 1 (`app.py`): system-prompt 4 ABSOLUTE RULES (greeting discipline + no fake execution + no state claims + no prior-turn recall)
+- Patch 2 (`app.py`): chat_history feed window 20 -> 6 turns
+- Patch 3 (`agent.py`): agent.py GROUNDING RULES section
+- Patch 4 (`app.py`): post-processing `_GUARD_FORBIDDEN` filter + canned greeting substitution + provenance flags
+- Patch 5: R2-extended forbidden phrases (embedded inside Patch 4 list -- 9 implicit-recall phrases like `'still giving'`, `'lights still'`, `'try again'`)
+
+## Backups in place (rollback points)
+
+- `/home/jes/control-plane/backups/chat_history_backup_day80.sql` (207669 bytes; 40 polluted rows from telegram-8751426822 in pg_dump column-inserts format)
+- `orchestrator/app.py.bak.day80-pre-grounding` sha256 `8d32c4...dac6` (pre-Patches-1+2 + pre-Patch-4)
+- `orchestrator/app.py.bak.day80-pre-r2` sha256 `d2e432...8b9` (post-Patches-1+2 + pre-Patch-4)
+- `orchestrator/ai_operator/agent/agent.py.bak.day80-pre-grounding` sha256 `16c075...80e` (pre-Patch-3)
+
+## Acceptance criteria total
+
+- Original directive: 14 PF + 17 AC; 14 PF PASS, AC.1-AC.8 PASS (Steps 1-4), AC.9-AC.17 superseded by amendment
+- Amendment: 8 APF + 16 AR; all PASS (AR.12 SHOULD-fail informational ~25-50s due to cold KV cache after 7h gap)
+- Total MUST AC pass: all
+
+## Findings worth surfacing for Paco
+
+1. **Tool-calling regression Sloan flagged: DISPROVED.** Cold test 2 explicitly fires `tool=home_control args={'action': 'turn_on', 'entity_id': 'light.wiz_rgbw_tunable_eda510'}`. The "lights stopped working ~1 week ago" was misdiagnosis -- it was pollution-driven hallucination drag, not tool-calling breakage. Once chat_history is clean, tool calls execute correctly.
+2. **Patches 1-3 alone are insufficient.** Same patches + same empty history + same restart produced AC.10 fail (original cold test 1 hallucinated `"are the lights still giving you trouble"`) and Form A pass (amendment cold test 1 produced clean conditional response). Stochastic sampling drives the difference. Patch 4's deterministic guard is the architectural answer.
+3. **Guard correctly substitutes truthful state-claim prose.** Cold test 2 model accurately reported tool-call success (`The WiZ RGBW Tunable EDA510 light is now on...`) but the prose matched literal forbidden list. Guard substituted with canned greeting. Trade-off documented in amendment: safety over verbose accuracy. User loses the verbose confirmation; tool effect happened; provenance preserved in journal + response payload.
+4. **MCP wrapper 30s timeout caught us.** Original Step 5 single-shot curl was reaped before the JSON returned. Server-side completed; client got nothing. Detached-curl + nohup + sentinel-file pattern works. For any test where model latency may exceed 25s, use two-shot polling.
+5. **PF.11 directive probe construction issue.** `curl -sI` (HEAD) returns 405 against FastAPI's GET-only /healthz route. Self-correct applied (HEAD->GET) under 4-condition rule. Recommend updating directive template to canonical GET probe.
+
+## Pending Paco-authorized actions
+
+1. Author `docs/paco_response_alexandra_smoke_hygiene_pollution_cleanup_close_confirm.md` (formal close-confirm).
+2. Commit Patches 1-4 to git canon: `cd /home/jes/control-plane && git add orchestrator/app.py orchestrator/ai_operator/agent/agent.py && git commit -m 'alexandra: Patches 1-4 (grounding rules + history truncation + agent grounding + post-processing guard)' && git push origin main`.
+3. Bank P6 #41 (deterministic-guard architectural lesson) per close-confirm section 8.
+4. Close implicit "lights tool regression" follow-up ticket as already-resolved-by-this-cycle.
+
+## Cumulative state
+
+- P6 lessons: 39 -> 41 pending (P6 #40 banked at original directive section 8 by Paco; P6 #41 proposed by PD in close-confirm section 8 awaiting Paco ratification).
+- Standing rules: 8 (unchanged unless P6 #40 or #41 promote on pattern recurrence).
+- First-try streak: this cycle is NOT first-try (one mid-cycle PD escalation + Paco amendment); resets for this cycle.
+
+## Substrate state at session end
+
+- orchestrator.service: active, MainPID 1215999, ActiveEnter 2026-05-04T13:14:20Z, NRestarts=0
+- chat_history for telegram-8751426822: 0 rows post Step R2.2 + 2 added by cold tests = 2 rows (915-equivalents not preserved; new rows 917-918 expected after AR.16; verify if needed)
+- Standing Gates 5/5 bit-identical pre/mid/post: SG2 postgres `2026-05-03T18:38:24.910689151Z r=0`; SG3 garage `2026-05-03T18:38:24.493238903Z r=0`; SG4 atlas-mcp PID 1212 NRestarts 0; SG5 atlas-agent PID 4753 NRestarts 0; SG6 mercury-scanner PID 7800
+
+## Repo state
+
+- control-plane HEAD pre-session: `d901cda` (post-amendment dispatch)
+- control-plane HEAD post-session: `c5010cd` (close-confirm doc)
+- 2 commits this session: `54066f7` (paco_request post_test_1_failed) + `c5010cd` (paco_review amendment_r2 close-confirm). Patches 1-4 modified working tree NOT committed.
