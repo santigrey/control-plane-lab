@@ -1,6 +1,6 @@
 # Alexandra -- Product Brief
 
-**Version:** 1.0 (companion to PROJECT_ASCENSION_INSTRUCTIONS.md v2.2)
+**Version:** 1.0 (companion to PROJECT_ASCENSION_INSTRUCTIONS.md v2.3)
 **Source canon:** `/home/jes/control-plane/docs/alexandra_product_vision.md` (ratified Day 66) + `docs/unified_alexandra_spec_v1.md` (ratified Day 66/Day 67) + `docs/alexandra_iot_security_protocol.md`
 **Purpose:** At-a-glance product reference. Authoritative source is the canonical product vision + unified spec.
 

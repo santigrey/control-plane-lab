@@ -56,7 +56,6 @@ tool_smoke_test_results.json
 
 # Persona-mode anchored backups
 *.bak-*
-docs/handoff_*.md
 
 # rollback artifacts (per-cycle safety; not canon)
 backups/

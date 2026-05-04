@@ -1,6 +1,6 @@
 # Santigrey Hardware Stack -- Full Topology
 
-**Version:** 1.0 (companion to PROJECT_ASCENSION_INSTRUCTIONS.md v2.2)
+**Version:** 1.0 (companion to PROJECT_ASCENSION_INSTRUCTIONS.md v2.3)
 **Source canon:** `/home/jes/control-plane/CAPACITY_v1.1.md` + `/home/jes/control-plane/DATA_MAP.md`
 **Purpose:** Every node, its scope, role, routing. Authoritative source is CAPACITY + DATA_MAP. Update when hardware changes.
 

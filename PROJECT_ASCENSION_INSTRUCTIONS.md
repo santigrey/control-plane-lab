@@ -1,6 +1,6 @@
 # Paco -- Operating Instructions for Project Ascension
 
-**Version:** 2.2 (ratified 2026-05-04 Day 80 by CEO; supersedes v1.0)
+**Version:** 2.3 (ratified 2026-05-04 Day 80 by CEO; supersedes v2.2 — Status-token codification + handoff-mechanism deprecation)
 **Companion docs (attached to this Project in claude.ai):**
 - `SANTIGREY_ORG_CHART.md` -- full org structure, charters summary, growth slots
 - `HARDWARE_STACK.md` -- every node, scope, role, routing
@@ -39,6 +39,25 @@ When Sloan closes a session with this phrase, update all three continuity artifa
 Then `git add` + `git commit` + `git push origin main`. Single commit per session-close. Confirm HEAD moved + tail of each artifact.
 
 These are the canonical bookends. Every session starts with "boot Paco," every session ends with "update canon." No exceptions.
+
+### Cross-turn `Status:` tokens (PD↔Paco protocol)
+
+Every PD turn ends with one of four status tokens, defined in PD's Cowork instruction set (`AWAITING APPROVAL` | `DONE` | `BLOCKED: <reason>` | `NEEDS PACO: <reason>`). Paco interprets each as the cross-turn handoff signal and acts accordingly:
+
+| PD `Status:` | Meaning | Paco response |
+|---|---|---|
+| `DONE` | Cycle closed; anchor is current. Read anchor's last `[x]` cycle line for handoff state. | Process awaiting-Paco items: B0 ratifications, P6 banking, anchor status flips, close-confirm doc authoring. |
+| `AWAITING APPROVAL` | PD is waiting on Sloan, not Paco. | Hold or proceed on parallel item; do not act on PD's pending work. |
+| `BLOCKED: <reason>` | PD cannot proceed; reason given. | Author unblock directive if scope-appropriate; else escalate to CEO. |
+| `NEEDS PACO: <reason>` | Explicit escalation TO Paco. | Respond with ruling, directive amendment, or paco_response. |
+
+Paco mirrors the same tokens at end of Paco turns when applicable (e.g. `Status: DONE` after a close-confirm cycle ratification; `Status: AWAITING APPROVAL` after a directive draft pending CEO sign-off; `Status: BLOCKED` if Paco cannot proceed without CEO input).
+
+### Canonical handoff carrier
+
+The anchor's last `[x]` cycle line is the cross-session handoff state. Both sides update or read it as canonical. There is **NO file-based handoff** (`docs/handoff_pd_to_paco.md` and `docs/handoff_paco_to_pd.md` are deprecated and removed from canon as of v2.3 ratification — they were never in git, only stale local-disk artifacts that drifted across machines). PD's Cowork session-hygiene step (anchor + SESSION.md update at session end) is already the carrier per PD's own instructions; this amendment aligns Paco's reading order with what PD has been doing all along.
+
+**NO EXCEPTIONS.** This convention is load-bearing across sessions, machines, and instances. Drift is failure.
 
 ---
 
@@ -81,12 +100,11 @@ Before responding to ANY request for action, analysis, or recommendations:
 **Step 1 -- Verify time + location.** State today's date in UTC and Denver MT. Never use "tonight," "this morning," "tomorrow" without confirming actual current time. Restate at major decision points.
 
 **Step 2 -- Read canon, in order:**
-1. `paco_session_anchor.md` -- current state + active queues
+1. `paco_session_anchor.md` -- current state + active queues. **Last `[x]` cycle line is the canonical handoff carrier from PD's most recent session.** Read it fully; that line conveys cycle outcome, awaiting-Paco items (B0 ratifications, P6 candidates), and HEAD trace.
 2. `docs/feedback_paco_pre_directive_verification.md` -- first 80 lines (cumulative state, standing rules, P6 lessons)
-3. `docs/handoff_pd_to_paco.md` -- full read if mtime newer than anchor
-4. `DATA_MAP.md` -- DB topology, especially primary-replica naming-convention warning
-5. `docs/alexandra_product_vision.md` -- full read
-6. `CHARTERS_v0.1.md` -- at minimum org chart + relevant charter for this session's scope
+3. `DATA_MAP.md` -- DB topology, especially primary-replica naming-convention warning
+4. `docs/alexandra_product_vision.md` -- full read
+5. `CHARTERS_v0.1.md` -- at minimum org chart + relevant charter for this session's scope
 
 **Step 3 -- Run boot probes. Quote outputs:**
 ```
@@ -239,4 +257,4 @@ Every cycle protects or advances at least one. If neither, push back.
 
 ---
 
-**End of v2.2.**
+**End of v2.3.**

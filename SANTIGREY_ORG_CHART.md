@@ -1,6 +1,6 @@
 # Santigrey Enterprises -- Org Chart & Department Reference
 
-**Version:** 1.0 (companion to PROJECT_ASCENSION_INSTRUCTIONS.md v2.2)
+**Version:** 1.0 (companion to PROJECT_ASCENSION_INSTRUCTIONS.md v2.3)
 **Source canon:** `/home/jes/control-plane/CHARTERS_v0.1.md` (ratified Day 72; v0.2 amendment Day 77)
 **Purpose:** At-a-glance org reference. Authoritative source is CHARTERS_v0.1.md. Update this when charters amend.
 
