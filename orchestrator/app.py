@@ -402,6 +402,40 @@ def get_alexandra_system_prompt() -> str:
         "/ask, private. This is the public work-and-life posture. No separate persona\n"
         "mode on this endpoint; you are simply yourself.\n"
         "\n"
+        "=========================================================================\n"
+        "ABSOLUTE RULES - THESE OVERRIDE EVERY OTHER RULE BELOW. NO EXCEPTIONS.\n"
+        "=========================================================================\n"
+        "\n"
+        "RULE 1 - GREETING DISCIPLINE:\n"
+        "On a greeting message ('Hey Alexandra', 'Hi', 'Good morning', 'What\'s up',\n"
+        "'Hello') with NO specific question, your ONLY response is: a brief greeting\n"
+        "+ a question asking what James needs. NEVER mention any device by name.\n"
+        "NEVER report any state. NEVER claim you executed any action. NEVER say\n"
+        "'I see the lights are giving you trouble' or anything similar. Greeting =\n"
+        "greet + ask, nothing more. This rule overrides PROACTIVE BEHAVIOR.\n"
+        "\n"
+        "RULE 2 - NO FAKE EXECUTION:\n"
+        "You CANNOT control devices, send messages, create events, or modify any\n"
+        "state by writing prose about it. Writing 'Turning on...', 'Now on', 'All\n"
+        "lights are now on', 'I have turned off X' is forbidden unless you ACTUALLY\n"
+        "called the home_control tool THIS TURN and saw a successful tool result.\n"
+        "If you want to control something, EMIT THE TOOL CALL. The tool runtime\n"
+        "executes; your prose does not. Narrating fake execution is a lie.\n"
+        "\n"
+        "RULE 3 - NO STATE CLAIMS WITHOUT TOOL CALLS:\n"
+        "Before writing ANY sentence that claims a device state, calendar event,\n"
+        "email content, or any other tool-backed fact, you must have a tool result\n"
+        "FROM THIS TURN that backs the claim. Prior chat history is NOT a tool\n"
+        "result. Your own past statements are NOT tool results. Memory is NOT a\n"
+        "tool result. If unsure, call the tool. If the tool fails, say so.\n"
+        "\n"
+        "RULE 4 - PRIOR TURNS ARE NOT FACTS:\n"
+        "You will see your own prior responses in chat history. Treat them as\n"
+        "YOUR previous outputs - not as ground truth. If a prior turn said 'lights\n"
+        "are on', that does not make lights on now. Re-verify with a tool call\n"
+        "before re-asserting any state.\n"
+        "=========================================================================\n"
+        "\n"
         "RELATIONSHIP\n"
         "James is your person. You know him - his ambitions, his homelab, his schedule,\n"
         "his history, the shape of his days. You are devoted to him the way Jarvis was\n"
@@ -1545,6 +1579,42 @@ def chat(req: ChatRequest, request: Request) -> dict:
     # Defense-in-depth: strip any residual sentinel from user-visible answer
     answer = _re.sub(r'\[\[ESCALATE:(sonnet|opus)\]\]', '', answer).strip()
 
+    # Day 80 R2 guard: deterministic post-processing filter against
+    # qwen2.5:72b instruction-drift hallucinations. Catches device-name
+    # leaks, fake-execution claims, and implicit-recall phrases that
+    # bypass system-prompt grounding rules. Substitutes a canned safe
+    # greeting on hit; original response logged for analysis.
+    _GUARD_FORBIDDEN = [
+        'blueroom', 'wiz ', 'eda510', 'ecf8da', 'edc8ae', '2115ad',
+        'floodlight', 'lamp', 'hubspace', 'tall switch', 'short switch',
+        'turning on', 'turning off', 'now on', 'now off',
+        'is on', 'is off', 'are on', 'are off',
+        "i've turned", "i've started", 'executed',
+        "i'll check the status", 'i see the issue',
+        'giving you trouble',
+        'still giving', 'still having', 'try this again', 'try again',
+        'as before', 'earlier today', 'last time',
+        'lights are giving', 'lights still',
+    ]
+    _guard_lc = answer.lower()
+    _guard_hit = next(
+        (p for p in _GUARD_FORBIDDEN if p in _guard_lc),
+        None,
+    )
+    if _guard_hit:
+        print(
+            f"[CHAT-GUARD] HIT phrase={_guard_hit!r} session={sid!r} "
+            f"resp_len={len(answer)} brain_pre={brain!r} "
+            f"resp_preview={answer[:200]!r}",
+            flush=True,
+        )
+        answer = "Hey James, what can I help you with?"
+        brain = "qwen2.5:72b (guard-substituted)"
+        provenance['model'] = brain
+        provenance['guard_substituted'] = True
+        provenance['guard_phrase'] = _guard_hit
+
+
     history.append({"role": "user", "content": msg})
     history.append({"role": "assistant", "content": answer})
     _save_chat_turn(sid, "user", msg)
@@ -1556,8 +1626,11 @@ def chat(req: ChatRequest, request: Request) -> dict:
     )
     _store_memory_async(f"James said: {msg}", "chat_user", endpoint='chat', role='user', grounded=True, provenance=provenance)
     _store_memory_async(f"Alexandra said: {answer}", "chat_assistant", endpoint='chat', role='assistant', grounded=provenance['grounded'], provenance=provenance)
-    if len(history) > 20:
-        history = history[-20:]
+    # Day 80 fix: reduced from 20 -> 6 to limit hallucination priming from
+    # polluted past turns. Aggressive truncation; can be tuned upward later
+    # once grounding behavior is verified clean.
+    if len(history) > 6:
+        history = history[-6:]
     _chat_sessions[sid] = history
 
     return {"response": answer, "session_id": sid, "image_path": _image_path, "brain": brain}
