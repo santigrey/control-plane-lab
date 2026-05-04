@@ -2889,3 +2889,129 @@ Lesson catalyzed by Cycle 2 abort applied at directive-author time + held at exe
 ### Next planned
 
 PD idle pending Paco close-confirm + Cycle 2 hold posture re-rule at 24h cap (2026-05-04 ~22:23Z; ~21h from now). With 4+ day Launchpad DDoS in progress, PD recommendation tilts toward Option A (extend cap) at cap re-rule. Cycle 2 hourly probe loop continues per ratified cadence; next tick due ~02:21Z.
+
+---
+
+# Day 80 early UTC -- Alexandra nightly smoke test hygiene + Google OAuth root-cause fix
+
+**Date:** 2026-05-04 ~04:00-04:15 UTC
+**Session anchor commit (anchor file):** local-only edit; not git-tracked yet
+**Repo commits:** `6da1976` (PRIVACY.md + TERMS.md) + `24b4349` (smoke test 4-patch)
+
+## TL;DR
+
+Five nightly Alexandra smoke test FAILures triaged + fixed end-to-end. Two were working-as-designed (smoke-test-side classification bugs); three were a Google OAuth refresh-token revocation. Root cause of the OAuth recurrence (Cloud Console OAuth app stuck in Testing status with 7-day test-user token TTL) structurally addressed via push-to-Production. Bonus discovery: nightly memory row Postgres write had been failing silently for 12 days post Day 78 substrate LAN-only rebind; closed.
+
+## Pre-fix state (from `tool_smoke_test_results.json` 2026-05-03T18:53:28Z)
+
+10 PASS / 5 FAIL / 0 EXCEPTION / 1 SCHEMA_ISSUE / -- SKIP not yet a status
+
+5 FAILures:
+1. `memory_save` -- defense-in-depth env-var gate `ALEXANDRA_MEMORY_SAVE_TOOL_ENABLED=0`; tool intentionally disabled by design
+2. `read_file` -- target was SESSION.md which had grown to 209KB > 50KB cap in registry.py line 704
+3. `get_emails` -- `invalid_grant: Token has been expired or revoked` (Google OAuth refresh)
+4. `get_calendar` -- same OAuth root cause
+5. `get_upcoming_calendar` -- same OAuth root cause
+
+## Triage decisions
+
+- (1) memory_save -- chose Option A: smoke test treats `disabled:True` envelope as new SKIP status; gate stays on; alert noise eliminated.
+- (2) read_file -- swap test target to `paco_session_anchor.md` (15.6KB; canonical; always present).
+- (3-5) Google OAuth -- two-layer fix: (a) re-auth tonight to mint fresh token; (b) flip OAuth consent screen Testing->In production to eliminate 7-day TTL recurrence.
+
+## Smoke test patches (commit `24b4349`)
+
+4 surgical edits to `orchestrator/tool_smoke_test.py` (7260 -> 8018 bytes; +758):
+
+1. **classify() recognizes disabled:True** -- new branch returns `("SKIP", str(result.get("error", ...)))` BEFORE the `ok:False` FAIL branch.
+2. **read_file target swap** -- `SAFE_TESTS["read_file"]` value `{"path": "SESSION.md"}` -> `{"path": "paco_session_anchor.md"}`.
+3. **counts/summary/JSON schema carry SKIP** -- `counts` dict initialized with `"SKIP": 0`; summary text appends `/{counts['SKIP']} SKIP`; output JSON adds `"skipped": [...]` list alongside `"failures"` and `"schema_issues"`.
+4. **Memory row Postgres conn rebind** -- `write_memory_row()` line 124: `@127.0.0.1:5432/controlplane` -> `@192.168.1.10:5432/controlplane`. Same fix pattern as Mercury .env edit Day 78 (CHECKLIST entry #109).
+
+Backup at `orchestrator/tool_smoke_test.py.bak.day80` (7260 bytes).
+
+## Bonus discovery: 12-day silent observability gap
+
+Query against pgvector `memory` table for `source = 'tool_smoke_test'`:
+```
+2026-05-04 04:10:58 (tonight, post-fix)
+2026-04-26 03:30:21 (last successful pre-fix)
+2026-04-25 03:30:23
+```
+
+12-day gap. Caused by Day 78 Mercury fix (CHECKLIST #109) which moved Postgres bind from dual-bind (localhost + LAN) to LAN-only on Beast. Mercury .env was fixed Day 78; smoke test was not (had no symptom triggering anyone to look -- Telegram alerts only fire on FAIL/EXCEPTION, not on memory row write failure which was buried in stdout). Tonight's fix restored continuity.
+
+## Google OAuth root-cause fix (Cloud Console flip)
+
+### Why tokens kept dying
+
+OAuth consent screen status was **Testing** (External user type with @gmail.com). Per Google's policy: refresh tokens for test users in Testing-mode apps **expire after 7 days**, regardless of refresh-token grant flow. Token JSON has no `expiry` field on our side; we only discover it dead when refresh fails. Last token Apr 21 -> first failure detected ~Apr 28 -> by May 3 was 12 days of FAILs.
+
+### Fix path: push to In production
+
+For a single-user personal-use app, Production status is the right answer. Avoids verification process (which is not feasible for personal-use single-user app).
+
+Google requires four URLs filled in Branding page before Publish-app button proceeds:
+- Application home page
+- Application privacy policy link
+- Application terms of service link
+- Authorized domains (must match domain in URLs above)
+
+### Artifacts created (commit `6da1976`)
+
+- `PRIVACY.md` (3374 bytes / 50 lines) -- single-user personal-use boilerplate covering: who Alexandra is (single-user, not a service), what data accessed (Gmail read/send + Calendar events), what Alexandra does with it (local processing on private homelab; no third-party transmission of Google data), third-party services used (Anthropic Claude API, Tailscale, Twilio; none receive Google account data), data retention, revocation procedure (myaccount.google.com/permissions).
+- `TERMS.md` (1948 bytes / 42 lines) -- single-user scope statement, no warranty, no liability to third parties, change procedure.
+
+Both files HTTP 200 from `https://github.com/santigrey/control-plane-lab/blob/main/{PRIVACY,TERMS}.md` post-push (curl verified).
+
+### Cloud Console execution (Claude-for-Chrome driven)
+
+CFC walked the Cloud Console UI through 6 steps:
+- Identified the new "Google Auth Platform" UI splits OAuth consent across 3 pages (Branding / Audience / Data Access) instead of the legacy single page.
+- Read pre-publish state: User type=External / Publishing status=Testing / Test users=james.3sloan@gmail.com / OAuth user cap=1 user / 100 cap.
+- Branding page pre-publish: 4 required URL fields all EMPTY; flagged.
+- After Sloan provided URLs (verified resolving in advance), CFC populated Branding page + saved ("Branding changes saved!" toast).
+- Navigated back to Audience page + clicked Publish-app -> Confirm.
+- Post-publish read: Publishing status=In production / Test users section GONE / no verification banner / no quota errors / Back-to-testing button replaces Publish-app button. Notification badge (1) on bell icon noted but unrelated.
+
+### Re-mint under Production
+
+Sloan ran `reauth_gmail.py` from laptop with SSH tunnel `ssh -L 8899:localhost:8899 jes@192.168.1.10`. Browser flow: "Google hasn't verified this app" -> Advanced -> "Go to Alexandra (unsafe)" -> Allow on consent screen showing all 3 scopes. Terminal printed:
+```
+[OK] Token written to /home/jes/control-plane/google_token.json
+[OK] Scopes authorized: ['https://www.googleapis.com/auth/gmail.send', 'https://www.googleapis.com/auth/gmail.readonly', 'https://www.googleapis.com/auth/calendar.events']
+[OK] Refresh token present: True
+```
+
+The `channel 3: open failed: connect failed` after was harmless SSH tunnel listener cleanup post-callback.
+
+## Post-fix smoke test result
+
+14 PASS / 0 FAIL / 0 EXCEPTION / 1 SCHEMA_ISSUE / 1 SKIP
+
+No Telegram alert fired (exit code 0; alerts trigger only on FAIL/EXCEPTION).
+
+Google tools PASS:
+- get_emails: PASS (2669 ms)
+- get_calendar: PASS (696 ms)
+- get_upcoming_calendar: PASS (673 ms)
+
+memory_save: SKIP (82 ms) -- defense-in-depth gate working as designed.
+read_file: PASS (0 ms) -- paco_session_anchor.md target.
+Memory row insertion: `{'ok': True}`.
+
+## Remaining items not addressed this session
+
+- **get_system_status SCHEMA_ISSUE** -- pre-existing handler returns None instead of envelope dict; not introduced by this work; ~5-min fix in `registry.py`. Banked as low-priority follow-up.
+- **Atlas vendor-renewal entry for OAuth token** -- recurrence safety net even with Production status (tokens can still die from password change, manual revoke at myaccount.google.com/permissions, Google security event). Add `atlas.vendors` row + `vendor.py` daily token-health check (no-op API call; alert on `invalid_grant`). Defer to next session -- Atlas Phase 9 territory.
+- **`adminpass` literal in tool_smoke_test.py line 123** -- pre-existing exposure (item 17 of the 17 known canon-hygiene exposures pending v0.1.1 rotation per P6 #34's exposure inventory). Not introduced this session; tracked under v0.1.1 backlog.
+
+## Cumulative state
+
+Unchanged: P6 lessons banked = 39, Standing rules = 8. No new lessons banked tonight (these were all known issues from the May 2 anchor; tonight executed the fixes).
+
+## Repo state
+
+- control-plane HEAD pre-session: `39af2f4` (Cycle 3 close-confirm)
+- control-plane HEAD post-session: `24b4349` (smoke test 4-patch)
+- 2 commits this session, both pushed to `santigrey/control-plane-lab` main: `6da1976` + `24b4349`.
