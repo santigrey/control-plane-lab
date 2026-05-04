@@ -3168,3 +3168,59 @@ Qwen2.5:72b on /chat (telegram-8751426822) had been hallucinating device states 
 ### Next session resume
 
 Fresh Paco instance opens with v2.2 instructions loaded + 3 companion docs in-context. CEO opens with "boot Paco". Paco runs full boot protocol (verify time + read 6 canon files in order + run boot probes + state understanding back in 5-7 bullets) before any other response. Active queues to surface from anchor: Alexandra Tier-1 fixes (autoGreet + stale agent_tasks row on CK primary), Patch Cycle 2 Goliath PPA recovery monitoring (cap 2026-05-07 ~22:23Z), homelab MCP localhost bug, Pi3 DNS Gateway role assignment, get_system_status SCHEMA_ISSUE, Telegram surface flakiness, Alexandra speed optimization.
+
+---
+
+# Project Ascension -- Day 80 (continued -- 2026-05-04 ~13:45 MT / 19:45 UTC)
+
+## Completed this session (resume from prior session-close)
+
+- **Alexandra Bug 1 (greeter polarity) + Bug 2 (queue:1 badge) bundled cycle CLOSED**. HEAD `b204525` on `control-plane` (pushed to GitHub origin/main).
+  - 8/8 MUST-PASS AC + 3/3 SHOULD-PASS AS first-try
+  - 7/7 DPF preflight first-try
+  - 2 B0 standing-meta-authority adaptations applied + documented for ratification
+  - Bug 1: +1 line at `dashboard.py` L167 (`if(!privateMode){_greeted=true;return;}`); orchestrator restart clean (MainPID 1215999 -> 1551163; /healthz GET 200)
+  - Bug 2: single-row UPDATE on CK primary `agent_tasks` row `6d5102a5-93e8-4972-846f-9acbabe2b795` from `approved` -> `completed` at 2026-05-04 17:48:49.434376+00; B2b logical replication landed on Beast replica in <10s
+  - Behavioral proof: 0 `POST /vision/analyze` across ~2h41m CEO professional-mode UI activity; 1 hit at 20:29:13 from CEO companion-mode regression test
+  - Standing gates 6/6 bit-identical pre/post
+  - Both secrets-scan layers + literal-sweep CLEAN
+  - Backup `dashboard.py.bak.day80-pre-greeter-fix` preserved at `/home/jes/control-plane/orchestrator/ai_operator/dashboard/`
+  - Close-confirm doc: `docs/paco_review_alexandra_dashboard_greeter_and_queue_badge_fix.md` (14,149 bytes)
+
+## Pending -> Completed (from prior session-close pending list)
+
+- [x] "Patch autoGreet() to skip when !privateMode (Bug 1 Option A)" -> SHIPPED
+- [x] "UPDATE the stale `approved` row in CK primary `controlplane.public.agent_tasks` to `completed` (Bug 2 Option A)" -> SHIPPED
+- [x] "Restart orchestrator + verify both fixes from fresh browser session" -> DONE
+
+## Pending (carried forward + new flags from this cycle)
+
+- **Paco close-confirm ratification** of B0.1 + B0.2 adaptations
+- **P6 #45 candidate** (source-surface grep coverage) -- pending Paco bank
+- **P6 #46 candidate** (nginx access logs file-only) -- pending Paco bank
+- **Chat-history timestamp display bug** (NEW, out-of-scope future flag): rendered timestamps on historical chats show current UI-open time rather than created_at; candidate for future Alexandra hygiene cycle
+- **Patch Cycle 2 (Goliath) recovery monitoring**: hourly Launchpad probe loop continues; cap deadline 2026-05-07 ~22:23Z
+- **API key rotation** (P6 #44 fallout)
+- **`get_system_status` SCHEMA_ISSUE**: ~5min fix in registry.py
+- **homelab MCP localhost bug**
+- **Pi3 DNS Gateway role assignment**
+- **Atlas vendor-renewal entry for Google OAuth token**
+- **Telegram surface flakiness investigation**
+- **Alexandra speed optimization**
+
+## Cumulative state
+
+- **P6 lessons banked: 44** (unchanged; +2 candidates #45 #46 pending Paco bank)
+- **Standing rules: 8** (unchanged)
+- **First-try streak**: 8/8 AC PASS first-try this cycle (under B0 adaptations)
+
+## Repo state
+
+- control-plane HEAD pre-cycle: `f75ee85` (instruction set v2.2 session bookend)
+- control-plane HEAD post-cycle: `b204525` (Alexandra Bug 1 + Bug 2 close-confirm)
+- 1 commit this cycle: `b204525` (273 insertions, 0 deletions, 2 files)
+- GitHub origin/main in sync with CK
+
+## Status
+
+`AWAITING PACO CLOSE-CONFIRM RATIFICATION`
