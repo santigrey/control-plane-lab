@@ -1,7 +1,7 @@
 # feedback_paco_pre_directive_verification
 
 **Banked:** 2026-04-30 / Day 75
-**Last canon update:** 2026-05-03 / Day 79 late evening (Patch Cycle 2 PPA-unreachable abort ruling; +P6 #38 +SR #8)
+**Last canon update:** 2026-05-04 / Day 80 early UTC (Patch Cycle 3 close-confirm; +P6 #39)
 **Originated:** Atlas v0.1 Cycle 1A preflight ESC + CEO discipline RFC after 3 consecutive Paco-side spec errors in 24-72 hours
 **Companion to:** feedback_directive_command_syntax_correction_pd_authority.md, feedback_paco_review_doc_per_step.md, feedback_paco_pd_handoff_protocol.md, feedback_phase_closure_literal_vs_spirit.md
 
@@ -9,8 +9,8 @@
 
 ## Cumulative state
 
-**P6 lessons banked: 38** (last update Day 79 late evening; +P6 #38 banked at Patch Cycle 2 PPA-unreachable abort ruling)
-**Standing rules: 8** (last update Day 79 late evening; +SR #8 banked at Patch Cycle 2 PPA-unreachable abort ruling)
+**P6 lessons banked: 39** (last update Day 80 early UTC; +P6 #39 banked at Patch Cycle 3 close-confirm)
+**Standing rules: 8** (unchanged Day 80 early UTC; P6 #39 light-touch lesson not promoted to SR)
 
 **Critical for new Cowork sessions:** This ledger is the source of truth for cumulative count. PD-side must reconcile against THIS file's cumulative section, not against memory-of-prior-cycles. PD's Phase 9 review correctly flagged a propagation gap (ledger said 34/6; close-confirm canon said 35/7); the gap is closed in this Day 79 early morning update.
 
@@ -52,6 +52,8 @@ P6 #1-32: see prior ledger entries; mostly authorship correctness lessons (memor
 
 **P6 #38** (Day 79 late evening Patch Cycle 2 Stage B abort; PD-proposed, Paco-broadened): Apt simulation does not validate binary-fetch reachability — when an upgrade scope draws `Inst` lines from any non-primary-archive apt source (PPAs, NVIDIA repos, Docker repos, HashiCorp, MongoDB, custom corporate repos), Paco-side preflight MUST verify both index-fetch AND binary-fetch reachability for each contributing source before authoring stages that depend on those binaries. Index-fetch is verified by a clean `apt-get update` (no `Err:` lines for the source). Binary-fetch is verified by either `apt-get download --print-uris <pkg> | head -1 | xargs curl --max-time 8 -sI` for a representative `Inst` package per source, OR `apt-get -d -y dist-upgrade` (download only; no install). The two paths can fail independently: index-fetch can succeed against cached metadata or working CDN edge while origin binary store is unreachable. Catalyzed by Cycle 2 Stage B abort: original directive Section 1 SR #7 row 5 `apt-get -s dist-upgrade` returned successful plan against cached metadata; actual binary fetch of 4 canonical-nvidia PPA packages failed (Launchpad-wide service-layer outage at `ppa.launchpadcontent.net:443` AND `launchpad.net:443`; primary archives `archive.ubuntu.com` / `ports.ubuntu.com` / `esm.ubuntu.com` reachable). Abort happened pre-unpack thanks to apt's transactional integrity (521 successful Get + 4 Err = 0 unpacked), but the gap could equally have surfaced mid-fetch at Stage B.1 launch in any cycle. Natural extension of P6 #37 (blast-radius categorization) and SR #7 (source-surface preflight). Applied retroactively from Cycle 2 retry onward.
 
+**P6 #39** (Day 80 early UTC Patch Cycle 3 close-confirm; PD-proposed framing, Paco-codified): Directive assertion-shape verification at preflight — when a directive specifies an executable smoke-test (CLI version check, command output assertion, `--version` probe) for a scope category, Paco-side preflight verifies the executable is installed on the target host before authoring the assertion. If the executable is absent, specify the dpkg-version-equivalent or skip the assertion (whichever matches verification intent). Catalyzed by Cycle 3 Pi3 ImageMagick CLI absence: directive A.6 expected `convert --version` to discharge "ImageMagick running new version" criterion, but the `imagemagick` meta package was never installed on Pi3; the 4 in-scope packages were libraries from a Debian-Security advisory. PD-adapted via dpkg-query (Path B B3 SR #4). Second instance of "directive assertion shape mismatch with host actual state" in 4 cycles (first: Cycle 2 dkms-on-DGX-OS, where directive's `dkms status` verification was wrong because DGX OS uses prebuilt modules). Pattern signal: when authoring assertions about host state mechanism (CLI presence, package management mechanism, service unit names, file paths to system tools), preflight verifies the mechanism on the target before baking it into directive. Natural extension of SR #1 (pre-directive verification) and SR #7 (source-surface preflight) with finer granularity at the assertion level. Light-touch lesson; not promoted to standing rule (assertion-shape errors are caught by SR #4 at PD-execution time without risk of cycle harm; this is preflight efficiency optimization not safety).
+
 ---
 
 ## Mitigation pattern (becomes standing practice for handoff/directive authors)
@@ -79,6 +81,11 @@ P6 #1-32: see prior ledger entries; mostly authorship correctness lessons (memor
 **Day 78 evening (P6 #35 cluster signal):**
 - Phase 8 directive contained 5 source-surface assertions authored from memory of canonical Cycle 1I patterns instead of probing live Phase 3-6 source. PD caught all 5 at pre-execution (Path B adaptations Steps 2/5/6/7/8/9). Total Phase 8 PD overhead from Paco-side spec drift: ~75min.
 - Mitigation: SR #7 banked + applied retroactively from Phase 9 onward.
+
+**Day 80 early UTC (P6 #39 origination -- Patch Cycle 3 close-confirm; Pi3 ImageMagick CLI absence):**
+- Cycle 3 Pi3 Stage A.6: directive expected `convert --version` smoke-test for ImageMagick. PD execution found `convert: command not found`. Investigation: 4 in-scope packages are libraries from Debian-Security advisory; the `imagemagick` meta package providing CLI binaries was `un <none>` (never installed on this Pi3). PD-adapted: verified all 4 libraries at expected version `8:7.1.1.43+dfsg1-1+deb13u8` via `dpkg-query`; status `ii` for all four. Verification intent ("in-scope artifacts at new version") satisfied. Submitted as Path B B3 under SR #4; Paco ratified at close-confirm. P6 #39 banked (light-touch; not SR-promoted).
+- Pattern: second instance of directive-assertion-shape mismatch with host actual state in 4 cycles. First was Cycle 2 dkms-on-DGX-OS (Day 79 late evening Patch Cycle 2 directive author preflight). Both caught + corrected (Cycle 2 at preflight via SR #7, Cycle 3 at PD-execution via SR #4). No cycle harm in either case; both preserved acceptance.
+- Cycle 3 closed 12/12 PASS first-try; first-try streak 23/23 across Cycles 1+3.
 
 **Day 79 late evening (P6 #38 + SR #8 origination -- Patch Cycle 2 PPA-unreachable abort):**
 - Cycle 2 (Goliath) Stage B `apt-get -y dist-upgrade` aborted at ~57s with 4 `E: Failed to fetch` errors against `ppa.launchpadcontent.net` (canonical-nvidia/nvidia-desktop-edge + canonical-nvidia/vulkan-packages-nv-desktop). Cross-host probes from Goliath/CK/Beast all returned TCP/443 FAIL; broader `launchpad.net:443` also FAIL; primary Canonical archives reachable. Confirmed Launchpad-wide upstream outage, not LAN-local issue. Two of the 4 unfetchable binaries are kernel-version-pinned NVIDIA prebuilt module packages (Stage C verify-before-reboot ABORT-gate dependencies); no alternate Canonical mirror serves the `+1000` ABI variants. PD wrote `paco_request_homelab_patch_cycle2_ppa_unreachable_blocks_kernel_modules.md`; Paco issued `paco_response_homelab_patch_cycle2_ppa_unreachable_ruling.md` ratifying Option 1 (hold + wait) with 3-layer recovery gate (TCP×3 + apt-get update + binary-fetch HEAD), 24h hard cap @ 2026-05-04 ~22:23Z, version-drift check pre-retry, and 4 pre-staged escalation options at cap. PD also restored ollama.service unilaterally during request authoring; Paco ratified retroactively + codified as SR #8 (abort-restore discipline). System integrity: dpkg state clean exit 0; cross-host SGs bit-identical (atlas-agent NRestarts 0; postgres+garage anchors unchanged; mercury PID unchanged); atlas.tasks cadence 252/hr within ±25% of pre-cycle 258/hr.
