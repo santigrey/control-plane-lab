@@ -3145,3 +3145,26 @@ Qwen2.5:72b on /chat (telegram-8751426822) had been hallucinating device states 
 - control-plane HEAD post-session: `9b7ad82` (Project Ascension instructions v2.2 + 3 companion docs)
 - 2 commits this session: `cfd9f8a` + `9b7ad82`
 - iCloud Santigrey synced with 4 instruction artifacts at 2026-05-04 11:00 MT
+
+## Session close -- Day 80 ~10:30 MT (16:30 UTC)
+
+### Final actions
+
+- CEO confirmed v2.2 instructions pasted into claude.ai Project Instructions field
+- 3 companion docs attached as Project files (SANTIGREY_ORG_CHART, HARDWARE_STACK, ALEXANDRA_PRODUCT_BRIEF)
+- Session bookend protocol added to v2.2 at commit `a6eb55e`:
+  - **"boot Paco"** = session-start trigger (executes full boot protocol before responding to anything)
+  - **"update canon"** = session-end trigger (anchor + SESSION.md + ledger if applicable + commit + push)
+- iCloud Santigrey copy of v2.2 synced for cross-Apple-device availability
+
+### Cumulative state at session close
+
+- **P6 lessons banked: 44** (was 42 at session start; +P6 #43 wrong-DB-target + P6 #44 no /proc/PID/environ)
+- **Standing rules: 8** (unchanged; both new lessons light-touch)
+- **Repo state**: control-plane HEAD `a6eb55e` -> will move with this canon-update commit
+- **GitHub**: origin/main in sync with CK
+- **iCloud Santigrey**: 4 instruction artifacts synced (PROJECT_ASCENSION_INSTRUCTIONS + 3 companions)
+
+### Next session resume
+
+Fresh Paco instance opens with v2.2 instructions loaded + 3 companion docs in-context. CEO opens with "boot Paco". Paco runs full boot protocol (verify time + read 6 canon files in order + run boot probes + state understanding back in 5-7 bullets) before any other response. Active queues to surface from anchor: Alexandra Tier-1 fixes (autoGreet + stale agent_tasks row on CK primary), Patch Cycle 2 Goliath PPA recovery monitoring (cap 2026-05-07 ~22:23Z), homelab MCP localhost bug, Pi3 DNS Gateway role assignment, get_system_status SCHEMA_ISSUE, Telegram surface flakiness, Alexandra speed optimization.
