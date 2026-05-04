@@ -42,39 +42,36 @@ Three active queues, executed in order:
 
 ### Active queues
 
-**Queue 1 -- Reachability cycle (in flight)**
-- [x] Step 1 -- Canon doc + probe script (HEAD 38b0c46)
-- [x] Step 2 -- CEO user policy: Option A consolidate to `jes` (HEAD 1cfced4)
-- [x] Cortez sub-decision: Y1 ratified (Day 78 mid-day; canon already encodes `sloan@cortez-canonical`)
-- [x] Step 3 -- Push canonical /etc/hosts to 4 PD-executable Linux nodes: CK, Beast, SlimJim, Goliath. CLOSE-CONFIRM 4/4 PASS first-try; standing gates 5/5 bit-identical (PD review HEAD `b421e05`; close-confirm `docs/paco_response_reachability_step3_close_confirm.md`)
-- [x] Step 3.5 -- KaliPi+Pi3 onboarding CLOSE-CONFIRM 6/6 phases PASS; standing gates 5/5 bit-identical; jes user with NOPASSWD sudo + canonical ssh keys + canonical /etc/hosts on both nodes; MCP HOST_USERS mapped to jes (commit `5517775`); homelab-mcp.service restarted (MainPID 1640430). Patch-cycle Step 1 banked. Close-confirm `docs/paco_response_reachability_step35_close_confirm.md`.
-- [x] Step 4 -- CLOSE-CONFIRM 5/5 sub-steps PASS; N×N matrix 31/31 cells PASS (30 cross-node + 1 self-loop, 5 n/a); standing gates 5/5 bit-identical; CEO "no SSH issues" priority discharged via per-node post-install verification + destructive-safe install order. Close-confirm `docs/paco_response_reachability_step4_close_confirm.md`. New canon `docs/fleet_reachability_matrix_canon.md`.
-- [x] Step 5 -- Mac mini onboarding CLOSE-CONFIRM (sshd already persistent; pre-directive verification caught .13->.194 IP drift; canonical /etc/hosts + ~/.ssh/config + 9-key authorized_keys installed on 6 fleet nodes + Mac mini; MCP ALLOWED_HOSTS macmini IP corrected to .194; full 7x7 NxN matrix 42/42 cross-node PASS; standing gates 5/5 bit-identical). Close-confirm `docs/paco_response_reachability_step5_close_confirm.md`.
-- [x] Step 6 -- CLOSE-CONFIRM: 25 duplicates + 5 redundant grants pruned; fleet 7/7 nodes 100% canonical (only marker block); 7x7 NxN matrix 42/42 cross-node PASS post-prune; standing gates 4/4 bit-identical. REACHABILITY CYCLE COMPLETE. Close-confirm `docs/paco_response_reachability_step6_close_confirm.md`.
-- [ ] Step 7 -- Atlas Domain 1 integration (deferred; not blocking)
+**In-flight:**
+- [!] CVE-2026-31431 Cycle 2 (Goliath) -- HELD on Launchpad PPA outage since 2026-04-30; 4 PPA-only binaries unfetchable (2 are kernel-version-pinned NVIDIA prebuilt modules, Stage C ABORT-gate deps); 72h cap @ 2026-05-07 ~22:23 UTC; hourly TCP probe loop running per Cycle 3 close-confirm (3-layer recovery gate: TCP×3 + apt-get update clean + binary-fetch HEAD 200/302/304); resume on probe-gate PASS or escalate at cap.
 
-**Queue 2 -- CVE-2026-31431 patch cycle (queued)**
-- See `docs/paco_directive_homelab_patch_cycle_cve_2026_31431.md` (6 steps)
-- Resumes after reachability Step 6
-- Mr Robot backlog Job #1
+**Pending priorities (no formal cycle yet):**
+- LinkedIn post / portfolio demo on Goliath fine-tuning POC + Cycle 2 PPA-management narrative (CEO-authored voice per Charter 6; Paco drafts).
+- Mr Robot Phase 0 charter (Charter 7; sequenced after `atlas_events_create` MCP tool ships + `security` schema migration on Beast).
+- Job search active management: applications.csv on Mac mini (65+ entries); weekly unemployment certification due Sunday 2026-05-10 (3-app min); recruiter watcher flagged as Atlas sub-function future build.
+- A2P 10DLC campaign registration (Twilio Denver +1 720 902 7314; under review).
+- Per Scholas coursework ongoing M/W/F 6-9 PM ET through 2026-06-26 (AXIOM); class days = tight-cycle policy.
+- v2.4 NEEDS CEO token formalization (flagged in `SESSION_KEY_PHRASES_v2_3.md` as ad-hoc; small amendment when next sessioned).
 
-**Queue 3 -- Atlas v0.1 Phase 7 (queued)**
-- Spec: `tasks/atlas_v0_1_agent_loop.md` lines 427-451 (amended Day 78 mid-day)
-- 7.1 emit_event + dispatch_telegram + 7.2 mercury cancel-window wire-up
-- Resumes after patch cycle close
-- 3 of 10 phases remain
+**Closed cycles (see `[x]` entries below for detail):**
+- Reachability cycle (Day 80; 7 steps closed; Step 7 Atlas Domain 1 deferred non-blocking)
+- CVE Cycle 1 (CK + Beast + SlimJim; Day 79 evening; standing-gate baseline reset)
+- CVE Cycle 3 (Pi3 + KaliPi; Day 80 early; P6 #38 first-application validation CLEAN)
+- Atlas v0.1 (Phases 1-10 + ship report `docs/paco_review_atlas_v0_1_agent_loop_ship.md`)
+- Alexandra hygiene (smoke test + Google OAuth + grounding hardening + Bug 1+2 dashboard greeter polarity)
+- Project Ascension governance v2.3 (instruction set + handoff deprecation + Status tokens + companion docs + iCloud Santigrey sync at HEAD `981ee9f`)
 
-### Standing Gates 6/6 holding
-- atlas-mcp.service: MainPID 2173807 (~13h+)
-- atlas-agent.service: disabled inactive (Phase 1 acceptance preserved through 6 phases)
-- mercury-scanner.service: MainPID 643409 (Day 78 morning .env fix preserved)
-- B2b anchor: 2026-04-27T00:13:57.800746541Z (bit-identical 96+h; resets at patch Step 5)
-- Garage anchor: 2026-04-27T05:39:58.168067641Z (bit-identical 96+h; resets at patch Step 5)
-- atlas .env on Beast: empty mode 0600 jes:jes (Phase 9 latent blocker neutralized)
+### Standing Gates 6/6 holding (live-probed 2026-05-04 ~22:38 UTC)
+- atlas-mcp.service: MainPID 1212 NRestarts=0 active (Beast)
+- atlas-agent.service: MainPID 4753 NRestarts=0 active+enabled (Beast; Phase 9 flipped active+enabled)
+- mercury-scanner.service: MainPID 7800 active (CK)
+- postgres-beast: StartedAt 2026-05-03T18:38:24.910689151Z r=0 (CVE Cycle 1 reset baseline)
+- garage-beast: StartedAt 2026-05-03T18:38:24.493238903Z r=0 (CVE Cycle 1 reset baseline)
+- atlas .env on Beast: empty mode 0600 jes:jes (Phase 9 latent blocker neutralized; verified 0 bytes)
 
 ### Discipline metrics
 - 47 P6 lessons banked (last: #47 Day 80 ~16:25 MT v2.3 reconciliation banking -- Paco mid-session HEAD-advance check before state-changing MCP execution); B0 standing meta-authority used cleanly once (B0.1 + B0.2 in Bug 1+2 cycle); v2.3 cycle did NOT invoke B0 (Paco direct via MCP override); not promoted to SR pending second clean PD-execution invocation
-- 6 standing rules
+- 8 standing rules (SR #1-#8); B0 standing meta-authority documented but not yet promoted to SR (used cleanly once in Bug 1+2 cycle; pending second clean PD-execution invocation)
 - 18 known canon-hygiene exposures pending P5 v0.1.1 (17 P5-class weak-credential + 1 phone literal; +1 mcp_server.py line 25 found Day 78 mid-day, P6 #34 forward-redaction applied to new artifacts this cycle)
 - 5 paco_requests / 5 caught at PD pre-execution
 - Paco-side error rate this session: high; correlated with conversation depth; fresh session expected to reduce
