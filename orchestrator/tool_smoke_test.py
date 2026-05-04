@@ -3,11 +3,17 @@
 Alexandra tool registry smoke test.
 
 Runs every registered tool handler with safe, non-destructive inputs, classifies
-the result as PASS / FAIL / EXCEPTION / SCHEMA_ISSUE, writes a JSON summary,
+the result as PASS / FAIL / EXCEPTION / SCHEMA_ISSUE / SKIP, writes a JSON summary,
 records a pgvector memory row, and fires a Telegram alert on any failure.
 
 Origin: Day 64 — post-mortem action item after memory_save + memory_recall
 drift (wrong embed model, wrong table) went undetected for unknown duration.
+
+Day 80 amendments:
+  - SKIP status added for tools intentionally disabled by env-var gate
+    (handler returns {ok: False, disabled: True}); not a FAIL.
+  - read_file test target swapped from SESSION.md (now >50KB, exceeds cap)
+    to paco_session_anchor.md (canonical, ~15KB, stable).
 """
 import json
 import os
@@ -48,7 +54,7 @@ SAFE_TESTS = {
     "ping": {},
     "memory_save": {"content": "smoke test", "source": f"smoke_test_{TIMESTAMP}"},
     "memory_recall": {"query": "smoke test"},
-    "read_file": {"path": "SESSION.md"},
+    "read_file": {"path": "paco_session_anchor.md"},
     "list_files": {},
     "web_search": {"query": "test"},
     "web_fetch": {"url": "https://httpbin.org/html"},
@@ -69,6 +75,11 @@ def classify(result):
     if isinstance(result, dict):
         if result.get("ok") is True:
             return "PASS", None
+        # Tool intentionally disabled by env-var gate (e.g. memory_save
+        # defense-in-depth). Not a FAIL: the gate IS the feature. Banked
+        # Day 80 after nightly false-FAIL noise on memory_save.
+        if result.get("disabled") is True:
+            return "SKIP", str(result.get("error", "tool disabled by config"))
         if result.get("ok") is False:
             return "FAIL", str(result.get("error", "ok:False without error message"))
         # dict with no explicit ok field
@@ -110,7 +121,7 @@ def write_memory_row(summary_text):
     import psycopg
     try:
         db_pass = os.getenv("CONTROLPLANE_DB_PASS", "adminpass")
-        db_url = f"postgresql://admin:{db_pass}@127.0.0.1:5432/controlplane"
+        db_url = f"postgresql://admin:{db_pass}@192.168.1.10:5432/controlplane"
         embed_model = "mxbai-embed-large"
         r = requests.post(
             "http://192.168.1.152:11434/api/embeddings",
@@ -159,7 +170,7 @@ def main():
         print(f"[smoke] {name}: {entry['status']} ({entry['duration_ms']} ms)", flush=True)
         entries.append(entry)
 
-    counts = {"PASS": 0, "FAIL": 0, "EXCEPTION": 0, "SCHEMA_ISSUE": 0}
+    counts = {"PASS": 0, "FAIL": 0, "EXCEPTION": 0, "SCHEMA_ISSUE": 0, "SKIP": 0}
     for e in entries:
         counts[e["status"]] = counts.get(e["status"], 0) + 1
 
@@ -172,6 +183,7 @@ def main():
         "counts": counts,
         "failures": [e["tool"] for e in failures],
         "schema_issues": [e["tool"] for e in entries if e["status"] == "SCHEMA_ISSUE"],
+        "skipped": [e["tool"] for e in entries if e["status"] == "SKIP"],
         "entries": entries,
     }
 
@@ -181,7 +193,8 @@ def main():
     summary_text = (
         f"tool_smoke_test {ISO_NOW}: "
         f"{counts['PASS']} PASS / {counts['FAIL']} FAIL / "
-        f"{counts['EXCEPTION']} EXCEPTION / {counts['SCHEMA_ISSUE']} SCHEMA_ISSUE"
+        f"{counts['EXCEPTION']} EXCEPTION / {counts['SCHEMA_ISSUE']} SCHEMA_ISSUE / "
+        f"{counts['SKIP']} SKIP"
     )
     if failures:
         summary_text += " | broken: " + ",".join(e["tool"] for e in failures)
