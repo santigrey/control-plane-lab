@@ -164,6 +164,7 @@ function unlockAudio(){try{_audioCtx=new AudioContext();_audioCtx.resume();}catc
 let _greeted=false;
 async function autoGreet(){
   if(_greeted)return;
+  if(!privateMode){_greeted=true;return;}
   _greeted=true;
   const vs=document.getElementById('voice-status');
   try{
