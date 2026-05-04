@@ -1,7 +1,7 @@
 # feedback_paco_pre_directive_verification
 
 **Banked:** 2026-04-30 / Day 75
-**Last canon update:** 2026-05-04 / Day 80 ~14:00 UTC (Alexandra hygiene pollution cleanup close-confirm; +P6 #40 +P6 #41 +P6 #42)
+**Last canon update:** 2026-05-04 / Day 80 ~16:00 UTC (Project Ascension instruction set v2.2 ratification; +P6 #43 +P6 #44)
 **Originated:** Atlas v0.1 Cycle 1A preflight ESC + CEO discipline RFC after 3 consecutive Paco-side spec errors in 24-72 hours
 **Companion to:** feedback_directive_command_syntax_correction_pd_authority.md, feedback_paco_review_doc_per_step.md, feedback_paco_pd_handoff_protocol.md, feedback_phase_closure_literal_vs_spirit.md
 
@@ -9,8 +9,8 @@
 
 ## Cumulative state
 
-**P6 lessons banked: 42** (last update Day 80 ~14:00 UTC; +P6 #40 + P6 #41 + P6 #42 banked at Alexandra hygiene pollution cleanup close-confirm)
-**Standing rules: 8** (unchanged Day 80 ~14:00 UTC; all three new P6 lessons light-touch not promoted to SR)
+**P6 lessons banked: 44** (last update Day 80 ~16:00 UTC; +P6 #43 + P6 #44 banked at Project Ascension instruction set v2.2 ratification)
+**Standing rules: 8** (unchanged Day 80 ~16:00 UTC; both new P6 lessons light-touch not promoted to SR pending pattern recurrence)
 
 **Critical for new Cowork sessions:** This ledger is the source of truth for cumulative count. PD-side must reconcile against THIS file's cumulative section, not against memory-of-prior-cycles. PD's Phase 9 review correctly flagged a propagation gap (ledger said 34/6; close-confirm canon said 35/7); the gap is closed in this Day 79 early morning update.
 
@@ -119,3 +119,9 @@ When Paco close-confirms a phase that banks a new P6 lesson or new SR:
 4. NEVER let the ledger lag the close-confirm canon
 
 This is the propagation gap PD's Phase 9 review caught. Closed structurally going forward.
+
+
+**P6 #43** (Day 80 ~16:00 UTC, banked at Project Ascension instruction set v2.2 ratification): Wrong-DB-target across session = rote habit hitting Beast first when orchestrator DATABASE_URL points at CK primary. Catalyzed by Day 80 morning 6h+ wasted-effort cycle: Paco queried Beast replica throughout session for forensic claims about agent_tasks/queue/orchestrator state, repeatedly reported partial state as full state, shipped fixes that landed on Beast (no orchestrator effect) while UI continued reading from CK primary. Root cause: SSH muscle memory + Beast being the convenient general-purpose forensic node + lack of explicit DATABASE_URL probe before DB claims. Mitigation: SR-style discipline added to PROJECT_ASCENSION_INSTRUCTIONS.md v2.2 DB FORENSIC DISCIPLINE section -- always identify service DATABASE_URL via `systemctl show <svc>.service -p Environment | grep -oE "DATABASE_URL=[^ ]+"` BEFORE any DB claim; quote host:port only (NOT credentials); label findings REPLICA-SIDE if querying Beast for primary-state question; when unsure if a table is replicated or Beast-local read DATA_MAP.md naming-convention warning section. Light-touch lesson; not promoted to standing rule pending pattern recurrence (if Paco repeats wrong-DB-target after v2.2 instructions in effect, promote to SR #9).
+
+**P6 #44** (Day 80 ~16:00 UTC, banked at Project Ascension instruction set v2.2 ratification): Never use `/proc/<pid>/environ` for env-var grep -- it dumps EVERY env var into chat including secrets. Catalyzed by Day 80 morning forensic command `sudo grep -aoE "DATABASE_URL=[^[:space:]]+" /proc/$PID/environ` which leaked into chat: orchestrator full DATABASE_URL with `admin:adminpass` literal credential (already known-exposed per P6 #34 inventory but live in chat now), Anthropic API key (`sk-ant-api03-WYP1kpO4...`), JSearch API key, Adzuna app key. CEO dismissed as low priority but the leak surface is real and the chat is in conversation history. Mitigation: PROJECT_ASCENSION_INSTRUCTIONS.md v2.2 DB FORENSIC DISCIPLINE section explicitly forbids `/proc/<pid>/environ` and mandates `systemctl show <svc>.service -p Environment` instead -- the latter only exposes vars declared in the systemd unit file (typically just the ones intentionally surfaced). Light-touch lesson; immediate operational mitigation = grep-with-scoped-output is the only acceptable env-var introspection going forward. NEVER /proc environ.
+

@@ -3085,3 +3085,63 @@ Qwen2.5:72b on /chat (telegram-8751426822) had been hallucinating device states 
 - control-plane HEAD pre-session: `d901cda` (post-amendment dispatch)
 - control-plane HEAD post-session: `c5010cd` (close-confirm doc)
 - 2 commits this session: `54066f7` (paco_request post_test_1_failed) + `c5010cd` (paco_review amendment_r2 close-confirm). Patches 1-4 modified working tree NOT committed.
+
+---
+
+# Project Ascension -- Day 80 (continued -- 2026-05-04 ~10:00 MT / 16:00 UTC)
+
+## Completed this session
+
+- **Project Ascension instruction set v2.2 ratified** (CEO Sloan, 2026-05-04 ~10:00 MT). Supersedes v1.0. 4 files written to canon and committed at HEAD `9b7ad82` -> pushed to GitHub origin/main.
+  - `PROJECT_ASCENSION_INSTRUCTIONS.md` (10952 bytes) -- main paste-in instructions for claude.ai Project field
+  - `SANTIGREY_ORG_CHART.md` (9194 bytes) -- companion: full charters, sub-agent definitions, growth slots, escalation chain
+  - `HARDWARE_STACK.md` (14916 bytes) -- companion: every node Tier 1-3 with services, themes, routing diagrams (5 full-stack data flows), storage tiers, failure modes, growth architecture
+  - `ALEXANDRA_PRODUCT_BRIEF.md` (8177 bytes) -- companion: dual identity flagship+substrate, two postures, memory contract, autonomy tiers, endpoints table, IoT 3-tier security
+  - All 4 SCP'd to iCloud Santigrey at `/Users/jes/Library/Mobile Documents/com~apple~CloudDocs/AI/Santigrey/` for cross-Apple-device sync (mtime 2026-05-04 11:00 MT; bytes match CK source).
+  - Companion docs intended to be attached as Project files in claude.ai for in-context loading at every session start.
+
+- **Key behavioral additions in v2.2:**
+  - Session-start boot protocol -- 4 mandatory steps: verify time UTC+MT, read 6 canon files in order (anchor / ledger first 80 lines / handoff / DATA_MAP / alexandra_product_vision / CHARTERS), run 3-5 boot probes quoting outputs, state understanding back in 5-7 bullets including working scope.
+  - DB forensic discipline -- always identify DATABASE_URL via `systemctl show <svc>.service -p Environment` (NEVER /proc/PID/environ which dumps ALL env vars including secrets); quote host:port only; label REPLICA-SIDE if querying Beast for primary state.
+  - Execution lane gates -- no state-changing MCP without explicit per-command CEO override; read-only forensics OK; state changes flow through PD via directive.
+  - Stop-and-recalibrate trigger -- 6 conditions that force halt + summarize-failure-pattern instead of next-fix-proposal.
+  - Communication rules -- no tonight/go-rest defaults; Sloan not James; tight responses; no filler praise.
+  - Memory honesty -- userMemories is snapshot not search index; read canon for prior context; don't pretend to remember.
+
+- **Day 80 morning 6h+ wasted-effort cycle catalyst (banked as P6 #43 + #44).** Symptoms: Alexandra dashboard greeting in companion mode despite "closed lock" UI / queue:1 badge persisting after attempted clear / Telegram first-contact errors / Alexandra fabricating system-status when tool calls failed. Paco-side root causes diagnosed mid-session by PD investigation (`docs/paco_request_alexandra_dashboard_greeter_route.md` HEAD `cfd9f8a`):
+  - Bug 1 (real, fix-pending): page-load greeter is `POST /vision/analyze` from `autoGreet()` in dashboard.py:165 with hardcoded companion-mode prompt at app.py:2081-2095; never consulted `privateMode` localStorage flag.
+  - Bug 2 (real, fix-pending): queue:1 badge sourced from `agent_tasks` row `6d5102a5-93e8-4972-846f-9acbabe2b795` ("B2a SHIPPED -- PostgreSQL on Beast 7/7 gates PASS, awaiting independent verification") with status=`approved` on CK primary; Paco's UPDATE early-session landed on Beast replica which is irrelevant to UI.
+  - Bug 3 (no fix needed): localStorage line 133 `privateMode = localStorage.getItem('alexandra_private') === '1'` semantics correct (defaults to false / professional on missing key).
+  - Paco-side discipline failures throughout session: querying Beast replica when orchestrator DATABASE_URL points at CK primary; `/proc/PID/environ` env grep dumped Anthropic API key + adminpass + JSearch + Adzuna keys to chat; defaulted to "tonight/go rest" framing during 9-11 AM MT working hours despite 3x CEO correction; shipped patches without verifying symptom source.
+
+## Pending
+
+- **Alexandra Tier-1 fixes via PD directive** (NOT YET AUTHORED):
+  - Patch autoGreet() to skip when !privateMode (Bug 1 Option A: 2-line client-side patch at dashboard.py)
+  - UPDATE the stale `approved` row in CK primary `controlplane.public.agent_tasks` to `completed` (Bug 2 Option A: 1 SQL UPDATE on CK side)
+  - Restart orchestrator + verify both fixes from fresh browser session
+  - Directive should follow v2.2 directive-authoring discipline (Verified-live block + 8 mandatory elements)
+- **Patch Cycle 2 (Goliath) recovery monitoring**: hourly Launchpad probe loop continues; cap deadline 2026-05-07 ~22:23Z (Option A 72h extended cap); 24h DDoS still ongoing per Day 80 morning probes.
+- **API key rotation** (P6 #44 fallout): Anthropic + JSearch + Adzuna + Postgres `admin:adminpass` literal exposed in this session's chat history. CEO dismissed as low priority but pending whenever convenient.
+- **`get_system_status` SCHEMA_ISSUE**: pre-existing handler returns None; ~5min fix in registry.py.
+- **homelab MCP localhost bug**: `homelab_read_messages` failing `127.0.0.1:5432: Connection refused` from Day 78 substrate-rebind aftermath; needs MCP server config bind-address audit.
+- **Pi3 role assignment**: DNS Gateway (Pi-hole + Unbound + Tailscale subnet router); patched + verified Day 80; role assignment pending.
+- **Atlas vendor-renewal entry for Google OAuth token**: recurrence safety net beyond Production status flip.
+- **Telegram surface flakiness investigation**: slow + intermittent per CEO Day 80 morning report.
+- **Alexandra speed optimization** (~10-15s/turn warm cache): separate optimization track.
+
+## Cumulative state
+
+- **P6 lessons banked: 44** (was 42 at start of session)
+  - +P6 #43 (wrong-DB-target across session)
+  - +P6 #44 (no /proc/PID/environ for env grep; use systemd Environment)
+- **Standing rules: 8** (unchanged; both new lessons light-touch pending pattern recurrence)
+- **First-try streak**: not applicable to this session (instruction-set rewrite, not a build cycle)
+
+## Repo state
+
+- control-plane HEAD pre-session: `c5010cd` (Alexandra hygiene close-confirm; Patches 1-4 working tree)
+- control-plane HEAD mid-session: `cfd9f8a` (paco_directive_alexandra_dashboard_persona_polarity_and_greeter -- investigation directive)
+- control-plane HEAD post-session: `9b7ad82` (Project Ascension instructions v2.2 + 3 companion docs)
+- 2 commits this session: `cfd9f8a` + `9b7ad82`
+- iCloud Santigrey synced with 4 instruction artifacts at 2026-05-04 11:00 MT
