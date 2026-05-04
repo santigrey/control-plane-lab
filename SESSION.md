@@ -2824,3 +2824,68 @@ PD idle pending Paco confirmation on:
 3. Hourly PPA TCP probe loop start authorization (PD will NOT auto-start per Sloan's direction).
 
 No cross-host SG drift expected during the block window (cycle is a no-op at this point; nothing on Beast/CK/SlimJim has been touched).
+
+
+## Day 80 early UTC -- Patch Cycle 3 (Pi3+KaliPi) CLOSED
+
+**Status:** Cycle 3 12/12 acceptance criteria PASS first-try. 1 Path B B3 adaptation (Pi3 ImageMagick CLI absence; lib-version verify stand-in) submitted for SR #4 ratification. P6 #38 first-proper-application validation CLEAN. Fleet patch sweep status: 6 of 7 nodes current; remaining Goliath via Cycle 2 retry once Launchpad DDoS recovers. control-plane HEAD `79da3cc`.
+
+### Pre-flight + Stage A Pi3
+
+- 14/14 verified-live rows match directive section 1; Pi3 24 upgradable + KaliPi 1559 upgradable confirmed at execution time.
+- Cross-host SG sentinel PRE: bit-identical to Cycle 1 close-confirm canon (postgres + garage + atlas-mcp 1212 + atlas-agent 4753 + mercury 7800).
+- Stage A.1 launch: 2026-05-04T00:07:57Z; PID 10024.
+- Stage A.2-A.3 wall time: ~3min. Summary `24 upgraded, 4 newly installed, 1 to remove and 0 not upgraded.` exact match. ZERO `E:`/`dpkg: error`.
+- Stage A.4 dpkg state: `audit` exit 0; `-C` exit 0.
+- Stage A.5 K1: NO_REBOOT_NEEDED (no `/var/run/reboot-required`); reboot SKIPPED. Pi3 kernel `6.12.75+rpt-rpi-v8` unchanged.
+- Stage A.6 post-verify: lightdm + NetworkManager active; tailscale `pi3 100.71.159.102` in tailnet; firefox 150.0.1; **Path B B3 for ImageMagick** (`convert: command not found` -- `imagemagick` meta never installed; verified 4 in-scope library packages at expected version `8:7.1.1.43+dfsg1-1+deb13u8` (was `deb13u7`) via `dpkg-query`; verification intent satisfied; submitted for SR #4 ratification).
+
+### Stage B KaliPi
+
+- Stage B.1 launch: 2026-05-04T00:15:36Z; PID 1454098.
+- Stage B.2 phases: calculate ~30s; download Fetched 2,189 MB in 2min 4s @ 17.6 MB/s (`kali.darklab.sh` CDN active); unpack ~16min; setup ~12min; trigger ~6min (man-db, ca-certs, php8.4, libc-bin, tex-common formats, libgdk-pixbuf, initramfs regen for both `+rpt-rpi-v8` + `+rpt-rpi-2712` kernel flavors, ca-certificates-java).
+- Mid-patch SG sentinel ran 3x: ALL bit-identical every probe. atlas.tasks 1h count 253 mid-stage = matches pre-cycle 253 exactly; observation continuity preserved through entire 38min KaliPi rolling upgrade.
+- Stage B.3 summary: `1559 upgraded, 69 newly installed, 9 to remove and 0 not upgraded.` exact 1559 (within +/-50 tolerance for kali-rolling churn). ZERO `E:`/`dpkg: error` across 826 unpack lines + 1628 setup lines.
+- Stage B.4 dpkg state: `audit` + `-C` both exit 0.
+- Stage B.5 K1: REBOOT_NEEDED (flagged by `dbus`, `polkitd` -- D-Bus session/auth daemon refresh; systemd 259->260.1 + libc6 2.42-13 did NOT independently flag). Reboot at 2026-05-04T01:11:20Z; SSH disconnected exit 255 (expected). POST_REBOOT_OK at 2026-05-04T01:12:35Z (probe attempt 2 from CK relay; attempt 1 timed out at ~30s). Offline window = **~75 seconds** (within 90-180s estimate).
+- Stage B.6 post-verify: lightdm + NetworkManager + bluetooth active; tailscale `kalipi 100.66.90.76` in tailnet; ssh `OpenSSH_10.2p1 Debian-6, OpenSSL 3.6.1 27 Jan 2026`; openssl `OpenSSL 3.6.1 27 Jan 2026`; reboot-required CLEARED; KaliPi kernel `6.12.34+rpt-rpi-2712` unchanged.
+
+### Cross-host SG sentinel POST
+
+- SG2 postgres: `2026-05-03T18:38:24.910689151Z` r=0 -- bit-identical pre/mid/post.
+- SG3 garage: `2026-05-03T18:38:24.493238903Z` r=0 -- bit-identical pre/mid/post.
+- SG4 atlas-mcp: MainPID 1212 NRestarts=0 active enabled -- bit-identical.
+- SG5 atlas-agent: MainPID 4753 NRestarts=0 active enabled -- bit-identical.
+- SG6 mercury (CK): MainPID 7800 active -- bit-identical (CK was untouched; only used as SSH relay for KaliPi post-reboot probe).
+- atlas.tasks 2h cadence: 506 (~253/hr; matches pre-cycle ~253/hr exactly).
+
+### Cycle 2 hourly PPA probe loop (concurrent with Cycle 3)
+
+3 ticks recorded during Cycle 3 window:
+- 2026-05-04T00:01:28Z lpc=FAIL lp=FAIL (initial init from Goliath; ~1h31m past ratified 22:30Z start; gap noted)
+- 2026-05-04T00:16:54Z lpc=FAIL lp=FAIL (folded into Stage B mid-patch sentinel)
+- 2026-05-04T01:21:03Z lpc=FAIL lp=FAIL (post-Stage-B + folded SG sentinel)
+
+0 of 3 consecutive OKs toward Layer 2 advance. Cross-host SG no-drift sentinel preserved every probe (bit-identical postgres anchor + atlas-agent MainPID 4753 NRestarts=0). **DDoS context: per CEO Sloan, foreign DDoS on Launchpad infrastructure since 2026-04-30 (4+ days at probe time).**
+
+### P6 #38 first-proper-application validation
+
+ZERO binary-fetch failures across 5 distinct apt sources spanning both Pi nodes:
+- `deb.debian.org/debian` (Pi3) -- HTTP 200
+- `deb.debian.org/debian-security` (Pi3) -- HTTP 200; 4 imagemagick-* lib pkgs delivered clean
+- `archive.raspberrypi.com/debian` (Pi3) -- HTTP 200; 17 RPi pkgs incl. firefox 101MB + libcamera 0.7 delivered clean
+- `pkgs.tailscale.com/stable/debian` (both nodes) -- HTTP 200 (no upgrade needed)
+- `http.kali.org/kali` (KaliPi) -- HTTP 302 + binary 302; 1559+69 packages incl. firmware-misc-nonfree blob delivered clean
+
+Lesson catalyzed by Cycle 2 abort applied at directive-author time + held at execution time. No new sub-lesson banked. Cumulative state remains P6=38, SR=8.
+
+### Repo state
+
+- control-plane HEAD pre-cycle: `d4411ae` (Cycle 3 directive anchor)
+- control-plane HEAD post-cycle: `79da3cc` (Cycle 3 paco_review)
+- paco_review: `docs/paco_review_homelab_patch_cycle3_cve_2026_31431.md` (217 lines, 17826 bytes; both secrets-scan layers + literal-sweep CLEAN per P6 #34; 1 broad-grep narrative meta-text hit on line 166 benign).
+- handoff_pd_to_paco.md updated (local-only .gitignored).
+
+### Next planned
+
+PD idle pending Paco close-confirm + Cycle 2 hold posture re-rule at 24h cap (2026-05-04 ~22:23Z; ~21h from now). With 4+ day Launchpad DDoS in progress, PD recommendation tilts toward Option A (extend cap) at cap re-rule. Cycle 2 hourly probe loop continues per ratified cadence; next tick due ~02:21Z.
