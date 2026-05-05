@@ -3259,3 +3259,75 @@ Fresh Paco instance opens with v2.2 instructions loaded + 3 companion docs in-co
 ## Status
 
 `SESSION CLOSED -- next session opens from Cortez with boot Paco`
+
+## Day 80 Session 3 -- 2026-05-05 01:47Z to ~05:55Z UTC (2026-05-04 19:47 to ~23:55 MT)
+
+**Trigger:** CEO `boot Paco` at 01:47Z from Cortez (post-Mac-mini-transition session 2 close).
+
+**Boot:** First boot under v2.3 governance from Cortez. MCP gateway wedged at boot (4-min timeouts on tool calls); CEO restarted Claude client and MCP responded; banked as substrate-hardening concern. CEO surfaced architectural pain: "restart Claude / restart service / re-SSH" pattern is not a working substrate. Three-layer mitigation sketched (detection / recovery watchdog / replace mcp-remote bridge); deferred to Substrate Hardening cycle (no rabbit-hole mid-session).
+
+**Cycles closed-confirmed:**
+- **Cycle 2.0b PPA Suppression + Goliath kernel 6.17 upgrade** -- 13/13 MUST-PASS AC; AS.1 PASS (3:01 reboot wall); AS.2/AS.3/AS.5 SOFT-FAIL accepted (all directive-authoring scope-mispredicts); AS.4 deferred-accepted. CVE-2026-31431 closed on Goliath via noble-updates/security/main routing. **Fleet patch state 6/7 -> 7/7.** K+D+M bumped per directive sec 9 B5: kernel 6.11.0-1016-nvidia -> 6.17.0-1014-nvidia / driver 580.95.05 -> 580.142 / NVIDIA modules ABI suffix +1000 -> +1 with source migration PPA -> noble-updates/restricted. libvulkan1 SKIP at 1.4.321.0-1~1 (orphan-but-source-suppressed; P6 #68 legitimate intermediate state). 30-package rehold APPLY at NEW versions (post-hold count 31). All 3 ollama models inferable post-reboot.
+- **Cycle 2 (Goliath CVE-2026-31431) FULLY CLOSED** via 2.0a non-PPA descope (Session 2) + 2.0b PPA suppression (Session 3) sequence.
+
+**Mid-cycle Paco escalations** (3 protective halts; SR #4 working as designed):
+- **Path X RATIFIED** (`c9cf915` SR9/B0): A.4 halt -- snapshot.ppa.launchpadcontent.net third source file `nv-vulkan-desktop-ppa.sources` discovered; PD halt protective and correct (Paco directive A.3 used filename-glob disable that missed file with no "canonical-nvidia" filename token but with that URL). B.X.1-B.X.7 applied: extend disable to URL/content-grep, retry A.4, libvulkan1 candidate verify, D.1 re-enable 3 files, D.2 pin scope expand.
+- **Path Q RATIFIED via CEO-direct** (`c8c4af2`): A.5 halt -- 30 apt-mark holds from Cycle 2.0a B2 scope blocked 6.17 upgrade by holding driver at 580.95.05 (directive sec 9 B5 expressly authorized 580.142 bump; the 2.0a holds prevented exactly this; mutually exclusive at authoring). PD raised P6 #62 candidate (B0/SR9 soft boundary at "reverses CEO-ratified prior decision"); Paco honored boundary; CEO directly ratified hold release. B.X.8 (CEO-direct) released 30 holds preserving docker-compose-plugin; B.X.9 (B0/SR9 PD-discretion) reheld at NEW versions default-applied at D-stage.
+- **Path R3 RATIFIED via CEO-direct** (`ff8081c`): A.5 retry literal-vs-semantic gate trips. A.7 substring `+1000` matched OLD-version annotations in upgrade lines (apt format `Inst <pkg> [<old>+1000] (<new>+1 <source>)`); A.8 sanity bound 5-25 was authored pre-B.X.8-knowledge (real scope 30 = B.X.8 unhold count); B.X.5 libvulkan1 absent because installed version lexically newer than noble/main (orphan-but-source-suppressed). PD raised P6 #67 candidate (>3 in-place adaptations should escalate to CEO-direct procedural posture); Paco honored. B.X.10-B.X.12 (CEO-direct) refined gates + libvulkan1 SKIP.
+
+**Major governance/discipline outcome:**
+- **3 directive-authoring discipline failures captured** (snapshot CDN host miss / filename-glob disable / apt-mark hold blindspot). Mitigation locked into commitment per `c8c4af2` §4:
+  1. Every apt-touching directive going forward lands with `PF.SOURCE_INVENTORY` (P6 #58) + `PF.HOLD_INVENTORY` (P6 #60) primitives in Verified-live block
+  2. Every directive authored within 24h of related cycle close-confirm requires prior close-confirm read at authoring time (P6 #64)
+  3. Next directive that breaks this discipline is SR-grade event, not P6
+- **PD discipline through 3 protective halts: EXEMPLARY** -- SR #4 working as designed; each halt protective and correct; each forensic analysis sharp (PD identified P6 #62 + P6 #67 boundary candidates that Paco subsequently honored).
+- **CEO communication-rule violation** caught and corrected mid-session: Paco offered "stop tonight" as an option at Path R3 deliberation; CEO called it out per v2.3 communication rules ("No 'tonight,' 'go rest,' 'let's pause' as defaults. Sloan declares breaks"). Paco acknowledged + struck. Lesson captured implicitly; not P6-banked but worth flagging.
+
+**P6 lessons banked this session:** #54-#70 (17 lessons total; cumulative P6 53 -> 70):
+- #54 (snapshot.ppa CDN distinct from primary lpc; PF source-discovery via content-grep)
+- #55 (apt-cache policy as canonical source-enumeration probe at PF time)
+- #56 (outage gates must specify host/CDN/path not service umbrella)
+- #57 (Paco-additional: source disable/match commands MUST use URL/content-grep not filename-glob)
+- #58 (Paco-additional: PF.SOURCE_INVENTORY directive primitive standardization)
+- #59 (Paco-additional: Cycle 2.0a clean ship was load-bearing on snapshot CDN; verify same hostname/URI apt actually uses)
+- #60 (PF must include apt-mark showhold when scope touches kernel/driver/library upgrades)
+- #61 (consecutive cycles touching overlapping scopes must enumerate prior cycle's protective state in PF)
+- #62 (B0/SR9 in-place fix authority soft boundary at "reverses CEO-ratified prior decision"; PD escalates rather than self-authorizes)
+- #63 (Paco-additional: Verified-live must include apt-subsystem internal state probes when cycle scope touches apt operations)
+- #64 (Paco-additional: directives within 24h of related cycle close-confirm require prior close-confirm read at authoring time)
+- #65 (A.7-class gates substring-matched against simulation log must specify position; anchor regexes at line-format positions and target-version closing-paren)
+- #66 (A.8-class sanity bounds must be authored AFTER cycle scope is known; use scope-relative bounds when B-extensions can change scope)
+- #67 (cycle-internal-iteration pattern; >3 in-place adaptations should escalate to CEO-direct ratification for procedural transparency; **SR promotion candidate** for next cycle qualification)
+- #68 (Paco-additional: orphan-but-source-suppressed is legitimate intermediate state; force-downgrade requires independent justification beyond "directive said source X")
+- #69 (long-running apt commands via MCP need nohup/detached pattern; tee survives mid-command but final-exit echos in bash chain don't)
+- #70 (B.4-class GRUB menuentry-name gates need to account for Ubuntu/DGX-OS simple-entry-points-to-newest pattern)
+
+**Standing gates 6/6 holding at session close** (live-probed 04:11Z UTC; bit-identical pre/post Cycle 2.0b): atlas-mcp PID 1212 NR=0 / atlas-agent PID 4753 NR=0 / mercury PID 7800 / postgres-beast 2026-05-03T18:38:24.910689151Z r=0 / garage-beast 2026-05-03T18:38:24.493238903Z r=0 / atlas .env empty 0600 jes:jes.
+
+**HEAD trace:**
+- pre-session: `aecb6ee` (Session 2 close)
+- Cycle 2.0b cycle commits: `8ac14eb` (directive) -> `c9cf915` (Path X) -> `c8c4af2` (Path Q) -> `ff8081c` (Path R3) -> `0e88de1` (CLOSE-CONFIRMED + anchor update)
+- post-session: `0e88de1` -> next (this canon update commit)
+- 5 cycle2_0b commits + 1 session close = 6 commits this session
+- GitHub origin/main in sync with CK
+
+**Substrate hardening pain banked** (deferred; not actioned this session):
+- MCP gateway wedge pattern: "restart Claude / restart service / re-SSH" symptom traced to client-side `mcp-remote` Node bridge wedging (CK-side homelab-mcp daemon survives Claude restart). Three-layer mitigation sketched (detection tool / recovery watchdog / replace bridge). To be sequenced in future Substrate Hardening cycle. CEO surfaced this as architectural concern; Paco acknowledged but did not propose tactical fix mid-session.
+
+**Pending at session close:**
+- Goliath finish-out follow-ons (post-Cycle-2.0b): /tmp cleanup investigation (P6 #48); headless snap pre-removal (P6 #49); apt-get autoremove sweep NOW APPROPRIATE.
+- LinkedIn post draft on Goliath fine-tuning + Cycle 2 PPA-management narrative (now with full lessons learned story).
+- Mr Robot Phase 0 charter draft.
+- Job search cycle review (Sunday 2026-05-10 unemployment cert: 3-app minimum; 5 days out).
+- v2.4 NEEDS CEO token formalization.
+- Substrate Hardening cycle (MCP wedge mitigation; new this session).
+- P5 v0.1.1 canon-hygiene cleanup (18 known exposures including phone literal in Twilio reference + descriptive secret-name lessons).
+- 17 P6 banks #54-#70 ratified into ledger; P6 #67 flagged as SR promotion candidate.
+
+**Cumulative state:** P6=70, SR=9 (P6 #67 SR-promotion-candidate for next cycle).
+
+**Strategic outcome:** Cycle 2 Goliath finish-out fully closed across two sessions. Fleet now 7/7 patched on CVE-2026-31431. Goliath drift-state corrected with proper source routing, holds at NEW versions, and PPA pin-priority demotion preventing silent re-routing. Portfolio narrative substantially deepened: 17 P6 banks + 4 paco_request/response audit chain demonstrate disciplined incident response under directive-authoring stress, not just clean-path execution. Next cycle on Goliath (autoremove sweep + /tmp + snaps) will inherit substantially better PF coverage from the lessons banked this session.
+
+## Status
+
+`SESSION CLOSED -- next session opens with boot Paco`
