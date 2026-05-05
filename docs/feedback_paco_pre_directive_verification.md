@@ -1,7 +1,7 @@
 # feedback_paco_pre_directive_verification
 
 **Banked:** 2026-04-30 / Day 75
-**Last canon update:** 2026-05-04 / Day 80 ~16:00 UTC (Project Ascension instruction set v2.2 ratification; +P6 #43 +P6 #44)
+**Last canon update:** 2026-05-05 / Day 80 ~05:55Z UTC (Session 3 post-mortem + SR #10 promotion + P6 #45-#78 banked; CEO-directed mandatory pre-action validation discipline)
 **Originated:** Atlas v0.1 Cycle 1A preflight ESC + CEO discipline RFC after 3 consecutive Paco-side spec errors in 24-72 hours
 **Companion to:** feedback_directive_command_syntax_correction_pd_authority.md, feedback_paco_review_doc_per_step.md, feedback_paco_pd_handoff_protocol.md, feedback_phase_closure_literal_vs_spirit.md
 
@@ -9,8 +9,8 @@
 
 ## Cumulative state
 
-**P6 lessons banked: 44** (last update Day 80 ~16:00 UTC; +P6 #43 + P6 #44 banked at Project Ascension instruction set v2.2 ratification)
-**Standing rules: 8** (unchanged Day 80 ~16:00 UTC; both new P6 lessons light-touch not promoted to SR pending pattern recurrence)
+**P6 lessons banked: 78** (last update Day 80 ~05:55Z UTC; +P6 #45-#78 banked across Cycle 2.0a close-confirm + Cycle 2.0b close-confirm + Day 80 Session 3 post-mortem; +SR #10 mandatory pre-action validation discipline)
+**Standing rules: 10** (last update Day 80 ~05:55Z UTC; SR #9 B0 standing-meta-authority promoted at Cycle 2.0a close-confirm; **SR #10 mandatory pre-action validation discipline promoted at Day 80 Session 3 post-mortem CEO-directed**)
 
 **Critical for new Cowork sessions:** This ledger is the source of truth for cumulative count. PD-side must reconcile against THIS file's cumulative section, not against memory-of-prior-cycles. PD's Phase 9 review correctly flagged a propagation gap (ledger said 34/6; close-confirm canon said 35/7); the gap is closed in this Day 79 early morning update.
 
@@ -145,3 +145,149 @@ This is the propagation gap PD's Phase 9 review caught. Closed structurally goin
 **P6 #53** (Day 80 ~01:35Z UTC 2026-05-05, banked at Cycle 2.0a close-confirm; PD-proposed framing as review 7.6, Paco-codified): Verification gates must include direct count assertions, NOT just diff-style comparisons that pass on missing inputs. Catalyzed by Cycle 2.0a Step B3 first-attempt: `comm -23 <(empty_file) <(showhold)` produced false-positive `ALL_30_HELD_CONFIRMED` token because `comm` evaluates as empty-set-difference when first input file is empty. PD caught immediately via independent `wc -l == 31` count gate. Mitigation: future directives that use diff/comparison gates MUST also include count gates as parallel verification. Pattern: `assert wc -l X == N AND diff X Y == 0`, never `diff X Y == 0` alone when X could be empty. Natural extension of SR #5 (write-then-verify) with finer granularity at the verification-engineering level. Light-touch lesson; not promoted to SR (PD already self-corrected via independent count gate; banking the lesson formalizes the approach for future directive-authoring).
 
 **SR #9** (Day 80 ~01:35Z UTC 2026-05-05, ratified at Cycle 2.0a close-confirm; promoted from B0 standing-meta-authority after two clean PD-execution invocations): PD execution-time source-surface adaptation authority. PD authorized to verify Paco source-surface claims (file paths, line numbers, indent style, anchor uniqueness, SQL identifiers, command syntax, command output formats, filter regex/Origin display, hold scope, count bands, artifact paths, package source attribution, count-vs-diff verification gates, cleanup-time tmpfile policy) AT EXECUTION TIME and adapt to ground truth WITHOUT halting for paco_request, when ALL of: (a) error is structural/clerical (path/format/syntax/scope mismatch); (b) corrected adaptation preserves directive intent UNCHANGED \u2014 cycle gate semantics (K+D+M, SGs, scope bounds, named outcomes) are inviolable; (c) adaptation documented in review (Paco-stated -> PD-observed -> PD-applied -> rationale). Scope expansion still halt + paco_request: NEW files outside directive scope, new services touched, new schema/intent violations, force-push, irreversible deletions outside directive's rollback section. Promotion history: B0 used cleanly twice (Bug 1+2 dashboard greeter cycle Day 80 ~20:55Z; Cycle 2.0a non-PPA descope cycle Day 80 ~01:30Z UTC 2026-05-05). SR #9 supersedes the per-directive B0 clause from now on; future directives may still cite B0 for emphasis but it operates as standing rule absent explicit retraction.
+
+---
+
+## P6 lessons #45-#78 (Day 80 cumulative; Cycle 2.0a + 2.0b + post-mortem + LinkedIn)
+
+### Banked at Cycle 2.0a close-confirm (2026-05-05 ~01:35Z UTC; HEAD `aecb6ee`; 6 lessons)
+
+**P6 #45-#47** -- Bug 1+2 Alexandra dashboard cycle close-confirm (Day 80 evening Session 2): MCP-direct execution does not authorize bypassing PD lane (#45); prose-rule patches insufficient for stochastic instruction-drift on 72B local models, deterministic post-processing guard is architectural safety net (#46); 4 directive-template upgrades banked from PD self-corrects (#47).
+
+**P6 #48** -- Goliath /tmp aggressive cleanup wiped probe loop artifacts mid-cycle. Mitigation: write cycle artifacts under `/home/jes/<cycle>/` not `/tmp/`. Goliath-specific behavior to investigate (systemd-tmpfiles / custom timer / shell policy).
+
+**P6 #49** -- Headless snap pre-removal: Goliath has firefox + nvidia-desktop-default-snaps from default DGX OS image; pure overhead on a no-display production node. Pre-remove on next maintenance cycle.
+
+**P6 #50** -- sshd transient outage during openssh-server postinst (~80 sec gap). Expected behavior; SR #4 abort-restore covers via standing rule.
+
+**P6 #51** -- PPA Origin-display filter: `apt-cache policy` shows `o=LP-PPA-canonical-nvidia-...` while sources file URL might be from `snapshot.ppa.*` distinct from primary `ppa.launchpadcontent.net`. Filter must content-grep file URLs not just policy origin field. **(This lesson was banked at 2.0a close-confirm but its full implication wasn't drawn out until Cycle 2.0b A.4 halt 24 hours later. See P6 #54-#59.)**
+
+**P6 #52** -- Driver hold-gate: 2.0a B2 expanded hold scope from 2 to 30 packages including driver-580 stack to prevent silent 580.95.05 -> 580.142 D-drift via noble-updates fallback. The expansion was intentionally protective. **(This protective measure conflicted with Cycle 2.0b sec 9 B5 authoring 24h later. See P6 #61, #64.)**
+
+**P6 #53** -- Count-vs-diff verification engineering: `apt list --upgradable | wc -l` and `apt-get upgrade -s | grep "^Inst"` give different numbers; both are valid for different gates. Standardize which gate uses which count.
+
+### Banked at Cycle 2.0b close-confirm (2026-05-05 ~04:25Z UTC; HEAD `0e88de1`; 17 lessons)
+
+**P6 #54** -- canonical-nvidia content can be served via `snapshot.ppa.launchpadcontent.net` CDN distinct from primary `ppa.launchpadcontent.net`. PF source-discovery gate must grep file CONTENTS for hostname patterns, not just filename glob.
+
+**P6 #55** -- `apt-cache policy <package>` is the canonical source-enumeration probe; should run for every explicit upgrade target at PF time to catch multi-source candidates BEFORE Stage A.
+
+**P6 #56** -- when an outage gates a cycle, the gate must specify WHICH host/CDN/path is the actual block, not the upstream service umbrella.
+
+**P6 #57** -- Directive disable/match commands targeting apt sources MUST use URL/content-grep, not filename-glob.
+
+**P6 #58** -- Standardize a `PF.SOURCE_INVENTORY` directive primitive: enumerate apt sources by content-grep for known PPA hostnames AND foreign-domain sources at PF time.
+
+**P6 #59** -- Cycle 2.0a clean ship was load-bearing on snapshot CDN being up; verification probe must measure the same hostname/URI that apt actually uses, not a related-but-distinct upstream surface.
+
+**P6 #60** -- Directive PF must include `apt-mark showhold` enumeration when cycle scope touches kernel/driver/library upgrades. Hold state is invisible to filename-glob source inventory and to apt-cache policy version tables.
+
+**P6 #61** -- When two consecutive cycles touch overlapping package scopes, the prior cycle's protective state (holds, pins, masked services, disabled units) MUST be enumerated in the next cycle's PF verified-live block.
+
+**P6 #62** -- The B0 / SR #9 in-place fix authority has a soft boundary at "reverses a prior CEO-ratified architectural decision". When the in-place fix would unwind a prior Path A / Path B / etc. CEO ratification (even if the unwinding is consistent with current directive intent), PD escalates rather than self-authorizes. Cycle 2.0b B.X.8 is the canonical example.
+
+**P6 #63** -- Directive Verified-live block must include apt-subsystem internal state probes when cycle scope touches apt operations: full source enumeration via content-grep, apt-mark showhold, /etc/apt/preferences.d/ contents, apt-cache policy on every explicit upgrade target.
+
+**P6 #64** -- Cycle dispatch latency vs. prior-cycle protective-state propagation: when authoring a directive within 24h of a related cycle close-confirm, the prior close-confirm review is required reading and its protective measures must be enumerated in the new directive's verified-live block.
+
+**P6 #65** -- Directive A.7-class gates (substring-matched against simulation log) must specify position (target-version only, not OLD-version annotation) to avoid false-positive matches on packages being upgraded FROM the suspect version. Anchor regexes at line-format positions (`^Inst`, `^Conf`, `^Remv`) and target-version closing-paren `\)` rather than free-substring match.
+
+**P6 #66** -- Directive A.8-class sanity bounds must be authored AFTER cycle scope is known. If B-extensions can change scope (e.g. B.X.8 unhold-30 in Cycle 2.0b), bounds should be defined relative to scope ("matches unhold count +/- N") not absolute.
+
+**P6 #67** -- Cycle-internal-iteration pattern with CEO-direct procedural posture at >3 in-place adaptations: when literal directive gates trip but semantic intent is met, in-place B-extension fix is canonical SR #9 / B0 territory; HOWEVER when in-place adaptations exceed ~3 in a single cycle, CEO-direct ratification is the right procedural posture for transparency. **SR-promotion candidate at next cycle qualification.**
+
+**P6 #68** -- "Orphan-but-source-suppressed" is a legitimate intermediate state, not a forced-correctness target. When source-suppression renders a previously-installed package version orphaned (no source serves it; installed version > available alternates), force-downgrade is not required IF (a) the source was suppressed for security/correctness reasons, (b) future natural updates will route through the now-canonical source once versions cross, (c) the orphaned version doesn't have an active CVE.
+
+**P6 #69** -- Long-running apt commands via MCP need nohup/detached pattern. MCP wrapper times out at 30s; SSH session and remote process tree continue independently; tee survives mid-command but final-exit echos in bash chain don't (chain killed mid-flight). For commands expected > 25s, use nohup + write-to-file pattern (Cycle 2.0a B2 precedent).
+
+**P6 #70** -- B.4-class GRUB menuentry-name gates need to account for Ubuntu/DGX-OS "simple-entry-points-to-newest" pattern. /etc/grub.d/10_linux generates a top-level `gnulinux-simple-<UUID>` menuentry that resolves to the most-recent kernel via newest-first ordering, with explicit per-kernel menuentries living in a submenu. Strict directive expectation "first menuentry should be 6.X (default)" needs refinement.
+
+### Banked at Day 80 Session 3 post-session post-mortem (2026-05-05 ~05:55Z UTC; CEO directly catalyzed)
+
+The following lessons trace to a CEO-requested post-mortem on the Cycle 2 PPA hold strategy AFTER cycle 2.0b shipped. CEO observation: "I want to know what went wrong with you not identifying work-arounds prior to today when you realized the launchpad issue could be bypassed; I want to know if the DDoS was actually a blocker in my situation."
+
+Post-mortem finding: **The 5-day Launchpad hold (2026-04-30 -> 2026-05-05) was load-bearing on the wrong host probe.** Goliath's apt routes through `snapshot.ppa.launchpadcontent.net` (UP throughout outage), not primary `ppa.launchpadcontent.net` (DOWN). The 4 "PPA-only" packages were always mirrored in `noble-updates/restricted` and `noble-security/restricted` -- canonical primary archives, never PPA-exclusive. Cycle 2 likely could have shipped clean on day 1 (2026-05-03) if directive PF had probed Goliath's actual sources and run apt-cache policy on explicit upgrade targets. **Estimate: 5 days of operational anxiety + 1 full Cycle 2.0a + 1 full Cycle 2.0b including 3 mid-cycle escalations spent on a misdiagnosis.**
+
+**P6 #71** -- When CEO discloses an external event ("DDoS on X", "outage at Y", "vendor postmortem reports Z"), Paco MUST decompose the affected service into its constituent surfaces (hostnames, CDNs, regions, API endpoints) and verify which surface the affected node actually depends on. Treating an upstream outage as monolithic was the seed error in the 5-day Launchpad hold. Mitigation primitive: for any directive whose Verified-live block cites an external incident as a blocker, include a `PF.SURFACE_DECOMPOSITION` clause enumerating: (a) the broad service name (e.g. "Launchpad"), (b) the constituent surfaces in scope (e.g. `launchpad.net` / `ppa.launchpadcontent.net` / `snapshot.ppa.launchpadcontent.net`), (c) which surface(s) the affected node uses per `grep -rhE '^(deb \|URIs:\|Types:)'` of `/etc/apt/sources.list*`, and (d) reachability probe per surface, not per service umbrella.
+
+**P6 #72** -- "What PD reported as broken" is a hypothesis, not ground truth. PD reports symptoms accurately; the diagnosis is Paco's job and requires independent probing before authoring rulings on top of the report. Cycle 2 first abort: PD reported "PPA unreachable; binary fetch fails on canonical-nvidia source." Paco accepted this as comprehensive and built a 72-hour-cap hold strategy on top. Probe Paco SHOULD have run: `ssh goliath 'grep -rhE "^(deb \|URIs:\|Types:)" /etc/apt/sources.list /etc/apt/sources.list.d/'` to discover Goliath actually used `snapshot.ppa.*`. That probe takes 30 seconds and would have surfaced the truth on day 1 instead of day 5.
+
+**P6 #73** -- Probe-loop authoring requires verifying the probe target matches the production target. If a multi-day gate is built around a host probe, that probe MUST measure the same host the production code uses. Same shape as P6 #43 (wrong-DB-target Beast vs CK primary) -- different surface, same lesson. The Cycle 2 hourly probe loop measured `ppa.launchpadcontent.net` for 5 days while Goliath's apt routed through `snapshot.ppa.launchpadcontent.net`. Every "lpc=FAIL" tick was true and irrelevant.
+
+**P6 #74** -- Asymmetric monitoring signals (e.g. `lpc=FAIL lp=PASS`, partial outage patterns, surfaces showing different states) are pause-and-investigate signals, not curiosities to annotate. Cycle 2.0a's review explicitly documented `lpc=FAIL lp=PASS asymmetric outage continues` and Paco didn't pause on it. "Asymmetric outage" is itself a multi-host signal that something was being measured incompletely. **Mitigation: any monitoring observation Paco doesn't have a clean explanation for halts ledger entry until investigated. "Asymmetric" or "partial" without explanation is a P6 candidate by default.**
+
+**P6 #75** -- Never validate work that cannot be seen. When CEO references a published artifact (LinkedIn post, blog post, public commit, demo video, resume claim) Paco MUST NOT confirm or validate without (a) the artifact text in chat, (b) a canon path Paco can read, or (c) a URL. The instinct to be agreeable when CEO references prior work is itself the failure mode. Phrasing like "I hope that was valid" is a probe, not an invitation to validate. **Right answer: "I can't see it; show me." Wrong answer: any content-bearing response that implies validation occurred.**
+
+**P6 #76** -- CEO assertions about prior canon state are hypotheses, not ground truth. Same shape as P6 #72 (PD reports) -- different source, same lesson. When CEO says "the post is in SESSION.md, we revised it 3 times," Paco verifies against actual canon BEFORE reasoning. If canon disagrees with CEO recollection, Paco surfaces the disagreement directly and asks for clarification. The agreeable instinct to confirm CEO recollection is a failure mode when canon disagrees. Catalyzed by tonight: CEO referenced a 3-revision DDoS LinkedIn draft; canon search showed zero matches.
+
+**P6 #77** -- Public-facing artifacts (LinkedIn posts, blog posts, demo videos, resume claims, interview talking points) MUST be ground-truth-verified against actual canon state before publication. Same probe discipline as a directive PF block. **Credibility cost of a wrong public claim is much higher than the cost of a wrong internal claim.** Drafting LinkedIn copy that claimed "no assumptions ship" without verifying Paco's own assumptions about Goliath's apt routing was the failure mode. The post implied PPA-pinned modules were unobtainable; canon now shows they were always available in noble-updates/restricted. Mitigation: pre-publication public-content gate requires the same `PF.SURFACE_DECOMPOSITION` (P6 #71) + `apt-cache policy` enumeration (P6 #55) + cross-reference against close-confirm canon as any directive.
+
+**P6 #78** -- Drafts of public-facing content MUST be committed to canon (via `linkedin_drafts/` or equivalent) BEFORE publication. Off-canon drafts are uneditable history and unauditable. Required flow: (a) draft -> commit to `linkedin_drafts/<topic>_v<N>.md` -> publish -> append publication URL + timestamp to draft footer in same canon dir as `linkedin_drafts/published/<date>_<topic>.md`. (b) If a post is published off-canon (drafted in chat session, published from phone, etc.), post-hoc commit the published text + URL + date to canon at FIRST opportunity. Catalyzed: 2026-05-04 LinkedIn post about Launchpad DDoS was drafted in chat, published, and never committed to canon. Tonight that prevented audit until CEO pasted the text manually.
+
+---
+
+## STANDING RULE PROMOTION: SR #10
+
+**SR #10** (Day 80 ~05:55Z UTC, banked CEO-directed at post-mortem close): **Mandatory Pre-Action Validation Discipline.** Every Paco action that produces an artifact (directive, ruling, response, public-facing content, ratification, P6 promotion) MUST clear a pre-action validation gate. The gate is non-negotiable; skipping it is itself a SR-grade violation.
+
+**Gate composition (4 mandatory probes; ALL must clear before action ships):**
+
+1. **PF.GROUND_TRUTH** -- Probe the actual production state of every system the action depends on. If the action references `<service X on host Y at version Z>`, run the probe that confirms each of {X, Y, Z}. No assumption from training data, prior-turn memory, or training priors is acceptable. The probe outputs land in the artifact's Verified-live block.
+
+2. **PF.SURFACE_DECOMPOSITION** (per P6 #71) -- For any external dependency named in the action (apt source, API endpoint, vendor service, third-party CDN), enumerate the constituent surfaces (hostnames, CDN endpoints, regions) AND verify which surface the affected node actually depends on. "Service umbrella" framing is rejected -- always decompose to surface level.
+
+3. **PF.PRIOR_STATE_PROPAGATION** (per P6 #61, #64) -- For any action authored within 24 hours of a related cycle close-confirm, the prior close-confirm review is required reading and its protective measures (holds, pins, deferred items, B-extensions, P6 banks, SR promotions) are enumerated in the new artifact's Verified-live block.
+
+4. **PF.ASSERTION_AUDIT** (per P6 #72, #76) -- Every assertion in the action that takes the form "X is true" must trace to (a) a probe output in this session's chat, (b) a canon file path Paco can read, or (c) a URL Paco can fetch. Assertions traceable only to CEO statements, PD reports, training data, or prior-session memory are explicitly flagged as `UNVERIFIED:` until probe-grounded.
+
+**Gate failure protocol:** If any of PF.1-PF.4 cannot clear (probe fails, surface unenumerated, prior state unread, assertion unverified), Paco STOPS and surfaces the gap to CEO before authoring the artifact. Paco does NOT proceed with caveats; gate is binary.
+
+**Public-facing content gate extension (per P6 #77, #78):** All public-facing artifacts (LinkedIn posts, blog posts, demo videos, resume claims, interview talking points) clear PF.1-PF.4 PLUS:
+
+5. **PF.PUBLIC_DRAFT_CANON_LANDING** -- Draft committed to `linkedin_drafts/` (or equivalent) BEFORE publication. Post-publication, URL + date appended to canon at first opportunity. Off-canon publication is itself a violation requiring P6 capture.
+
+**SR #10 violation = SR-grade event.** Per v2.3 communication rules, SR-grade events require explicit acknowledgement, P6 banking, and CEO-direct ratification of corrective action.
+
+**Authority chain:** SR #10 promoted by direct CEO instruction at Day 80 ~05:55Z UTC: "Everything you do wrong you need to record the correction and add it to the canon so that you learn and don't repeat the same mistakes" + "we need more scrutinization of your planning, increase your level of validation and verification non-negotiable." SR #10 codifies the pre-action discipline this instruction mandates.
+
+---
+
+## LESSONS-LEARNED SYNTHESIS (Day 80 post-mortem)
+
+The 9 mistakes Paco made on Day 80, traced to a meta-pattern:
+
+| # | Mistake | Trace | P6 |
+|---|---|---|---|
+| 1 | Treated "PPA unreachable" as comprehensive PD report; built 72h-cap hold strategy without probing Goliath's actual apt sources | Cycle 2 first abort 2026-05-03 | #72 |
+| 2 | Designed a probe loop measuring `ppa.launchpadcontent.net` while Goliath's apt routed through `snapshot.ppa.launchpadcontent.net`; ran for 5 days against wrong host | Cycle 2 ruling 2026-05-03 | #73 |
+| 3 | Treated "Launchpad DDoS" as monolithic; never asked which Launchpad surface was being DDoSed vs which surface Goliath used | Cycle 2 cap extension 2026-05-04 | #71 |
+| 4 | Categorized 4 packages as "PPA-only" without running apt-cache policy; carried wrong framing through 4 cycles + LinkedIn post | Cycle 2.0a planning 2026-05-04 | #55, #77 |
+| 5 | Authored Cycle 2.0b directive 20 min after 2.0a close-confirm without re-reading 2.0a's hold-expansion protective measure; self-conflicting directive shipped to PD | Cycle 2.0b directive 2026-05-05 02:20Z | #61, #64 |
+| 6 | Directive 2.0b A.3 disable used filename-glob pattern; missed `nv-vulkan-desktop-ppa.sources` (canonical-nvidia by URL not filename) | Cycle 2.0b A.4 halt | #54, #57 |
+| 7 | Directive 2.0b A.7 grep used substring-too-loose; matched `+1000` in OLD-version annotations instead of target-position only | Cycle 2.0b A.5 retry halt | #65 |
+| 8 | Drafted LinkedIn post claiming "no assumptions ship" while my own assumptions about Goliath's apt routing were wrong; published before post-mortem reframe | LinkedIn post 2026-05-04 | #77, #78 |
+| 9 | Offered "stop tonight" as Path R3 deliberation option in violation of v2.3 communication rule "No 'tonight,' 'go rest,' 'let's pause' as defaults" | Cycle 2.0b R3 deliberation | (communication-rule violation; SR-grade) |
+
+**Meta-pattern:** All 9 mistakes share a root cause: **Paco accepted assertions (PD reports, CEO disclosures, prior-cycle framings, training-data priors) as ground truth without independent probe verification.** SR #10 PF.1-PF.4 gate is the structural fix. The agreeable instinct (be helpful, don't slow CEO down, trust prior context) is the failure mode that SR #10 forces Paco to override.
+
+**Cumulative lesson:** Pre-action validation is not a tax. It's the only mechanism that prevents the same mistake from recurring. The 9 mistakes above all happened in 5 days BECAUSE the 8 prior P6 lessons across 79 days didn't rise to mandatory pre-action gates. SR #10 makes them mandatory.
+
+---
+
+## Cumulative state update (Day 80 ~05:55Z UTC; supersedes prior cumulative state line)
+
+**P6 lessons banked: 78** (last update Day 80 ~05:55Z UTC; +P6 #45-#78 banked across Cycle 2.0a close-confirm + Cycle 2.0b close-confirm + Day 80 Session 3 post-mortem)
+**Standing rules: 10** (last update Day 80 ~05:55Z UTC; SR #9 promoted from B0 at Cycle 2.0a close-confirm; **SR #10 promoted at Session 3 post-mortem CEO-directed**)
+**SR-promotion candidates pending qualification:** P6 #67 (cycle-internal-iteration pattern with CEO-direct procedural posture at >3 in-place adaptations; needs second-cycle qualification under v2.3 "pattern proves sound across cycles" criterion).
+
+---
+
+## Recurrence log (extended)
+
+- **Cycle 2 -> Cycle 2.0a -> Cycle 2.0b -> Day 80 Session 3 post-mortem**: 9 distinct mistakes across 5 days, all traceable to assertion-acceptance-without-probe pattern. Catalyzed CEO-directed promotion of pre-action validation to SR #10 standing.
+- **Communication-rule violation ("stop tonight")**: caught by CEO mid-Path-R3; logged in close-confirm response; not P6-banked separately because v2.3 communication rules already cover; flagged here as SR-grade event for ledger awareness.
+- **LinkedIn post audit gap**: drafted in chat session, published, never committed to canon; uncovered tonight when CEO referenced "the post we published yesterday" and Paco found nothing in canon search. Catalyzed P6 #77 + P6 #78.
+
+---
+
+**End of Day 80 Session 3 ledger update.**
