@@ -3224,3 +3224,38 @@ Fresh Paco instance opens with v2.2 instructions loaded + 3 companion docs in-co
 ## Status
 
 `AWAITING PACO CLOSE-CONFIRM RATIFICATION`
+
+## Day 80 Session 2 -- 2026-05-04 17:14Z to 01:55Z UTC (2026-05-05)
+
+**Trigger:** CEO `boot Paco` at 17:14Z. Session under v2.2 governance at boot; ratified v2.3 mid-session.
+
+**Cycles closed-confirmed:**
+- Alexandra dashboard greeter polarity (Bug 1) + queue:1 stale badge (Bug 2) -- 8/8 MUST + 3/3 SHOULD; B0.1 + B0.2 ratified at close-confirm.
+- Project Ascension governance v2.2 -> v2.3 -- handoff_*.md mechanism deprecated; PD four-value Status taxonomy adopted; companion docs version-bumped; iCloud Santigrey synced (5 docs); Path 2 hybrid reconciliation applied mid-execution after CEO-committed `3f30fed` discovered post-execution-start.
+- Cycle 2.0a Goliath non-PPA descope -- 13/13 MUST + 3/3 SHOULD; ~579 packages upgraded clean from noble-updates/security/esm; K+D+M bit-identical pre/post (kernel 6.11.0-1016-nvidia / driver 580.95.05); 6/6 fleet SGs bit-identical pre/mid/post; ollama 3 models restored; B0 invoked 4 times structurally with intent preserved.
+
+**Major governance change:**
+- B0 standing-meta-authority PROMOTED to SR #9 at Cycle 2.0a close-confirm (second clean PD-execution invocation; spec language "if pattern proves sound across cycles" satisfied).
+
+**P6 lessons banked this session:** #45, #46, #47, #48, #49, #50, #51, #52, #53 (9 lessons total; cumulative P6 44 -> 53).
+
+**Standing gates 6/6 holding at session close** (live-probed 01:30Z UTC 2026-05-05): atlas-mcp PID 1212 NR=0 / atlas-agent PID 4753 NR=0 / mercury PID 7800 / postgres-beast 18:38:24.910 r=0 / garage-beast 18:38:24.493 r=0 / atlas .env empty 0600.
+
+**HEAD trace:**
+- pre-session: `f75ee85`
+- post-session: `aecb6ee` -> next (this canon update commit)
+- 11 commits this session
+- GitHub origin/main in sync with CK
+
+**Pending at session close:**
+- Goliath finish-out queue: Cycle 2.0b on lpc-recovery (cap 2026-05-07T22:23Z); /tmp cleanup investigation; headless snap pre-removal; reboot deferred to 2.0b; autoremove sweep.
+- LinkedIn post draft on Goliath fine-tuning + PPA management narrative.
+- Mr Robot Phase 0 charter draft.
+- Job search cycle review (Sunday 2026-05-10 unemployment cert: 3-app minimum).
+- v2.4 NEEDS CEO token formalization.
+
+**Cumulative state:** P6=53, SR=9.
+
+## Status
+
+`SESSION CLOSED -- next session opens from Cortez with boot Paco`
