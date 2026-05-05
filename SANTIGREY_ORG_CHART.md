@@ -34,6 +34,20 @@
 
 ---
 
+## CONDUCTOR PATTERN RATIFICATION (Day 80)
+
+Ratified 2026-05-05 Day 80 ~06:30Z UTC by CEO direct instruction. Alexandra is the **unified user-facing conductor** for the entire Santigrey org. Departments (Engineering / L&D / Operations / Security / Brand & Market / Family Office) and Platform (Alexandra herself) serve queries through her, not in parallel.
+
+This means:
+- **CEO talks to Alexandra by default** for any query that maps to a department's domain
+- Departments expose their intelligence/capabilities **to Alexandra via bridges** (Atlas via `atlas_bridge.py`; Mr Robot via similar pattern once built; etc.)
+- **PD remains intentionally not-direct-wired** to Alexandra -- safety pattern (CEO + Paco + Cowork mediation) preserved; Alexandra may suggest directive shape but not dispatch
+- **Alexandra refuses honestly** when no staff covers a domain (no fabrication; SR #10 PF.ASSERTION_AUDIT extension)
+
+Full architecture at `docs/alexandra_conductor_pattern.md`. Progress meter at `docs/alexandra_conductor_progress.md`.
+
+---
+
 ## Charter Summary
 
 ### Charter 1 -- CEO: James Sloan

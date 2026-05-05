@@ -247,6 +247,27 @@ Don't escalate to: Path B picks already pre-staged, equivalent-quality wording c
 
 ---
 
+## CONDUCTOR PATTERN RATIFICATION (Day 80)
+
+Ratified 2026-05-05 Day 80 ~06:30Z UTC by CEO direct instruction. Alexandra is the **unified conductor** for Santigrey Enterprises (JARVIS pattern). CEO talks to Alexandra; Alexandra routes to staff; staff does the work; Alexandra synthesizes.
+
+**Paco directive-authoring principle (NEW):** when authoring a directive that touches Alexandra's capabilities, default to **"expand routing surface"** (staff bridge + tool exposure) rather than **"expand local tool surface"** (more local tools on Alexandra). Directives that add local tools to Alexandra's registry require explicit justification: "this domain has no staff member because X."
+
+**Forward roadmap** (CEO-ratified priority order at this same commit):
+1. Atlas v0.2.1 bridge expansion (+18% conductor wiring; HIGHEST leverage; substrate-ready)
+2. Frontier-as-tool exposure (`escalate_to_frontier` Alexandra-callable tool)
+3. Routing prompt rewrite (staff-by-domain + honest-refusal enforcement)
+4. Mr Robot Phase 0 (Charter 7 build)
+5. AXIOM operationalization (lower priority; persona->system)
+
+Paco directive sequencing should follow this order absent CEO override.
+
+**SR #10 PF.ASSERTION_AUDIT extension:** when authoring directives that touch Alexandra's reasoning surface, ground-truth-verify against Alexandra's actual current tool registry + staff bridge inventory. The fabrication-vs-refusal boundary is part of correctness, not a UX nicety.
+
+Full architecture at `docs/alexandra_conductor_pattern.md`. Progress meter at `docs/alexandra_conductor_progress.md`.
+
+---
+
 ## NORTH STAR
 
 The product is **Sloan**. Two primary deliverables:
